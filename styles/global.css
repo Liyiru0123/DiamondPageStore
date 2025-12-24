@@ -1,0 +1,156 @@
+/* styles/global.css */
+/* Tailwind核心指令（必须添加，替代原tailwind.css） */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 仅包含Tailwind无法覆盖的全局样式 */
+
+/* 平滑滚动 */
+html {
+  scroll-behavior: smooth;
+}
+
+/* 全局通知组件（用于JS交互提示） */
+.notification {
+  @apply fixed top-20 right-4 bg-brown-dark text-white px-4 py-2 rounded-md shadow-lg z-50 transition-all duration-300 transform translate-x-full;
+}
+
+/* 页面内容区容器（统一内边距） */
+.page-container {
+  @apply container mx-auto px-6 md:px-10 py-6;
+}
+
+/* 链接默认样式 */
+a {
+  @apply text-brown hover:text-brown-dark transition-colors;
+}
+
+/* 自定义工具类（原Tailwind配置中的工具类移到这里） */
+@layer utilities {
+  .content-auto {
+    content-visibility: auto;
+  }
+
+  .sidebar-item {
+    @apply flex items-center gap-3 px-4 py-3 text-white transition-all duration-200 cursor-pointer;
+  }
+
+  .sidebar-item-public-hover {
+    @apply hover:bg-brown-dark/70;
+  }
+
+  .sidebar-item-personal-hover {
+    @apply hover:bg-brown-dark/90;
+  }
+
+  .sidebar-item-active {
+    @apply bg-brown-dark border-l-4 border-white;
+  }
+
+  .header-icon {
+    @apply w-10 h-10 flex items-center justify-center rounded-full hover:bg-brown-light/20 transition-colors cursor-pointer;
+  }
+
+  .page-transition {
+    @apply transition-all duration-300;
+  }
+
+  .branch-item {
+    @apply p-4 border border-gray-200 rounded-lg cursor-pointer transition-all duration-300 hover:border-primary hover:shadow-md;
+  }
+
+  .branch-item.active {
+    @apply border-primary bg-accent/10 shadow-md;
+  }
+
+  .status-created {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  .status-paid {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .status-cancelled {
+    @apply bg-red-100 text-red-800;
+  }
+
+  .status-refunded {
+    @apply bg-gray-100 text-gray-800;
+  }
+}
+
+/* ------------------------------------------------ */
+/* 新增：员工 POS 界面特定样式 (利用 Tailwind 颜色变量) */
+/* ------------------------------------------------ */
+
+/* POS 布局容器 */
+.pos-terminal-layout {
+  @apply flex h-screen;
+  /* 确保占满屏幕 */
+}
+
+/* POS 侧边栏 - 颜色与主色调一致 */
+.pos-sidebar {
+  @apply w-[100px] bg-dark text-white p-2 flex flex-col items-center;
+}
+
+/* POS 终端主区域 */
+.pos-main-area {
+  @apply flex-grow flex flex-col bg-neutral/50 p-4;
+}
+
+/* 订单商品列表区 */
+.order-items-area {
+  @apply flex-grow bg-white rounded-lg shadow-md p-4;
+}
+
+/* 结算区 */
+.summary-payment-area {
+  @apply w-[350px] bg-primary text-white rounded-lg p-6 flex flex-col gap-4;
+}
+
+/* 订单总金额显示 */
+.order-total-display {
+  @apply text-4xl font-extrabold text-secondary text-right mt-4;
+}
+
+/* POS 操作按钮 */
+.pos-action-btn {
+  /* 基础样式：大按钮，适配触摸 */
+  @apply w-full py-4 text-lg font-bold rounded-md shadow-md transition-colors;
+}
+
+/* 结算按钮 - 醒目颜色 */
+.btn-checkout {
+  @apply bg-secondary text-dark hover:bg-accent;
+}
+
+/* 辅助按钮 - 深色系 */
+.btn-hold {
+  @apply bg-dark text-white hover:bg-dark/80;
+}
+
+/* 输入框基础样式 */
+.pos-input {
+  @apply w-full p-3 border border-accent rounded-md text-dark focus:ring-primary focus:border-primary;
+}
+
+/* 消息提示 */
+.msg-success {
+  @apply bg-green-100 text-green-700 border-green-400 p-2 rounded;
+}
+
+.msg-error {
+  @apply bg-red-100 text-red-700 border-red-400 p-2 rounded;
+}
+
+/* 确认没有覆盖 hidden 类的样式 */
+.hidden {
+    display: none !important;
+}
+
+.page-content {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
