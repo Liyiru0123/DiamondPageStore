@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diamond Page Store - Staff Dashboard</title>
+    
+    <!-- 1. 外部资源 -->
+    <script src="../scripts/tailwind.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="../styles/global.css">
+
+    <!-- 2. 引入布局脚本 -->
+    <script src="../scripts/layout.js"></script>
+
+    <!-- 3. 自定义样式补充 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto { content-visibility: auto; }
+            .book-shadow { box-shadow: 0 4px 6px -1px rgba(139, 90, 43, 0.1), 0 2px 4px -1px rgba(139, 90, 43, 0.06); }
+            
+            /* 继承自原 staff.html 的特定组件样式 */
+            .card { @apply bg-white rounded-xl p-5 book-shadow hover:shadow-lg transition-all duration-300; }
+            .form-input { @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all; }
+            
+            .btn-primary { @apply bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-all duration-300 shadow-md hover:shadow-lg; }
+            .btn-secondary { @apply bg-secondary border border-primary/30 text-primary px-4 py-2 rounded-lg hover:bg-accent/20 transition-all duration-300; }
+
+            /* 特定状态样式 */
+            .status-low { @apply bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium; }
+            .status-medium { @apply bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium; }
+            .status-high { @apply bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium; }
+            .status-pending { @apply bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium; }
+            .status-processing { @apply bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium; }
+            .status-shipped { @apply bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium; }
+            .status-cancelled { @apply bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium; }
+            .status-delivered { @apply bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium; }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 font-sans text-dark h-screen flex overflow-hidden">
+
+    <!-- 1. 侧边栏容器 (layout.js 填充) -->
+    <div id="layout-sidebar"></div>
+
+    <!-- 2. 右侧主体区域 -->
+    <div class="flex-1 flex flex-col h-full overflow-hidden relative">
+
+        <!-- 头部容器 (layout.js 填充) -->
+        <div id="layout-header" class="flex-shrink-0"></div>
+
+        <!-- 具体的页面内容 -->
+        <main class="flex-1 overflow-y-auto p-4 lg:p-6" id="main-content">
+
+            <!-- A. Dashboard Page -->
+            <div id="dashboard-page" class="page-content">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-bold">Branch Dashboard</h1>
+                    <div id="current-date" class="text-gray-600"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="card">
+                        <p class="text-sm text-gray-500 mb-1">Total Books in Stock</p>
+                        <p class="text-2xl font-bold" id="total-books">1,248</p>
+                        <p class="text-sm text-green-600 mt-1 flex items-center">
+                            <i class="fa fa-arrow-up mr-1"></i> 3.2% from last week
+                        </p>
+                    </div>
+                    
+                    <div class="card">
+                        <p class="text-sm text-gray-500 mb-1">Low Stock Items</p>
+                        <p class="text-2xl font-bold text-red-600" id="low-stock-books">18</p>
+                        <p class="text-sm text-red-600 mt-1 flex items-center">
+                            <i class="fa fa-arrow-up mr-1"></i> 2 items added today
+                        </p>
+                    </div>
+                    
+                    <div class="card">
+                        <p class="text-sm text-gray-500 mb-1">Pending Orders</p>
+                        <p class="text-2xl font-bold" id="pending-orders">24</p>
+                        <p class="text-sm text-yellow-600 mt-1 flex items-center">
+                            <i class="fa fa-clock-o mr-1"></i> 8 need processing
+                        </p>
+                    </div>
+                    
+                    <div class="card">
+                        <p class="text-sm text-gray-500 mb-1">Today's Sales</p>
+                        <p class="text-2xl font-bold" id="todays-sales">¥3,642</p>
+                        <p class="text-sm text-green-600 mt-1 flex items-center">
+                            <i class="fa fa-arrow-up mr-1"></i> 12.5% from yesterday
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="card">
+                        <h3 class="text-lg font-semibold mb-4">Recent Orders</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-orders-list" class="bg-white divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="text-lg font-semibold mb-4">Low Stock Alerts</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ISBN</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="low-stock-list" class="bg-white divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- B. Inventory Management Page -->
+            <div id="inventory-page" class="page-content hidden">
+                <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold">Inventory Management</h1>
+                        <p class="text-gray-500">Manage all books in your branch inventory</p>
+                    </div>
+                    <button class="btn-primary" id="add-book-btn">
+                        <i class="fa fa-plus mr-2"></i>Add New Book
+                    </button>
+                </div>
+
+                <div class="card mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Search Inventory</label>
+                            <div class="relative">
+                                <input type="text" id="inventory-search" class="form-input pl-10" placeholder="Title, Author, ISBN...">
+                                <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                            <select id="category-filter" class="form-input">
+                                <option value="">All Categories</option>
+                                <option value="fiction">Fiction</option>
+                                <option value="non-fiction">Non-Fiction</option>
+                                <option value="science">Science</option>
+                                <option value="history">History</option>
+                                <option value="biography">Biography</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Stock Level</label>
+                            <select id="stock-filter" class="form-input">
+                                <option value="">All Levels</option>
+                                <option value="low">Low Stock (0-5)</option>
+                                <option value="medium">Medium Stock (6-20)</option>
+                                <option value="high">High Stock (21+)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+                            <select id="sort-filter" class="form-input">
+                                <option value="title">Title (A-Z)</option>
+                                <option value="stock-asc">Stock (Low to High)</option>
+                                <option value="stock-desc">Stock (High to Low)</option>
+                                <option value="recent">Recently Added</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex justify-end mt-4 gap-2">
+                        <button id="filter-inventory" class="btn-primary">Apply Filters</button>
+                        <button id="reset-inventory" class="btn-secondary">Reset</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Inventory List</h3>
+                        <p class="text-sm text-gray-500">Total: <span id="total-inventory-count">0</span> items</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Author</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ISBN</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-list" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="flex justify-between items-center mt-5">
+                        <p class="text-sm text-gray-500">Showing 1 to 10 of <span id="pagination-total">0</span> records</p>
+                        <div class="flex gap-1">
+                            <button class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50" id="prev-page" disabled>
+                                <i class="fa fa-chevron-left text-xs"></i>
+                            </button>
+                            <button class="w-8 h-8 flex items-center justify-center rounded border border-primary bg-primary text-white" id="page-1">1</button>
+                            <button class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50" id="page-2">2</button>
+                            <button class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50" id="page-3">3</button>
+                            <button class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50" id="next-page">
+                                <i class="fa fa-chevron-right text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- C. Order Processing Page -->
+            <div id="orders-page" class="page-content hidden">
+                <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
+                    <h1 class="text-2xl font-bold">Order Processing</h1>
+                    <div class="flex gap-2 flex-wrap">
+                        <div class="relative">
+                            <input type="text" placeholder="Search orders..." class="form-input pl-10 w-full md:w-64">
+                            <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                        <select class="form-input" id="order-status-filter">
+                            <option value="">All Statuses</option>
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-list" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- D. Stock Requests Page -->
+            <div id="stock-request-page" class="page-content hidden">
+                <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
+                    <h1 class="text-2xl font-bold">Stock Requests</h1>
+                    <button class="btn-primary" id="new-request-btn">
+                        <i class="fa fa-plus mr-2"></i>New Stock Request
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="card">
+                        <h3 class="text-lg font-semibold mb-4">Pending Requests</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Request ID</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Requested</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expected Delivery</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pending-requests-list" class="bg-white divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="text-lg font-semibold mb-4">Previous Requests</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Request ID</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Requested</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Date</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="previous-requests-list" class="bg-white divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Modal for Book Details/Editing (放在主体之外) -->
+    <div id="book-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xl font-bold" id="modal-title">Add New Book</h3>
+                    <button id="close-modal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fa fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6">
+                <form id="book-form">
+                    <input type="hidden" id="book-id">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="book-title">Book Title *</label>
+                            <input type="text" id="book-title" class="form-input" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="book-author">Author *</label>
+                            <input type="text" id="book-author" class="form-input" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="book-isbn">ISBN *</label>
+                            <input type="text" id="book-isbn" class="form-input" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="book-category">Category *</label>
+                            <select id="book-category" class="form-input" required>
+                                <option value="">Select Category</option>
+                                <option value="fiction">Fiction</option>
+                                <option value="non-fiction">Non-Fiction</option>
+                                <option value="science">Science</option>
+                                <option value="history">History</option>
+                                <option value="biography">Biography</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="book-price">Price *</label>
+                            <input type="number" id="book-price" class="form-input" min="0" step="0.01" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="book-stock">Stock Quantity *</label>
+                            <input type="number" id="book-stock" class="form-input" min="0" required>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button type="button" id="cancel-book" class="btn-secondary">Cancel</button>
+                        <button type="submit" class="btn-primary">Save Book</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 脚本引入区 -->
+    <script src="../scripts/common.js"></script>
+
+    <script src="../scripts/staff.js"></script>
+
+    <!-- 【必须】初始化 layout.js -->
+    <script>
+        if (typeof initLayout === 'function') {
+            initLayout('staff', 'dashboard');
+        } else {
+            console.error('Layout script not loaded!');
+        }
+    </script>
+</body>
+</html>
