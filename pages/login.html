@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Diamond Page Store</title>
+    <script src="../scripts/tailwind.js"></script>
+    <link rel="stylesheet" href="../styles/global.css">
+</head>
+<body class="bg-brown-cream min-h-screen flex items-center justify-center p-6">
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-brown-light/20">
+        <div class="p-8">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-serif font-bold text-brown-dark">Welcome Back</h1>
+                <p class="text-gray-500 mt-2">Please enter your details to sign in</p>
+            </div>
+
+            <form id="login-form" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-bold text-brown-dark mb-1">Username</label>
+                    <input type="text" id="username" required class="w-full px-4 py-3 rounded-lg border border-brown-light focus:ring-2 focus:ring-brown focus:outline-none transition-all" placeholder="Enter your username">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-brown-dark mb-1">Password</label>
+                    <input type="password" id="password" required class="w-full px-4 py-3 rounded-lg border border-brown-light focus:ring-2 focus:ring-brown focus:outline-none transition-all" placeholder="••••••••">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-brown-dark mb-1">Login Role</label>
+                    <select id="role" class="w-full px-4 py-3 rounded-lg border border-brown-light focus:ring-2 focus:ring-brown focus:outline-none transition-all bg-white">
+                        <option value="customer">Customer</option>
+                        <option value="staff">Sales Staff</option>
+                        <option value="manager">Store Manager</option>
+                        <option value="finance">Finance Staff</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-brown text-white py-3 rounded-lg font-bold hover:bg-brown-dark transition-colors shadow-md active:scale-[0.98]">
+                    Sign In
+                </button>
+            </form>
+        </div>
+    </div>
+    <script src="../scripts/common.js"></script>
+    <script src="../scripts/login.js"></script>
+</body>
+</html>

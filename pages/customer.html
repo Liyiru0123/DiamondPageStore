@@ -26,6 +26,14 @@
       .page-transition { @apply transition-all duration-300; }
     }
   </style>
+
+  <script>
+    // 立即执行检查，防止未授权内容闪烁
+    (function () {
+      const token = localStorage.getItem('auth_token');
+      if (!token) window.location.href = 'login.html';
+    })();
+  </script>
 </head>
 
 <body class="bg-brown-cream min-h-screen flex overflow-x-hidden font-serif">
@@ -100,7 +108,9 @@
             <!-- 任务 4：价格筛选 -->
             <div class="flex items-center">
               <label class="text-sm font-bold text-brown-dark mr-2">Price Range:</label>
-              <select class="border border-brown-light rounded px-3 py-1.5 text-sm focus:ring-1 focus:ring-brown outline-none" id="price-filter">
+              <select
+                class="border border-brown-light rounded px-3 py-1.5 text-sm focus:ring-1 focus:ring-brown outline-none"
+                id="price-filter">
                 <option value="all">All Prices</option>
                 <option value="0-20">¥0 - ¥20</option>
                 <option value="20-50">¥20 - ¥50</option>
@@ -110,7 +120,9 @@
             <!-- 任务 4：语言筛选 -->
             <div class="flex items-center">
               <label class="text-sm font-bold text-brown-dark mr-2">Language:</label>
-              <select class="border border-brown-light rounded px-3 py-1.5 text-sm focus:ring-1 focus:ring-brown outline-none" id="language-filter">
+              <select
+                class="border border-brown-light rounded px-3 py-1.5 text-sm focus:ring-1 focus:ring-brown outline-none"
+                id="language-filter">
                 <option value="all">All Languages</option>
                 <option value="English">English</option>
                 <option value="Chinese">Chinese</option>
@@ -124,7 +136,9 @@
             <!-- 任务 5：增强排序功能 -->
             <div class="flex items-center">
               <label class="text-sm font-bold text-brown-dark mr-2">Sort By:</label>
-              <select class="border border-brown-light rounded px-3 py-1.5 text-sm focus:ring-1 focus:ring-brown outline-none" id="sort-filter">
+              <select
+                class="border border-brown-light rounded px-3 py-1.5 text-sm focus:ring-1 focus:ring-brown outline-none"
+                id="sort-filter">
                 <option value="default">Default</option>
                 <option value="popular">Popular Recommendations</option>
                 <option value="price-asc">Price: Low to High</option>
@@ -283,6 +297,17 @@
 
         <!-- 分类书籍列表 -->
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 relative z-10" id="category-books"></div>
+        <!-- 在分类筛选逻辑 div 之后插入 -->
+        <div class="flex justify-end mb-6">
+          <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-brown-light/30 shadow-sm">
+            <label class="text-sm font-bold text-brown-dark"><i class="fa fa-sort-amount-desc"></i> Sort By:</label>
+            <select id="category-sort-filter"
+              class="text-sm border-none focus:ring-0 cursor-pointer bg-transparent text-gray-600">
+              <option value="default">Default Match</option>
+              <option value="fav-desc">Most Favorites (High to Low)</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <!-- 4. 购物车页面 -->
@@ -307,9 +332,10 @@
             <div class="text-lg text-brown-dark">Total: <span id="cart-total" class="font-bold text-brown">¥0.00</span>
             </div>
           </div>
-          <button
-            class="bg-brown text-white px-6 py-2 rounded-md hover:bg-brown-dark transition-colors w-full sm:w-auto">Proceed
-            to Checkout</button>
+          <button id="proceed-checkout"
+            class="bg-brown text-white px-6 py-2 rounded-md hover:bg-brown-dark transition-colors w-full sm:w-auto shadow-md active:scale-95">
+            Proceed to Checkout
+          </button>
         </div>
       </div>
 
@@ -325,16 +351,43 @@
             data-status="all">All Orders</button>
           <button
             class="order-status-btn bg-white text-brown border border-brown px-4 py-2 rounded-full text-sm hover:bg-brown-light/20 transition-colors"
-            data-status="pending">Pending Payment</button>
+            data-status="created">Pending Payment</button>
           <button
             class="order-status-btn bg-white text-brown border border-brown px-4 py-2 rounded-full text-sm hover:bg-brown-light/20 transition-colors"
-            data-status="shipping">Processing</button>
+            data-status="paid">Paid</button>
           <button
             class="order-status-btn bg-white text-brown border border-brown px-4 py-2 rounded-full text-sm hover:bg-brown-light/20 transition-colors"
-            data-status="completed">Completed</button>
+            data-status="cancelled">Cancelled</button>
         </div>
         <div id="orders-list" class="space-y-6">
           <p class="text-gray-600 text-center py-10">No order records</p>
+        </div>
+        <div id="orders-list" class="space-y-6 pb-20">
+          <!-- 动态渲染订单卡片 -->
+        </div>
+
+        <!-- 任务 3.2 新增：订单页底部操作栏 -->
+        <div id="orders-footer"
+          class="hidden mt-8 pt-6 border-t border-brown-light/30 flex flex-col md:flex-row justify-between items-center gap-4 bg-brown-cream/30 p-4 rounded-lg">
+          <div class="flex items-center gap-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="select-all-orders" class="w-5 h-5 accent-brown">
+              <span class="text-sm font-bold text-brown-dark">Select All</span>
+            </label>
+            <div class="text-sm text-gray-600">
+              Selected: <span id="selected-orders-count" class="font-bold text-brown">0</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-6">
+            <div class="text-right">
+              <p class="text-xs text-gray-500 uppercase">Total Amount</p>
+              <p id="combined-total-price" class="text-xl font-bold text-brown">¥0.00</p>
+            </div>
+            <button id="merge-payment-btn" disabled
+              class="bg-brown text-white px-8 py-3 rounded-xl font-bold hover:bg-brown-dark disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-md active:scale-95">
+              Combine Payment
+            </button>
+          </div>
         </div>
       </div>
 
@@ -355,44 +408,39 @@
           <i class="fa fa-spinner fa-spin text-brown text-2xl"></i>
         </div>
         <h2 class="text-2xl font-bold text-brown-dark mb-6 border-b border-brown-light pb-2">Membership Center</h2>
-        <div class="bg-brown-cream/50 rounded-lg p-6 mb-8">
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+
+        <div
+          class="bg-gradient-to-r from-brown-dark to-brown rounded-2xl p-8 mb-8 text-white shadow-lg relative overflow-hidden">
+          <!-- 背景装饰图标 -->
+          <i class="fa fa-diamond absolute -right-4 -bottom-4 text-white/10 text-9xl rotate-12"></i>
+
+          <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
             <div>
-              <h3 class="text-lg font-medium text-brown-dark">Gold Member</h3>
-              <p class="text-gray-600 mt-1">Membership valid until: 2025-12-31</p>
+              <div class="flex items-center gap-3 mb-2">
+                <span id="member-level-badge"
+                  class="bg-white/20 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase">Loading...</span>
+              </div>
+              <h3 id="display-user-name" class="text-3xl font-serif font-bold">Customer</h3>
+              <p class="text-white/70 mt-2 text-sm">Total Spent: <span id="member-total-spent"
+                  class="font-bold text-white">¥0.00</span></p>
             </div>
-            <div class="flex items-center gap-6">
+            <div class="flex items-center gap-8 bg-black/10 p-6 rounded-xl backdrop-blur-sm">
               <div class="text-center">
-                <p class="text-brown-dark font-bold text-xl">2580</p>
-                <p class="text-sm text-gray-600">Available Points</p>
+                <p id="member-points" class="font-bold text-3xl">0</p>
+                <p class="text-[10px] uppercase tracking-widest text-white/60">Available Points</p>
               </div>
+              <div class="w-px h-10 bg-white/20"></div>
               <div class="text-center">
-                <p class="text-brown-dark font-bold text-xl">10% Off</p>
-                <p class="text-sm text-gray-600">Member Discount</p>
+                <p id="member-discount-text" class="font-bold text-3xl">0%</p>
+                <p class="text-[10px] uppercase tracking-widest text-white/60">Current Discount</p>
               </div>
-              <button class="bg-brown text-white px-4 py-2 rounded hover:bg-brown-dark transition-colors">Redeem
-                Points</button>
             </div>
           </div>
         </div>
-        <div>
-          <h3 class="text-xl font-bold text-brown-dark mb-4">Member Exclusive Benefits</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="flex items-start gap-3 p-3 border border-brown-light/30 rounded-lg">
-              <i class="fa fa-tag text-brown mt-1"></i>
-              <div>
-                <h4 class="font-medium">Exclusive Discounts</h4>
-                <p class="text-sm text-gray-600 mt-1">10% off all books, additional discounts on special offers</p>
-              </div>
-            </div>
-            <div class="flex items-start gap-3 p-3 border border-brown-light/30 rounded-lg">
-              <i class="fa fa-gift text-brown mt-1"></i>
-              <div>
-                <h4 class="font-medium">Birthday Gift</h4>
-                <p class="text-sm text-gray-600 mt-1">¥20 no-threshold coupon available in your birthday month</p>
-              </div>
-            </div>
-          </div>
+
+        <h3 class="text-xl font-bold text-brown-dark mb-4">Privileges & Progress</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8" id="member-tier-cards">
+          <!-- 动态生成的等级卡片将插入此处 -->
         </div>
       </div>
     </main>
@@ -479,6 +527,50 @@
           <p class="text-sm col-span-2"><span class="font-medium text-brown-dark">ISBN:</span> <span
               id="detail-book-isbn" class="text-gray-600 text-xs">978-3-16-148410-0</span></p>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 任务 3.3：支付弹窗 -->
+  <div id="payment-modal" class="fixed inset-0 bg-black/60 z-[60] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl transform transition-all">
+      <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+        <h3 class="text-xl font-bold text-brown-dark">Complete Payment</h3>
+        <button class="close-payment text-gray-400 hover:text-gray-600"><i class="fa fa-times text-xl"></i></button>
+      </div>
+      <div class="p-6 space-y-6">
+        <div>
+          <label class="text-sm text-gray-500 block mb-2">Order(s) Summary</label>
+          <div id="payment-summary-list" class="max-h-32 overflow-y-auto space-y-2 border-y py-3 border-gray-50">
+            <!-- 动态显示支付列表 -->
+          </div>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="font-medium">Total Amount</span>
+          <span id="payment-modal-total" class="text-2xl font-bold text-red-600">¥0.00</span>
+        </div>
+        <div class="space-y-3">
+          <label class="text-sm font-bold text-brown-dark block">Select Payment Method</label>
+          <div class="grid grid-cols-2 gap-3">
+            <label
+              class="border-2 border-brown rounded-xl p-3 flex flex-col items-center gap-2 cursor-pointer bg-brown/5">
+              <input type="radio" name="pay-method" value="credit" checked class="hidden">
+              <i class="fa fa-credit-card text-2xl text-brown"></i>
+              <span class="text-xs font-bold">Credit Card</span>
+            </label>
+            <label
+              class="border-2 border-gray-100 rounded-xl p-3 flex flex-col items-center gap-2 cursor-pointer hover:border-brown/50">
+              <input type="radio" name="pay-method" value="paypal" class="hidden">
+              <i class="fa fa-paypal text-2xl text-gray-400"></i>
+              <span class="text-xs font-bold text-gray-500">PayPal</span>
+            </label>
+          </div>
+        </div>
+        <button id="confirm-payment-btn"
+          class="w-full bg-brown text-white py-4 rounded-xl font-bold text-lg hover:bg-brown-dark transition-all flex items-center justify-center gap-3 shadow-lg">
+          <span id="pay-btn-text">Confirm Payment</span>
+          <i id="pay-spinner" class="fa fa-spinner fa-spin hidden"></i>
+        </button>
       </div>
     </div>
   </div>
