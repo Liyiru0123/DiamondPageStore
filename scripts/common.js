@@ -150,22 +150,27 @@ function renderSearchResults(books) {
  * 全局鉴权检查逻辑
  * @param {Array} allowedRoles 允许访问该页面的角色列表
  */
+// 在 common.js 的 checkAuth 函数中修改内容
 function checkAuth(allowedRoles = []) {
     const token = localStorage.getItem('auth_token');
-    const userStr = localStorage.getItem('current_user');
+    const userRole = localStorage.getItem('user_role');
 
-    if (!token || !userStr) {
-        console.warn("Unauthorized access, redirecting to login.");
+    // 如果没有 Token 或 角色不匹配
+    if (!token) {
         window.location.href = 'login.html';
         return;
     }
 
-    const user = JSON.parse(userStr);
-
-    // 如果指定了允许的角色且当前用户角色不在其中，则拦截
-    if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-        alert("Access Denied: You do not have permission to view this page.");
-        window.location.href = 'login.html';
+    if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
+        alert("Access Denied: You do not have permission for this area.");
+        // 根据实际角色遣返
+        const fallback = {
+            'customer': 'customer.html',
+            'staff': 'staff.html',
+            'manager': 'manager.html',
+            'finance': 'finance.html'
+        };
+        window.location.href = fallback[userRole] || 'login.html';
     }
 }
 
