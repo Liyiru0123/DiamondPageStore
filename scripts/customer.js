@@ -90,6 +90,36 @@ function bindEvents() {
   const clearBtn = document.getElementById('clear-cart');
   if (clearBtn) clearBtn.addEventListener('click', clearCart);
 
+  // 9. 个人信息弹窗触发 (通过 ID 寻找 layout.js 中生成的头像容器)
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.fa-user-circle-o') || e.target.closest('#user-profile-trigger')) {
+      openProfileModal();
+    }
+  });
+
+  // 10. 历史公告触发 (Learn More 按钮)
+  const learnMoreBtn = document.querySelector('#home-page button');
+  if (learnMoreBtn && learnMoreBtn.textContent.includes('Learn More')) {
+    learnMoreBtn.addEventListener('click', openAnnouncements);
+  }
+
+  // 11. 弹窗关闭通用逻辑
+  document.querySelectorAll('.close-profile, #close-announcement').forEach(btn => {
+    btn.onclick = () => {
+      document.getElementById('profile-modal').classList.add('hidden');
+      document.getElementById('announcement-modal').classList.add('hidden');
+    };
+  });
+
+  // 12. 个人信息保存
+  const profileForm = document.getElementById('profile-form');
+  if (profileForm) {
+    profileForm.onsubmit = (e) => {
+      e.preventDefault();
+      saveProfile();
+    };
+  }
+
   // 结算按钮绑定
   const checkoutBtn = document.getElementById('proceed-checkout');
   if (checkoutBtn) checkoutBtn.addEventListener('click', handleCheckout);
@@ -707,8 +737,8 @@ function updateMemberPageUI() {
 
   // 计算累计消费（仅已支付订单）
   const totalSpent = userData.totalSpent || orders
-        .filter(o => o.status === 'paid')
-        .reduce((sum, o) => sum + o.total, 0);
+    .filter(o => o.status === 'paid')
+    .reduce((sum, o) => sum + o.total, 0);
 
   // 积分逻辑：1元 = 1积分
   const points = Math.floor(totalSpent);
@@ -739,4 +769,63 @@ function updateMemberPageUI() {
             `;
     }).join('');
   }
+}
+
+/**
+ * 个人信息：打开弹窗并填充数据
+ */
+function openProfileModal() {
+  const user = JSON.parse(localStorage.getItem('current_user') || '{}');
+  document.getElementById('profile-username').value = user.username || '';
+  document.getElementById('profile-email').value = user.email || 'customer@example.com';
+  document.getElementById('profile-password').value = '';
+  document.getElementById('profile-modal').classList.remove('hidden');
+}
+
+/**
+ * 个人信息：保存逻辑
+ */
+function saveProfile() {
+  const newUsername = document.getElementById('profile-username').value;
+  const newEmail = document.getElementById('profile-email').value;
+  const newPassword = document.getElementById('profile-password').value;
+
+  // 模拟更新本地存储
+  const user = JSON.parse(localStorage.getItem('current_user') || '{}');
+  user.username = newUsername;
+  user.email = newEmail;
+  if(newPassword) user.password = newPassword; // 实际场景需加密
+
+  localStorage.setItem('current_user', JSON.stringify(user));
+  
+  // TODO: 待替换为后端接口 updateProfileAPI({userId: user.id, username: newUsername, email: newEmail, password: newPassword})
+  
+  showAlert("Profile updated successfully!");
+  document.getElementById('profile-modal').classList.add('hidden');
+  
+  // 如果 Header 有显示用户名，此处可触发刷新逻辑
+}
+
+/**
+ * 历史公告：渲染并展示
+ */
+function openAnnouncements() {
+  const container = document.getElementById('announcement-list');
+  const mockAnnouncements = [
+    { title: "Autumn Reading Festival", date: "2024-10-01", content: "Gold members enjoy 20% off all selected fiction." },
+    { title: "Store System Upgrade", date: "2024-09-15", content: "Our membership system is now upgraded for faster checkout." },
+    { title: "New Branch Opening", date: "2024-08-20", content: "Visit our new South Port Store for exclusive opening gifts." }
+  ];
+
+  container.innerHTML = mockAnnouncements.map(ann => `
+    <div class="p-4 bg-brown-cream/30 border-l-4 border-brown rounded-r-lg">
+      <div class="flex justify-between items-center mb-1">
+        <h4 class="font-bold text-brown-dark">${ann.title}</h4>
+        <span class="text-xs text-gray-500">${ann.date}</span>
+      </div>
+      <p class="text-sm text-gray-700">${ann.content}</p>
+    </div>
+  `).join('');
+
+  document.getElementById('announcement-modal').classList.remove('hidden');
 }
