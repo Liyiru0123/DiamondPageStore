@@ -13,7 +13,7 @@ function switchPage(pageId) {
     pages.forEach(page => {
         page.classList.add('hidden');
     });
-    
+
     const targetPage = document.getElementById(`${pageId}-page`);
     if (targetPage) {
         targetPage.classList.remove('hidden');
@@ -23,6 +23,12 @@ function switchPage(pageId) {
             targetPage.style.transition = 'opacity 0.3s ease';
             targetPage.style.opacity = '1';
         }, 50);
+
+        if (pageId === 'favorites') {
+            updateFavoritesUI();
+        } else if (pageId === 'orders') {
+            renderOrdersUI();
+        }
     }
 
     // B. 处理侧边栏高亮
@@ -40,91 +46,91 @@ function switchPage(pageId) {
     if (sidebar && window.innerWidth < 768) {
         sidebar.classList.add('-translate-x-full');
     }
-    
+
     // D. 滚动到顶部
     window.scrollTo(0, 0);
 }
 
 // 3. 搜索逻辑
 function searchBooks(keywordInput = null) {
-  // 切换到搜索页
-  switchPage('search');
+    // 切换到搜索页
+    switchPage('search');
 
-  const inputEl = document.getElementById('search-input');
-  const priceFilter = document.getElementById('price-filter');
-  const langFilter = document.getElementById('language-filter');
-  const sortFilter = document.getElementById('sort-filter');
-  const keywordEl = document.getElementById('search-keyword');
+    const inputEl = document.getElementById('search-input');
+    const priceFilter = document.getElementById('price-filter');
+    const langFilter = document.getElementById('language-filter');
+    const sortFilter = document.getElementById('sort-filter');
+    const keywordEl = document.getElementById('search-keyword');
 
-  // 如果是从外部（如热门标签）传入的关键词，则同步给输入框
-  if (keywordInput !== null) {
-      inputEl.value = keywordInput;
-  }
+    // 如果是从外部（如热门标签）传入的关键词，则同步给输入框
+    if (keywordInput !== null) {
+        inputEl.value = keywordInput;
+    }
 
-  const keyword = inputEl.value.trim().toLowerCase();
-  const priceRange = priceFilter.value; // all, 0-20, 20-50, 50+
-  const language = langFilter.value;   // all, English, Chinese...
-  const sortBy = sortFilter.value;     // default, popular, price-asc, price-desc
+    const keyword = inputEl.value.trim().toLowerCase();
+    const priceRange = priceFilter.value; // all, 0-20, 20-50, 50+
+    const language = langFilter.value;   // all, English, Chinese...
+    const sortBy = sortFilter.value;     // default, popular, price-asc, price-desc
 
-  // 更新结果标题处的关键词显示
-  if(keywordEl) keywordEl.textContent = keyword ? `("${keyword}")` : '(Please enter keywords)';
+    // 更新结果标题处的关键词显示
+    if (keywordEl) keywordEl.textContent = keyword ? `("${keyword}")` : '(Please enter keywords)';
 
-  if (typeof mockBooks === 'undefined') return;
+    if (typeof mockBooks === 'undefined') return;
 
-  // 1. 执行叠加筛选
-  let results = mockBooks.filter(book => {
-      // 关键词过滤 (标题/作者/类别)
-      const matchesKeyword = !keyword || 
-          book.title.toLowerCase().includes(keyword) || 
-          book.author.toLowerCase().includes(keyword) ||
-          book.category.toLowerCase().includes(keyword);
+    // 1. 执行叠加筛选
+    let results = mockBooks.filter(book => {
+        // 关键词过滤 (标题/作者/类别)
+        const matchesKeyword = !keyword ||
+            book.title.toLowerCase().includes(keyword) ||
+            book.author.toLowerCase().includes(keyword) ||
+            book.category.toLowerCase().includes(keyword);
 
-      // 任务 4：价格区间过滤
-      let matchesPrice = true;
-      if (priceRange === '0-20') matchesPrice = book.price <= 20;
-      else if (priceRange === '20-40') matchesPrice = book.price > 20 && book.price <= 40;
-      else if (priceRange === '50+') matchesPrice = book.price >= 50;
+        // 任务 4：价格区间过滤
+        let matchesPrice = true;
+        if (priceRange === '0-20') matchesPrice = book.price <= 20;
+        else if (priceRange === '20-40') matchesPrice = book.price > 20 && book.price <= 40;
+        else if (priceRange === '50+') matchesPrice = book.price >= 50;
 
-      // 任务 4：语言过滤
-      let matchesLang = true;
-      if (language !== 'all') matchesLang = book.language === language;
+        // 任务 4：语言过滤
+        let matchesLang = true;
+        if (language !== 'all') matchesLang = book.language === language;
 
-      return matchesKeyword && matchesPrice && matchesLang;
-  });
+        return matchesKeyword && matchesPrice && matchesLang;
+    });
 
-  // 2. 任务 5：执行排序逻辑
-  if (sortBy === 'popular') {
-      results.sort((a, b) => (b.favCount || 0) - (a.favCount || 0));
-  } else if (sortBy === 'price-asc') {
-      results.sort((a, b) => a.price - b.price);
-  } else if (sortBy === 'price-desc') {
-      results.sort((a, b) => b.price - a.price);
-  }
-  // 'default' 则保持原始 mockBooks 顺序 (results 本身就是按原始索引过滤出来的)
+    // 2. 任务 5：执行排序逻辑
+    if (sortBy === 'popular') {
+        results.sort((a, b) => (b.favCount || 0) - (a.favCount || 0));
+    } else if (sortBy === 'price-asc') {
+        results.sort((a, b) => a.price - b.price);
+    } else if (sortBy === 'price-desc') {
+        results.sort((a, b) => b.price - a.price);
+    }
+    // 'default' 则保持原始 mockBooks 顺序 (results 本身就是按原始索引过滤出来的)
 
-  // 3. 渲染结果
-  renderSearchResults(results);
+    // 3. 渲染结果
+    renderSearchResults(results);
 }
 
 // 4. 渲染搜索结果
 function renderSearchResults(books) {
-  const resultsContainer = document.getElementById('search-results');
-  const noResults = document.getElementById('no-results');
-  
-  if (!resultsContainer) return;
+    const resultsContainer = document.getElementById('search-results');
+    const noResults = document.getElementById('no-results');
 
-  if (books.length === 0) {
-    resultsContainer.innerHTML = '';
-    noResults.classList.remove('hidden');
-    return;
-  }
-  
-  noResults.classList.add('hidden');
-  
-  if (typeof bookCardTemplate === 'function') {
-      resultsContainer.innerHTML = books.map(bookCardTemplate).join('');
-  } else {
-      resultsContainer.innerHTML = books.map(book => `
+    if (!resultsContainer) return;
+
+    if (books.length === 0) {
+        resultsContainer.innerHTML = '';
+        noResults.classList.remove('hidden');
+        return;
+    }
+
+    noResults.classList.add('hidden');
+
+    if (typeof bookCardTemplate === 'function') {
+        resultsContainer.innerHTML = books.map(bookCardTemplate).join('');
+    } else {
+        resultsContainer.innerHTML = books.map(book => `
         <div class="bg-white rounded-lg shadow-md overflow-hidden p-4 book-card-item" data-id="${book.id}">
           <h3 class="font-bold text-brown-dark">${book.title}</h3>
           <p class="text-sm text-gray-600">${book.author}</p>
@@ -134,8 +140,40 @@ function renderSearchResults(books) {
           </div>
         </div>
       `).join('');
-  }
-  
-  if (typeof bindCartAndFavoriteEvents === 'function') bindCartAndFavoriteEvents();
-  if (typeof bindBookCardClickEvents === 'function') bindBookCardClickEvents();
+    }
+
+    if (typeof bindCartAndFavoriteEvents === 'function') bindCartAndFavoriteEvents();
+    if (typeof bindBookCardClickEvents === 'function') bindBookCardClickEvents();
+}
+
+/**
+ * 全局鉴权检查逻辑
+ * @param {Array} allowedRoles 允许访问该页面的角色列表
+ */
+function checkAuth(allowedRoles = []) {
+    const token = localStorage.getItem('auth_token');
+    const userStr = localStorage.getItem('current_user');
+
+    if (!token || !userStr) {
+        console.warn("Unauthorized access, redirecting to login.");
+        window.location.href = 'login.html';
+        return;
+    }
+
+    const user = JSON.parse(userStr);
+
+    // 如果指定了允许的角色且当前用户角色不在其中，则拦截
+    if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+        alert("Access Denied: You do not have permission to view this page.");
+        window.location.href = 'login.html';
+    }
+}
+
+/**
+ * 登出逻辑
+ */
+function logout() {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('current_user');
+    window.location.href = 'login.html';
 }

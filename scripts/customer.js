@@ -2,6 +2,7 @@
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
+  checkAuth(['customer']);
   initCart();
   initFavorites();
   renderDiscountBooks();
@@ -81,16 +82,56 @@ function bindEvents() {
       btn.classList.add('bg-brown', 'text-white');
 
       const status = btn.getAttribute('data-status');
-      const list = document.getElementById('orders-list');
-      if(list) {
-          list.innerHTML = `<p class="text-gray-600 text-center py-10">No ${status === 'all' ? '' : status} order records</p>`;
-      }
+      renderOrdersUI(status); // 关键：传入状态进行筛选渲染
     });
   });
 
   // 8. 清空购物车
   const clearBtn = document.getElementById('clear-cart');
   if (clearBtn) clearBtn.addEventListener('click', clearCart);
+
+  // 结算按钮绑定
+  const checkoutBtn = document.getElementById('proceed-checkout');
+  if (checkoutBtn) checkoutBtn.addEventListener('click', handleCheckout);
+
+  // 支付弹窗关闭
+  document.querySelectorAll('.close-payment').forEach(btn => {
+    btn.onclick = () => document.getElementById('payment-modal').classList.add('hidden');
+  });
+
+  // 合并支付按钮
+  const mergeBtn = document.getElementById('merge-payment-btn');
+  if (mergeBtn) mergeBtn.addEventListener('click', () => openPaymentModal(getSelectedOrderIds()));
+
+  // 确认支付
+  const confirmPayBtn = document.getElementById('confirm-payment-btn');
+  if (confirmPayBtn) confirmPayBtn.addEventListener('click', handlePaymentExecution);
+
+  // 全选逻辑
+  const selectAll = document.getElementById('select-all-orders');
+  if (selectAll) {
+    selectAll.onchange = (e) => {
+      document.querySelectorAll('.order-checkbox').forEach(cb => cb.checked = e.target.checked);
+      updateOrderFooterUI();
+    };
+  }
+
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      logout();
+    });
+  }
+
+  const categorySort = document.getElementById('category-sort-filter');
+  if (categorySort) {
+    categorySort.addEventListener('change', () => {
+      // 获取当前激活的分类按钮
+      const activeCategory = document.querySelector('.category-btn.bg-brown')?.getAttribute('data-category') || 'all';
+      renderCategoryBooks(activeCategory);
+    });
+  }
 }
 
 /**
@@ -99,19 +140,22 @@ function bindEvents() {
 function switchPage(pageId) {
   const pages = document.querySelectorAll('.page-content');
   pages.forEach(page => page.classList.add('hidden'));
-  
+
   const targetPage = document.getElementById(`${pageId}-page`);
   if (targetPage) {
     targetPage.classList.remove('hidden');
     targetPage.style.opacity = '0';
     setTimeout(() => {
-        targetPage.style.transition = 'opacity 0.3s ease';
-        targetPage.style.opacity = '1';
+      targetPage.style.transition = 'opacity 0.3s ease';
+      targetPage.style.opacity = '1';
     }, 50);
-    
-    // 如果切换到收藏页，执行刷新渲染
+
+    //执行刷新渲染
     if (pageId === 'favorites') {
       updateFavoritesUI();
+    }
+    if (pageId === 'member') {
+      updateMemberPageUI();
     }
   }
 
@@ -165,27 +209,35 @@ const bookCardTemplate = (book) => `
 
 function renderCategoryBooks(category) {
   const container = document.getElementById('category-books');
-  if(!container) return;
+  const sortVal = document.getElementById('category-sort-filter')?.value || 'default';
+  if (!container) return;
 
-  const filteredBooks = category === 'all' 
-    ? mockBooks 
-    : mockBooks.filter(book => 
-        book.category.toLowerCase().includes(category.toLowerCase())
-      );
+  // 1. 过滤逻辑
+  let filteredBooks = category === 'all'
+    ? [...mockBooks]
+    : mockBooks.filter(book =>
+      book.category.toLowerCase().includes(category.toLowerCase())
+    );
+
+  // 2. 排序逻辑 (TODO: 待替换为后端接口)
+  // 此处目前为前端纯逻辑排序
+  if (sortVal === 'fav-desc') {
+    filteredBooks.sort((a, b) => (b.favCount || 0) - (a.favCount || 0));
+  }
 
   if (filteredBooks.length === 0) {
     container.innerHTML = '<p class="text-center py-10 col-span-full text-gray-500 italic">No books found in this category.</p>';
     return;
   }
-  
+
   container.innerHTML = filteredBooks.map(bookCardTemplate).join('');
-  
+
   bindCartAndFavoriteEvents();
   bindBookCardClickEvents();
 }
 
 function renderDiscountBooks() {
-    // 逻辑同上
+  // 逻辑同上
 }
 
 // 购物车逻辑
@@ -203,7 +255,7 @@ function addToCart(bookId) {
   if (existingItemIndex > -1) {
     cart[existingItemIndex].quantity += 1;
   } else {
-    cart.push({ id: book.id, title: book.title, author: book.author, price: book.price, quantity: 1 });
+    cart.push({ id: book.id, title: book.title, author: book.author, price: book.price, storeName: book.storeName || "Main Headquarters", quantity: 1 });
   }
   localStorage.setItem('bookCart', JSON.stringify(cart));
   updateCartUI();
@@ -214,8 +266,8 @@ function updateCartUI() {
   const cartCount = document.getElementById('cart-count');
   const cartQuickCount = document.getElementById('cart-quick-count');
   const totalItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  if(cartCount) cartCount.textContent = totalItemCount;
-  if(cartQuickCount) cartQuickCount.textContent = totalItemCount;
+  if (cartCount) cartCount.textContent = totalItemCount;
+  if (cartQuickCount) cartQuickCount.textContent = totalItemCount;
 
   const cartEmpty = document.getElementById('cart-empty');
   const cartList = document.getElementById('cart-list');
@@ -224,20 +276,23 @@ function updateCartUI() {
   if (!cartList) return;
 
   if (cart.length === 0) {
-    if(cartEmpty) cartEmpty.classList.remove('hidden');
+    if (cartEmpty) cartEmpty.classList.remove('hidden');
     cartList.classList.add('hidden');
-    if(cartFooter) cartFooter.classList.add('hidden');
+    if (cartFooter) cartFooter.classList.add('hidden');
     return;
   }
 
-  if(cartEmpty) cartEmpty.classList.add('hidden');
+  if (cartEmpty) cartEmpty.classList.add('hidden');
   cartList.classList.remove('hidden');
-  if(cartFooter) cartFooter.classList.remove('hidden');
+  if (cartFooter) cartFooter.classList.remove('hidden');
 
   cartList.innerHTML = cart.map(item => `
     <div class="flex items-center justify-between p-4 bg-white border-b border-brown-light/30 rounded-lg shadow-sm mb-3">
         <div class="flex flex-col flex-1 cursor-pointer book-card-item" data-id="${item.id}">
           <h4 class="font-bold text-brown-dark">${item.title}</h4>
+          <p class="text-[10px] text-brown/60 flex items-center gap-1 mt-0.5">
+            <i class="fa fa-map-marker"></i> ${item.storeName}
+          </p>
           <p class="text-sm text-gray-600">${item.author}</p>
         </div>
         <div class="flex items-center gap-4">
@@ -254,47 +309,47 @@ function updateCartUI() {
 
   const cartTotal = document.getElementById('cart-total');
   const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  if(cartTotal) cartTotal.textContent = `¥${totalPrice.toFixed(2)}`;
+  if (cartTotal) cartTotal.textContent = `¥${totalPrice.toFixed(2)}`;
 
   bindCartItemEvents();
-  bindBookCardClickEvents(); 
+  bindBookCardClickEvents();
 }
 
 function bindCartItemEvents() {
-    document.querySelectorAll('.cart-minus').forEach(btn => {
-        btn.onclick = () => {
-            const id = parseInt(btn.dataset.id);
-            const item = cart.find(i => i.id === id);
-            if(item.quantity > 1) item.quantity--;
-            else cart = cart.filter(i => i.id !== id);
-            localStorage.setItem('bookCart', JSON.stringify(cart));
-            updateCartUI();
-        };
-    });
-    document.querySelectorAll('.cart-plus').forEach(btn => {
-        btn.onclick = () => {
-            const id = parseInt(btn.dataset.id);
-            cart.find(i => i.id === id).quantity++;
-            localStorage.setItem('bookCart', JSON.stringify(cart));
-            updateCartUI();
-        };
-    });
-    document.querySelectorAll('.cart-remove').forEach(btn => {
-        btn.onclick = () => {
-            const id = parseInt(btn.dataset.id);
-            cart = cart.filter(i => i.id !== id);
-            localStorage.setItem('bookCart', JSON.stringify(cart));
-            updateCartUI();
-        };
-    });
+  document.querySelectorAll('.cart-minus').forEach(btn => {
+    btn.onclick = () => {
+      const id = parseInt(btn.dataset.id);
+      const item = cart.find(i => i.id === id);
+      if (item.quantity > 1) item.quantity--;
+      else cart = cart.filter(i => i.id !== id);
+      localStorage.setItem('bookCart', JSON.stringify(cart));
+      updateCartUI();
+    };
+  });
+  document.querySelectorAll('.cart-plus').forEach(btn => {
+    btn.onclick = () => {
+      const id = parseInt(btn.dataset.id);
+      cart.find(i => i.id === id).quantity++;
+      localStorage.setItem('bookCart', JSON.stringify(cart));
+      updateCartUI();
+    };
+  });
+  document.querySelectorAll('.cart-remove').forEach(btn => {
+    btn.onclick = () => {
+      const id = parseInt(btn.dataset.id);
+      cart = cart.filter(i => i.id !== id);
+      localStorage.setItem('bookCart', JSON.stringify(cart));
+      updateCartUI();
+    };
+  });
 }
 
 function clearCart() {
-    if(confirm('Clear cart?')) {
-        cart = [];
-        localStorage.setItem('bookCart', JSON.stringify(cart));
-        updateCartUI();
-    }
+  if (confirm('Clear cart?')) {
+    cart = [];
+    localStorage.setItem('bookCart', JSON.stringify(cart));
+    updateCartUI();
+  }
 }
 
 // 收藏逻辑 (修复点：数值同步与状态持久化)
@@ -322,16 +377,16 @@ function toggleFavorite(bookId) {
     book.favCount = (book.favCount || 0) + 1; // 数值即时 +1
     showAlert('Added to favorites!');
   }
-  
+
   // 状态持久化
   localStorage.setItem('bookFavorites', JSON.stringify(favorites));
-  
+
   // 全局同步 UI
   updateFavoriteButtons();
-  
+
   // 如果当前在收藏页，则刷新列表
-  if(!document.getElementById('favorites-page').classList.contains('hidden')) {
-      updateFavoritesUI();
+  if (!document.getElementById('favorites-page').classList.contains('hidden')) {
+    updateFavoritesUI();
   }
 }
 
@@ -341,8 +396,8 @@ function updateFavoriteButtons() {
     const id = parseInt(btn.dataset.id);
     const isFav = favorites.some(f => f.id === id);
     const icon = btn.querySelector('i');
-    if(icon) {
-        icon.className = isFav ? 'fa fa-heart text-red-500' : 'fa fa-heart-o';
+    if (icon) {
+      icon.className = isFav ? 'fa fa-heart text-red-500' : 'fa fa-heart-o';
     }
   });
 
@@ -357,20 +412,20 @@ function updateFavoriteButtons() {
 }
 
 function updateFavoritesUI() {
-    const container = document.getElementById('favorites-list');
-    if(!container) return;
-    
-    if(favorites.length === 0) {
-        container.innerHTML = '<p class="col-span-full text-center py-10 text-gray-500">No favorite books yet. Start exploring!</p>';
-        return;
-    }
-    
-    // 使用统一卡片模板，确保样式互通
-    container.innerHTML = favorites.map(book => bookCardTemplate(book)).join('');
-    
-    // 重新绑定交互互通事件
-    bindCartAndFavoriteEvents();
-    bindBookCardClickEvents();
+  const container = document.getElementById('favorites-list');
+  if (!container) return;
+
+  if (favorites.length === 0) {
+    container.innerHTML = '<p class="col-span-full text-center py-10 text-gray-500">No favorite books yet. Start exploring!</p>';
+    return;
+  }
+
+  // 使用统一卡片模板，确保样式互通
+  container.innerHTML = favorites.map(book => bookCardTemplate(book)).join('');
+
+  // 重新绑定交互互通事件
+  bindCartAndFavoriteEvents();
+  bindBookCardClickEvents();
 }
 
 // 通用绑定
@@ -411,4 +466,277 @@ function showAlert(message) {
   document.getElementById('alertText').textContent = message;
   alertElement.classList.replace('opacity-0', 'opacity-100');
   setTimeout(() => alertElement.classList.replace('opacity-100', 'opacity-0'), 3000);
+}
+
+/**
+ * 任务 3.1：结算逻辑
+ */
+function handleCheckout() {
+  if (cart.length === 0) return showAlert("Cart is empty");
+
+  const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  const newOrder = {
+    orderId: 'ORD-' + Date.now().toString().slice(-8),
+    items: [...cart],
+    total: totalPrice,
+    date: new Date().toLocaleString(),
+    status: 'created', // 状态：created, paid, cancelled
+    cancelReason: null, // 取消原因
+    storeName: cart[0].storeName
+  };
+
+  let orders = JSON.parse(localStorage.getItem('bookOrders') || '[]');
+  orders.unshift(newOrder);
+  localStorage.setItem('bookOrders', JSON.stringify(orders));
+
+  cart = [];
+  localStorage.setItem('bookCart', JSON.stringify(cart));
+  updateCartUI();
+
+  showAlert("Order created! Please pay within 30 minutes.");
+  switchPage('orders'); // switchPage 会触发 renderOrdersUI('all')
+}
+
+/**
+ * 任务 3.2：订单页 UI 渲染
+ */
+function renderOrdersUI(filterStatus = 'all') {
+  console.log(`[Debug] Rendering orders with filter: ${filterStatus}`);
+  const list = document.getElementById('orders-list');
+  const footer = document.getElementById('orders-footer');
+
+  const allOrders = JSON.parse(localStorage.getItem('bookOrders') || '[]');
+
+  // 执行筛选逻辑
+  const filteredOrders = filterStatus === 'all'
+    ? allOrders
+    : allOrders.filter(o => o.status === filterStatus);
+
+  if (filteredOrders.length === 0) {
+    list.innerHTML = `<div class="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
+            <i class="fa fa-file-o text-4xl text-gray-200 mb-3"></i>
+            <p class="text-gray-500">No ${filterStatus === 'all' ? '' : filterStatus} orders found.</p>
+        </div>`;
+    if (footer) footer.classList.add('hidden');
+    return;
+  }
+
+  if (footer) footer.classList.remove('hidden');
+
+  list.innerHTML = filteredOrders.map(order => {
+    // 状态样式映射
+    const statusMap = {
+      'created': { text: 'Pending Payment', class: 'bg-orange-100 text-orange-700', icon: 'fa-clock-o' },
+      'paid': { text: 'Paid & Processing', class: 'bg-green-100 text-green-700', icon: 'fa-check-circle' },
+      'cancelled': { text: 'Cancelled', class: 'bg-red-100 text-red-700', icon: 'fa-times-circle' }
+    };
+    const st = statusMap[order.status] || statusMap['created'];
+
+    return `
+        <div class="border border-brown-light/20 rounded-xl p-5 shadow-sm bg-white">
+            <div class="flex items-start gap-4">
+                <input type="checkbox" class="order-checkbox w-5 h-5 mt-1 accent-brown" 
+                    ${order.status !== 'created' ? 'disabled' : ''} 
+                    data-id="${order.orderId}" onchange="updateOrderFooterUI()">
+                <div class="flex-1">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <span class="text-xs font-bold text-gray-400">ID: ${order.orderId}</span>
+                            <p class="text-sm text-gray-500">${order.date}</p>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold ${st.class} flex items-center gap-1">
+                                <i class="fa ${st.icon}"></i> ${st.text}
+                            </span>
+                            ${order.cancelReason ? `<span class="text-[10px] text-red-400 mt-1">Reason: ${order.cancelReason}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 mb-4 overflow-x-auto py-1">
+                        ${order.items.map(item => `<div class="w-12 h-16 bg-brown-cream rounded border flex-shrink-0 flex items-center justify-center text-[8px] p-1 text-center">${item.title}</div>`).join('')}
+                    </div>
+                    <div class="flex justify-between items-end border-t border-gray-50 pt-4">
+                        <div class="text-xs text-gray-400"><i class="fa fa-map-marker"></i> ${order.storeName}</div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-lg font-bold text-brown">¥${order.total.toFixed(2)}</span>
+                            ${order.status === 'created' ? `
+                                <button onclick="handleCancelOrder('${order.orderId}')" class="text-gray-400 hover:text-red-500 text-sm font-medium transition-colors">Cancel</button>
+                                <button onclick="openPaymentModal(['${order.orderId}'])" class="bg-brown text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-brown-dark transition-all">Pay Now</button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+  }).join('');
+}
+
+function getSelectedOrderIds() {
+  return Array.from(document.querySelectorAll('.order-checkbox:checked')).map(cb => cb.dataset.id);
+}
+
+function updateOrderFooterUI() {
+  const selectedIds = getSelectedOrderIds();
+  const orders = JSON.parse(localStorage.getItem('bookOrders') || '[]');
+  const selectedOrders = orders.filter(o => selectedIds.includes(o.orderId));
+
+  document.getElementById('selected-orders-count').textContent = selectedIds.length;
+  const total = selectedOrders.reduce((sum, o) => sum + o.total, 0);
+  document.getElementById('combined-total-price').textContent = `¥${total.toFixed(2)}`;
+  document.getElementById('merge-payment-btn').disabled = selectedIds.length === 0;
+}
+
+/**
+ * 任务 3.3：支付逻辑
+ */
+let pendingPayIds = [];
+function openPaymentModal(orderIds) {
+  if (!orderIds || orderIds.length === 0) return;
+  pendingPayIds = orderIds;
+  const orders = JSON.parse(localStorage.getItem('bookOrders') || '[]');
+  const targetOrders = orders.filter(o => orderIds.includes(o.orderId));
+
+  const summaryList = document.getElementById('payment-summary-list');
+  summaryList.innerHTML = targetOrders.map(o => `
+        <div class="flex justify-between text-sm">
+            <span class="text-gray-600">${o.orderId}</span>
+            <span class="font-bold">¥${o.total.toFixed(2)}</span>
+        </div>
+    `).join('');
+
+  const total = targetOrders.reduce((sum, o) => sum + o.total, 0);
+  document.getElementById('payment-modal-total').textContent = `¥${total.toFixed(2)}`;
+  document.getElementById('payment-modal').classList.remove('hidden');
+}
+
+async function handlePaymentExecution() {
+  const btnText = document.getElementById('pay-btn-text');
+  const spinner = document.getElementById('pay-spinner');
+
+  // UI Loading
+  btnText.textContent = 'Processing...';
+  spinner.classList.remove('hidden');
+
+  // TODO: 待替换为 payOrderAPI
+  // 模拟 1.5s 网络延迟
+  await new Promise(resolve => setTimeout(resolve, 1500));
+
+  // 更新本地订单状态
+  let orders = JSON.parse(localStorage.getItem('bookOrders') || '[]');
+  orders = orders.map(o => {
+    if (pendingPayIds.includes(o.orderId)) {
+      o.status = 'paid';
+    }
+    return o;
+  });
+  localStorage.setItem('bookOrders', JSON.stringify(orders));
+
+  // 完成处理
+  document.getElementById('payment-modal').classList.add('hidden');
+  btnText.textContent = 'Confirm Payment';
+  spinner.classList.add('hidden');
+
+  showAlert("Payment successful!");
+  renderOrdersUI();
+  updateOrderFooterUI();
+}
+
+/**
+ * 处理取消订单
+ */
+function handleCancelOrder(orderId) {
+  if (!confirm("Are you sure you want to cancel this order?")) return;
+
+  let orders = JSON.parse(localStorage.getItem('bookOrders') || '[]');
+  const orderIndex = orders.findIndex(o => o.orderId === orderId);
+
+  if (orderIndex > -1) {
+    orders[orderIndex].status = 'cancelled';
+    orders[orderIndex].cancelReason = 'User Cancelled'; // TODO: 可扩展为弹窗选择原因
+    localStorage.setItem('bookOrders', JSON.stringify(orders));
+
+    showAlert("Order cancelled.");
+    // 获取当前处于激活状态的标签
+    const activeStatus = document.querySelector('.order-status-btn.bg-brown')?.dataset.status || 'all';
+    renderOrdersUI(activeStatus);
+  }
+}
+/**
+ * 任务：会员等级与积分逻辑
+ */
+
+// 1. 等级配置表
+const MEMBER_TIERS = [
+  { level: 'Basic', minSpent: 0, discount: 1.0, icon: 'fa-user-o', color: 'text-gray-400' },
+  { level: 'Silver', minSpent: 500, discount: 0.9, icon: 'fa-shield', color: 'text-blue-400' },
+  { level: 'Gold', minSpent: 2000, discount: 0.85, icon: 'fa-trophy', color: 'text-yellow-500' },
+  { level: 'Diamond', minSpent: 5000, discount: 0.8, icon: 'fa-diamond', color: 'text-purple-500' }
+];
+
+// 2. 根据消费金额获取会员信息
+function getMemberStatus(totalSpent) {
+  let currentTier = MEMBER_TIERS[0];
+  for (let i = MEMBER_TIERS.length - 1; i >= 0; i--) {
+    if (totalSpent >= MEMBER_TIERS[i].minSpent) {
+      currentTier = MEMBER_TIERS[i];
+      break;
+    }
+  }
+  return currentTier;
+}
+
+// 3. 更新会员中心 UI
+function updateMemberPageUI() {
+  // TODO: 待替换为获取当前登录用户信息的后端接口
+  const mockUser = JSON.parse(localStorage.getItem('current_user')) || { name: 'Guest' };
+  const orders = JSON.parse(localStorage.getItem('bookOrders') || '[]');
+
+  /**
+     * TODO: 待替换为后端接口返回对象
+     * const response = await fetch('/api/user/profile');
+     * const userData = await response.json();
+     */
+  const userData = {
+    userId: 1001,
+    username: "ZhangSan",
+    totalSpent: 2850.50, // 核心字段：累计消费总额
+    points: 2850,        // 核心字段：当前可用积分
+    memberLevel: "Gold", // 冗余字段
+    nextTierProgress: 150
+  };
+
+  // 计算累计消费（仅已支付订单）
+  const totalSpent = userData.totalSpent || orders
+        .filter(o => o.status === 'paid')
+        .reduce((sum, o) => sum + o.total, 0);
+
+  // 积分逻辑：1元 = 1积分
+  const points = Math.floor(totalSpent);
+  const status = getMemberStatus(totalSpent);
+
+  // 填充数据
+  document.getElementById('display-user-name').textContent = mockUser.username || mockUser.name;
+  document.getElementById('member-total-spent').textContent = `¥${totalSpent.toFixed(2)}`;
+  document.getElementById('member-points').textContent = points.toLocaleString();
+  document.getElementById('member-level-badge').textContent = status.level;
+  document.getElementById('member-discount-text').textContent = `${Math.round((1 - status.discount) * 100)}%`;
+
+  // 渲染等级卡片
+  const tierContainer = document.getElementById('member-tier-cards');
+  if (tierContainer) {
+    tierContainer.innerHTML = MEMBER_TIERS.map(tier => {
+      const isCurrent = status.level === tier.level;
+      const isLocked = totalSpent < tier.minSpent;
+      return `
+                <div class="p-4 border-2 rounded-xl transition-all ${isCurrent ? 'border-brown bg-brown/5 shadow-md' : 'border-gray-100 opacity-60'}">
+                    <i class="fa ${tier.icon} ${tier.color} text-2xl mb-2"></i>
+                    <h4 class="font-bold text-brown-dark">${tier.level}</h4>
+                    <p class="text-xs text-gray-500 mt-1">Spend ¥${tier.minSpent}+</p>
+                    <div class="mt-3 pt-3 border-t border-gray-100">
+                        <span class="text-sm font-medium text-brown">${Math.round(tier.discount * 100) / 10} 折 Discount</span>
+                    </div>
+                </div>
+            `;
+    }).join('');
+  }
 }
