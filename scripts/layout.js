@@ -89,7 +89,8 @@ function renderStoreSidebar(role, activePage) {
 
         return `
             <div class="sidebar-item sidebar-item-public-hover ${activeClass} relative" 
-                 data-page="${item.id}">
+                 data-page="${item.id}"
+                 onclick="switchPage('${item.id}')"> <!-- 添加这一行 -->
                 <i class="fa ${item.icon} text-xl w-6 text-center"></i>
                 <span class="sidebar-text ml-3">${item.text}</span>
                 ${badgeHtml}
@@ -147,8 +148,11 @@ function renderAdminSidebar(role, activePage) {
 
     const menuHtml = items.map(item => {
         const isActive = item.id === activePage;
+        // 修复点：在 div 标签中添加 onclick="switchPage('${item.id}')"
         return `
-            <div class="${baseLinkStyle} ${isActive ? activeLinkStyle : ''}" data-page="${item.id}">
+            <div class="${baseLinkStyle} ${isActive ? activeLinkStyle : ''}" 
+                 data-page="${item.id}" 
+                 onclick="switchPage('${item.id}')">
                 <i class="fa ${item.icon} w-5 text-center"></i>
                 <span>${item.text}</span>
             </div>
@@ -169,6 +173,7 @@ function renderAdminSidebar(role, activePage) {
             </div>
         </aside>
     `;
+
 }
 
 function renderAdminHeader(role) {

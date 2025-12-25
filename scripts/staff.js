@@ -316,15 +316,7 @@ function renderInventory(data) {
     bindDynamicEvents();
 }
 
-// 确保 bindDynamicEvents 函数存在
-function bindDynamicEvents() {
-    document.querySelectorAll('.delete-book-btn').forEach(btn => {
-        btn.onclick = function () {
-            const id = this.getAttribute('data-id');
-            deleteInventoryBatch(id); // 假设你后面写了这个函数
-        };
-    });
-}
+
 
 
 function updateDashboardStats(data) {
@@ -417,7 +409,6 @@ function renderStockRequests() {
 // 绑定动态生成的按钮事件 (Edit/Delete)
 function bindDynamicEvents() {
     document.querySelectorAll('.edit-book-btn').forEach(btn => {
-        // 防止重复绑定，先移除旧的 (简单实现：这里其实每次重新渲染都会是新元素，所以直接绑定即可)
         btn.onclick = function() {
             const id = this.getAttribute('data-id');
             editBook(id);
@@ -425,7 +416,7 @@ function bindDynamicEvents() {
     });
 
     document.querySelectorAll('.delete-book-btn').forEach(btn => {
-        btn.onclick = function() {
+        btn.onclick = function () {
             const id = this.getAttribute('data-id');
             deleteBook(id);
         };
@@ -434,7 +425,7 @@ function bindDynamicEvents() {
 
 // 编辑书籍：填充表单
 function editBook(id) {
-    const book = books.find(b => b.id === parseInt(id));
+    const book = globalBooks.find(b => b.batch_id == id);
     const bookModal = document.getElementById('book-modal');
     if (book && bookModal) {
         document.getElementById('modal-title').textContent = 'Edit Book';
