@@ -35,31 +35,67 @@ window.switchPage = function(pageId) {
     });
 };
 
+const CURRENT_STORE_ID = 1; // 假设当前登录的是 1号店 (Downtown Store)
+let globalBooks = [];       // 用于前端搜索和过滤的本地缓存
 /**
  * ------------------------------------------------------------------
  * 2. 模拟数据 (Sample Data)
  * ------------------------------------------------------------------
  */
-const books = [
-    { id: 1, title: "The Great Gatsby", author: "F. Scott Fitzgerald", isbn: "9780743273565", category: "fiction", price: 15.99, stock: 12 },
-    { id: 2, title: "Sapiens: A Brief History of Humankind", author: "Yuval Noah Harari", isbn: "9780062316097", category: "non-fiction", price: 19.99, stock: 8 },
-    { id: 3, title: "A Brief History of Time", author: "Stephen Hawking", isbn: "9780553380163", category: "science", price: 14.99, stock: 3 },
-    { id: 4, title: "1984", author: "George Orwell", isbn: "9780451524935", category: "fiction", price: 12.99, stock: 25 },
-    { id: 5, title: "The Diary of a Young Girl", author: "Anne Frank", isbn: "9780553573404", category: "biography", price: 11.99, stock: 5 },
-    { id: 6, title: "To Kill a Mockingbird", author: "Harper Lee", isbn: "9780061120084", category: "fiction", price: 13.99, stock: 18 },
-    { id: 7, title: "The Theory of Everything", author: "Stephen Hawking", isbn: "9780553380163", category: "science", price: 16.99, stock: 2 },
-    { id: 8, title: "Educated", author: "Tara Westover", isbn: "9780399590504", category: "biography", price: 17.99, stock: 10 },
-    { id: 9, title: "The Guns of August", author: "Barbara W. Tuchman", isbn: "9780345476098", category: "history", price: 21.99, stock: 7 },
-    { id: 10, title: "Pride and Prejudice", author: "Jane Austen", isbn: "9780141439518", category: "fiction", price: 9.99, stock: 32 }
-];
+//const books = [
+//    { id: 1, title: "The Great Gatsby", author: "F. Scott Fitzgerald", isbn: "9780743273565", category: "fiction", price: 15.99, stock: 12 },
+//    { id: 2, title: "Sapiens: A Brief History of Humankind", author: "Yuval Noah Harari", isbn: "9780062316097", category: "non-fiction", price: 19.99, stock: 8 },
+//    { id: 3, title: "A Brief History of Time", author: "Stephen Hawking", isbn: "9780553380163", category: "science", price: 14.99, stock: 3 },
+//    { id: 4, title: "1984", author: "George Orwell", isbn: "9780451524935", category: "fiction", price: 12.99, stock: 25 },
+//    { id: 5, title: "The Diary of a Young Girl", author: "Anne Frank", isbn: "9780553573404", category: "biography", price: 11.99, stock: 5 },
+//    { id: 6, title: "To Kill a Mockingbird", author: "Harper Lee", isbn: "9780061120084", category: "fiction", price: 13.99, stock: 18 },
+//    { id: 7, title: "The Theory of Everything", author: "Stephen Hawking", isbn: "9780553380163", category: "science", price: 16.99, stock: 2 },
+//    { id: 8, title: "Educated", author: "Tara Westover", isbn: "9780399590504", category: "biography", price: 17.99, stock: 10 },
+//    { id: 9, title: "The Guns of August", author: "Barbara W. Tuchman", isbn: "9780345476098", category: "history", price: 21.99, stock: 7 },
+//    { id: 10, title: "Pride and Prejudice", author: "Jane Austen", isbn: "9780141439518", category: "fiction", price: 9.99, stock: 32 }
+//];
 
-const orders = [
-    { id: 1001, customer: "John Smith", date: "2023-06-15", items: 3, total: 45.97, status: "shipped" },
-    { id: 1002, customer: "Jane Doe", date: "2023-06-16", items: 2, total: 32.50, status: "processing" },
-    { id: 1003, customer: "Robert Johnson", date: "2023-06-16", items: 1, total: 15.99, status: "pending" },
-    { id: 1004, customer: "Emily Davis", date: "2023-06-15", items: 4, total: 67.96, status: "delivered" },
-    { id: 1005, customer: "Michael Brown", date: "2023-06-14", items: 2, total: 29.98, status: "cancelled" }
-];
+// A. 获取库存数据的函数
+async function fetchInventory() {
+    try {
+        // 请求 PHP API
+        const response = await fetch(`../api/staff/inventory.php?store_id=${CURRENT_STORE_ID}`);
+        const result = await response.json();
+
+        if (result.success) {
+            globalBooks = result.data; // 保存数据供 render 使用
+            renderInventory(globalBooks);
+            renderLowStockItems(globalBooks);
+            updateDashboardStats(globalBooks); // 更新仪表盘数字
+        } else {
+            console.error('Error:', result.message);
+        }
+    } catch (error) {
+        console.error('Fetch error:', error);
+    }
+}
+//const orders = [
+//    { id: 1001, customer: "John Smith", date: "2023-06-15", items: 3, total: 45.97, status: "shipped" },
+//    { id: 1002, customer: "Jane Doe", date: "2023-06-16", items: 2, total: 32.50, status: "processing" },
+//    { id: 1003, customer: "Robert Johnson", date: "2023-06-16", items: 1, total: 15.99, status: "pending" },
+//    { id: 1004, customer: "Emily Davis", date: "2023-06-15", items: 4, total: 67.96, status: "delivered" },
+//    { id: 1005, customer: "Michael Brown", date: "2023-06-14", items: 2, total: 29.98, status: "cancelled" }
+//];
+
+// B. 获取订单数据的函数
+async function fetchOrders() {
+    try {
+        const response = await fetch(`../api/staff/orders.php?store_id=${CURRENT_STORE_ID}`);
+        const result = await response.json();
+
+        if (result.success) {
+            renderOrders(result.data);
+            renderRecentOrders(result.data); // 复用数据渲染仪表盘
+        }
+    } catch (error) {
+        console.error('Fetch error:', error);
+    }
+}
 
 const stockRequests = [
     { id: 501, dateRequested: "2023-06-10", items: 5, status: "pending", expectedDelivery: "2023-06-20" },
@@ -83,10 +119,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 渲染所有数据表格
-    renderRecentOrders();
-    renderLowStockItems();
-    renderInventory();
-    renderOrders();
+    // 替换原来的 render 调用，改为 fetch
+    fetchInventory();
+    fetchOrders();
     renderStockRequests();
 
     // 绑定页面内部的事件 (Modal, Filters 等)
@@ -232,48 +267,81 @@ function renderLowStockItems() {
     bindDynamicEvents(); // 绑定动态生成的按钮事件
 }
 
-// 渲染 Inventory: 书籍列表
-function renderInventory() {
+
+// scripts/staff.js 的修正片段
+
+function renderInventory(data) {
     const inventoryList = document.getElementById('inventory-list');
     const totalCount = document.getElementById('total-inventory-count');
-    const paginationTotal = document.getElementById('pagination-total');
-    
-    if (!inventoryList) return;
-    
-    inventoryList.innerHTML = '';
-    if (totalCount) totalCount.textContent = books.length;
-    if (paginationTotal) paginationTotal.textContent = books.length;
 
-    books.forEach(book => {
+    if (!inventoryList) return;
+    inventoryList.innerHTML = ''; // 清空原有内容
+
+    if (totalCount) totalCount.textContent = data.length;
+
+    if (data.length === 0) {
+        inventoryList.innerHTML = '<tr><td colspan="8" class="text-center py-4">No inventory found</td></tr>';
+        return;
+    }
+
+    data.forEach(item => {
+        // 根据库存数量决定颜色
+        const stock = parseInt(item.quantity);
         let stockStatus = 'high';
-        if (book.stock <= 5) stockStatus = 'low';
-        else if (book.stock <= 20) stockStatus = 'medium';
+        if (stock <= 5) stockStatus = 'low';
+        else if (stock <= 20) stockStatus = 'medium';
 
         const row = document.createElement('tr');
+        // 注意：这里使用的是 PHP 返回的字段名 (book_name, publisher 等)
         row.innerHTML = `
-            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${book.title}</td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${book.author}</td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${book.isbn}</td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${capitalize(book.category)}</td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">¥${book.price.toFixed(2)}</td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${book.stock}</td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${item.book_name}</td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${item.publisher || '-'}</td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${item.ISBN}</td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${item.bingding || 'Paperback'}</td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">¥${parseFloat(item.unit_price).toFixed(2)}</td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${stock}</td>
             <td class="px-4 py-3 whitespace-nowrap">
                 <span class="status-${stockStatus}">${capitalize(stockStatus)}</span>
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-sm">
-                <button class="text-primary hover:text-primary/80 mr-3 edit-book-btn" data-id="${book.id}">
-                    <i class="fa fa-pencil"></i>
-                </button>
-                <button class="text-red-600 hover:text-red-700 delete-book-btn" data-id="${book.id}">
-                    <i class="fa fa-trash"></i>
+                <button class="text-red-600 hover:text-red-700 delete-book-btn" data-id="${item.batch_id}">
+                    <i class="fa fa-trash"></i> Delete
                 </button>
             </td>
         `;
         inventoryList.appendChild(row);
     });
 
+    // 绑定新生成的按钮事件
     bindDynamicEvents();
 }
+
+// 确保 bindDynamicEvents 函数存在
+function bindDynamicEvents() {
+    document.querySelectorAll('.delete-book-btn').forEach(btn => {
+        btn.onclick = function () {
+            const id = this.getAttribute('data-id');
+            deleteInventoryBatch(id); // 假设你后面写了这个函数
+        };
+    });
+}
+
+
+function updateDashboardStats(data) {
+    // Calculate totals from the live data
+    const totalBooks = data.reduce((sum, item) => sum + parseInt(item.quantity || 0), 0);
+    const lowStockCount = data.filter(item => parseInt(item.quantity) <= 5).length;
+
+    // Update DOM elements
+    const totalEl = document.getElementById('total-books');
+    const lowStockEl = document.getElementById('low-stock-books');
+
+    if (totalEl) totalEl.textContent = totalBooks;
+    if (lowStockEl) lowStockEl.textContent = lowStockCount;
+
+    // Note: Pending orders and sales would typically come from fetchOrders()
+}
+
 
 // 渲染 Orders: 订单列表
 function renderOrders() {
