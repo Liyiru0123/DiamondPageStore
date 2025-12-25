@@ -11,6 +11,34 @@
   <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
   <link rel="stylesheet" href="../styles/global.css">
 
+  <!-- 在各页面 head 标签最顶部插入 -->
+  <script>
+    (function () {
+      const token = localStorage.getItem('auth_token');
+      const role = localStorage.getItem('user_role');
+      const currentPage = window.location.pathname.split('/').pop();
+
+      // 1. 基础检查：无 Token 直接回退
+      if (!token) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      // 2. 角色越权检查 (可选增强)
+      const roleRouteMap = {
+        'customer': 'customer.html',
+        'staff': 'staff.html',
+        'manager': 'manager.html',
+        'finance': 'finance.html'
+      };
+
+      // 如果当前文件名不是该角色应属的页面，且不是 login.html，则强制纠正
+      if (roleRouteMap[role] && currentPage !== roleRouteMap[role] && currentPage !== 'login.html') {
+        console.warn("Access denied: Redirecting to authorized page.");
+        window.location.href = roleRouteMap[role];
+      }
+    })();
+  </script>
   <!-- 2. 引入布局生成器 -->
   <script src="../scripts/layout.js"></script>
 
@@ -27,13 +55,6 @@
     }
   </style>
 
-  <script>
-    // 立即执行检查，防止未授权内容闪烁
-    (function () {
-      const token = localStorage.getItem('auth_token');
-      if (!token) window.location.href = 'login.html';
-    })();
-  </script>
 </head>
 
 <body class="bg-brown-cream min-h-screen flex overflow-x-hidden font-serif">

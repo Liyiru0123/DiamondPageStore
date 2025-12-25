@@ -2,6 +2,21 @@
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    // 在 login.js 的 e.preventDefault() 之后
+    const btn = document.getElementById('login-submit-btn');
+    const spinner = document.getElementById('login-spinner');
+
+    // 提交时显示加载，但不删除文字
+    if (btn && spinner) {
+        btn.disabled = true;
+        spinner.classList.remove('hidden');
+    }
+
+    // ... 逻辑执行完后恢复 ...
+    if (btn && spinner) {
+        btn.disabled = false;
+        spinner.classList.add('hidden');
+    }
 
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
@@ -19,23 +34,28 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         };
     };
 
+    // 定位到 login.js 中 mockLoginAPI 后的 try-catch 块内
     try {
         const response = await mockLoginAPI({ username, password, role });
 
         if (response.success) {
-            // 存储鉴权信息
+            // 1. 存储鉴权信息与角色状态
             localStorage.setItem('auth_token', response.token);
             localStorage.setItem('current_user', JSON.stringify(response.user));
+            localStorage.setItem('user_role', response.user.role); // 显式存储角色方便读取
 
-            // 根据角色跳转
+            // 2. 分发路由跳转
             const routes = {
-                customer: 'customer.html',
-                staff: 'staff.html',
-                manager: 'manager.html',
-                finance: 'finance.html'
+                'customer': 'customer.html',
+                'staff': 'staff.html',
+                'manager': 'manager.html',
+                'finance': 'finance.html'
             };
-            
-            window.location.href = routes[role] || 'customer.html';
+
+            // 获取目标页面，默认跳转到 customer
+            const targetPage = routes[response.user.role] || 'customer.html';
+            window.location.href = targetPage;
+
         } else {
             alert("Login failed. Please check your credentials.");
         }
