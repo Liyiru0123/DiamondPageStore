@@ -1,11 +1,10 @@
+// 财务系统核心功能
+
 // Add status styles
 function addStatusStyles() {
     const style = document.createElement('style');
     style.textContent = `
-        .status-created { background-color: #dbeafe; color: #1e40af; }
-        .status-paid { background-color: #dcfce7; color: #166534; }
-        .status-cancelled { background-color: #fee2e2; color: #b91c1c; }
-        .status-refunded { background-color: #fef3c7; color: #92400e; }
+        /* 发票状态样式保持不变 */
         .invoice-draft { background-color: #f3f4f6; color: #374151; }
         .invoice-sent { background-color: #dbeafe; color: #1e40af; }
         .invoice-paid { background-color: #dcfce7; color: #166534; }
@@ -69,178 +68,167 @@ function addStatusStyles() {
                 display: none !important;
             }
         }
+        
+        /* 侧边栏高亮样式 */
+        .sidebar-link.active {
+            background-color: rgba(210, 180, 140, 0.3) !important;
+            color: #8B5A2B !important;
+            font-weight: 500 !important;
+        }
+        
+        /* 总收入卡片样式 */
+        .total-revenue-card {
+            background: linear-gradient(135deg, #8B5A2B 0%, #D2B48C 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 10px 20px rgba(139, 90, 43, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .total-revenue-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(139, 90, 43, 0.3);
+        }
+        
+        .revenue-trend-up {
+            color: #10B981;
+        }
+        
+        .revenue-trend-down {
+            color: #EF4444;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* 日期选择器样式 */
+        .date-range-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .date-input {
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #374151;
+            background-color: white;
+            transition: all 0.3s;
+        }
+        
+        .date-input:focus {
+            outline: none;
+            border-color: #8B5A2B;
+            box-shadow: 0 0 0 3px rgba(139, 90, 43, 0.1);
+        }
+        
+        /* 修复图表容器样式 */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* 确保图表响应式 */
+        canvas {
+            display: block;
+            max-width: 100%;
+            height: auto !important;
+        }
+        
+        /* 紧凑日期选择器 */
+        .compact-date-selector {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .compact-date-input {
+            padding: 6px 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            font-size: 13px;
+            max-width: 120px;
+        }
+        
+        /* 饼图容器样式 - 增加高度让饼图更大 */
+        .pie-chart-container {
+            position: relative;
+            width: 100%;
+            height: 380px !important; /* 增加高度，让饼图更大 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* 饼图画布样式 - 让饼图更大 */
+        .pie-chart-canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        
+        @media (max-width: 768px) {
+            .compact-date-selector {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .compact-date-input {
+                max-width: 100%;
+            }
+            
+            .pie-chart-container {
+                height: 350px !important; /* 移动端适当调整 */
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .pie-chart-container {
+                height: 400px !important; /* 桌面端更大 */
+            }
+        }
     `;
     document.head.appendChild(style);
 }
 
-// Initialize date display
-function initDateDisplay() {
-    const now = new Date();
-    const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-    const dateElem = document.getElementById('current-date');
-    if (dateElem) dateElem.textContent = now.toLocaleDateString('en-US', options);
-}
-
 // Global chart instances management
-let overviewIncomeTrendChart = null;
-let bookTypeChartInstance = null;
-let trendTimePeriod = 'weekly';
+let paymentMethodPieChart = null;
+let revenueByDateChart = null;
+let purchaseCostByDateChart = null;
 
-// 计算待处理发票数量
-function updatePendingInvoicesCount() {
-    const pendingInvoices = Object.values(invoiceData).filter(invoice => 
-        invoice.status === 'draft' || invoice.status === 'sent'
-    ).length;
-    
-    const pendingInvoicesElem = document.getElementById('pending-invoices-count');
-    if (pendingInvoicesElem) {
-        pendingInvoicesElem.textContent = pendingInvoices;
+// 支付方式数据 - 只保留三种支付方式
+const paymentMethodData = {
+    distribution: {
+        labels: ['Credit Card', 'Third-Party Payment', 'Cash'],
+        data: [125000, 85000, 65000],
+        colors: ['#774b30', '#a9805b', '#9f5933']
     }
-}
+};
 
-// Initialize Overview charts
-function initOverviewCharts() {
-    // Income trend chart
-    const incomeTrendCtx = document.getElementById('overview-income-trend-chart');
-    if (incomeTrendCtx) {
-        if (overviewIncomeTrendChart) overviewIncomeTrendChart.destroy();
-        updateIncomeTrendChart(trendTimePeriod);
-    }
+// 总收入统计 - 移除不需要的字段
+const totalRevenueStats = {
+    currentMonth: 86420,
+    lastMonth: 82000,
+    growth: 5.4
+};
 
-    // 添加待处理发票数量更新
-    updatePendingInvoicesCount();
-
-    // Book type pie chart
-    const bookTypeCtx = document.getElementById('book-type-chart');
-    if (bookTypeCtx) {
-        if (bookTypeChartInstance) bookTypeChartInstance.destroy();
-        bookTypeChartInstance = new Chart(bookTypeCtx.getContext('2d'), {
-            type: 'pie',
-            data: {
-                labels: ['Fiction', 'Non-Fiction', 'Science', 'History', 'Biography'],
-                datasets: [{
-                    data: [35, 25, 15, 12, 13],
-                    backgroundColor: ['#774b30', '#9f5933', '#a9805b', '#cca278','#e1c7ac'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'right' },
-                    title: { display: true, text: 'Book Type Sales Distribution', font: { size: 14, weight: 'bold' } }
-                }
-            }
-        });
-    }
-}
-
-// Update income trend chart
-function updateIncomeTrendChart(period) {
-    const ctx = document.getElementById('overview-income-trend-chart');
-    if (!ctx) return;
-
-    const dataMap = {
-        weekly: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], values: [12000, 15000, 13500, 14200, 16800, 18500, 17200] },
-        monthly: { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], values: [72000, 78000, 82000, 80000, 85000, 86420] },
-        quarterly: { labels: ['Q1', 'Q2', 'Q3', 'Q4'], values: [210000, 250000, 280000, 320000] }
-    };
-    const data = dataMap[period];
-
-    overviewIncomeTrendChart = new Chart(ctx.getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: data.labels,
-            datasets: [{
-                label: 'Income',
-                data: data.values,
-                borderColor: '#3B82F6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                tension: 0.3,
-                fill: true,
-                pointRadius: 4,
-                pointBackgroundColor: '#3B82F6'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { callback: value => '¥' + value.toLocaleString() }
-                }
-            }
-        }
-    });
-}
-
-// Initialize period switcher
-function initPeriodSwitcher() {
-    const btns = document.querySelectorAll('.trend-period-btn');
-    if (!btns.length) return;
-
-    btns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            btns.forEach(b => b.classList.replace('bg-blue-600', 'bg-gray-100').classList.replace('text-white', 'text-gray-700'));
-            btn.classList.replace('bg-gray-100', 'bg-blue-600').classList.replace('text-gray-700', 'text-white');
-            trendTimePeriod = btn.getAttribute('data-period');
-            updateIncomeTrendChart(trendTimePeriod);
-        });
-    });
-}
-
-// Render recent transactions
-function renderRecentTransactions() {
-    const container = document.getElementById('overview-recent-transactions');
-    if (!container) {
-        console.warn('Transaction container not found, retrying...');
-        setTimeout(renderRecentTransactions, 100);
-        return;
-    }
-
-    const validTransactions = Object.values(allOrderData)
-        .filter(t => t.createdDate)
-        .map(t => ({
-            ...t,
-            sortDate: new Date(t.createdDate.replace(' ', 'T'))
-        }))
-        .sort((a, b) => b.sortDate - a.sortDate)
-        .slice(0, 5);
-
-    container.innerHTML = '';
-    validTransactions.forEach(t => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 transition-colors cursor-pointer';
-        row.dataset.orderId = t.orderId;
-
-        let statusClass = 'bg-blue-100 text-blue-800';
-        if (t.status === 'paid') statusClass = 'bg-green-100 text-green-800';
-        else if (t.status === 'cancelled') statusClass = 'bg-red-100 text-red-800';
-        else if (t.status === 'refunded') statusClass = 'bg-yellow-100 text-yellow-800';
-
-        row.innerHTML = `
-            <td class="px-4 py-3 text-sm">${t.createdDate}</td>
-            <td class="px-4 py-3 text-sm font-medium">${t.orderId}</td>
-            <td class="px-4 py-3 text-sm">${t.totalAmount}</td>
-            <td class="px-4 py-3 text-sm">
-                <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${t.status.charAt(0).toUpperCase() + t.status.slice(1)}</span>
-            </td>
-        `;
-        container.appendChild(row);
-
-        row.addEventListener('click', () => {
-            switchPage('income-expense');
-            setTimeout(() => showOrderDetails(t.orderId), 300);
-        });
-    });
-}
-
-// Switch page function - 修复
-function switchPage(pageId) {
-    console.log('Switching to page:', pageId);
+// 财务页面切换函数
+window.financeSwitchPage = function(pageId) {
+    console.log('Finance switchPage called:', pageId);
     
     // Hide all pages
     document.querySelectorAll('.page-content').forEach(page => {
@@ -256,32 +244,11 @@ function switchPage(pageId) {
         return;
     }
 
-    // Update navigation active state
-    document.querySelectorAll('.sidebar-link').forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('data-page') === pageId) {
-            link.classList.add('active');
-        }
-    });
-
     // Initialize page content based on pageId
     setTimeout(() => {
         switch (pageId) {
-            case 'overview':
-                console.log('Initializing Overview page...');
-                initDateDisplay();
-                initOverviewCharts();
-                initPeriodSwitcher();
-                renderRecentTransactions();
-                break;
-                
-            case 'income-expense':
-                console.log('Initializing Transaction Details page...');
-                // Initialize transaction details page if needed
-                break;
-                
             case 'income-stats':
-                console.log('Initializing Income Distribution page...');
+                console.log('Initializing Financial Overview page...');
                 initIncomeStatsCharts();
                 break;
                 
@@ -290,159 +257,835 @@ function switchPage(pageId) {
                 initInvoicePage();
                 break;
         }
+    }, 50); // 缩短延迟时间
+};
+
+// Financial overview charts
+function initIncomeStatsCharts() {
+    console.log('Initializing financial overview charts...');
+    
+    // Render total revenue card
+    renderTotalRevenueCard();
+    
+    // Payment method revenue pie chart
+    initPaymentMethodPieChart();
+    
+    // Revenue by date chart - 初始化时显示默认数据
+    renderRevenueByDateChart();
+
+    // Purchase cost by date chart - 初始化时显示默认数据
+    renderPurchaseCostByDateChart();
+}
+
+// 初始化支付方式饼图 - 将图例移到饼图下方，并放大饼图
+function initPaymentMethodPieChart() {
+    const paymentMethodCtx = document.getElementById('payment-method-pie-chart');
+    if (paymentMethodCtx) {
+        // 确保canvas元素存在且可以获取上下文
+        const ctx = paymentMethodCtx.getContext('2d');
+        if (!ctx) {
+            console.error('Cannot get 2D context for payment method chart');
+            setTimeout(initPaymentMethodPieChart, 100);
+            return;
+        }
+        
+        // 销毁现有图表
+        if (paymentMethodPieChart) {
+            paymentMethodPieChart.destroy();
+        }
+        
+        // 计算饼图大小 - 使用更大的饼图
+        const pieChartContainer = document.querySelector('.pie-chart-wrapper');
+        const chartHeight = pieChartContainer ? pieChartContainer.clientHeight : 380;
+        
+        // 饼图半径计算：使用容器高度的85%作为最大可能直径，然后取一半为半径
+        const maxRadius = (chartHeight * 0.85) / 2;
+        const actualRadius = maxRadius * 0.95; // 调整为95%大小，让饼图更大
+        
+        // 创建新图表 - 将图例移到饼图下方
+        paymentMethodPieChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: paymentMethodData.distribution.labels,
+                datasets: [{
+                    data: paymentMethodData.distribution.data,
+                    backgroundColor: paymentMethodData.distribution.colors,
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                    hoverOffset: 20, // 增加悬停偏移量
+                    hoverBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // 允许调整宽高比
+                layout: {
+                    padding: {
+                        top: 15, // 增加上边距
+                        bottom: 50, // 增加下边距，为图例留出空间
+                        left: 15, // 增加左边距
+                        right: 15 // 增加右边距
+                    }
+                },
+                plugins: {
+                    legend: { 
+                        position: 'bottom', // 将图例位置改为底部
+                        labels: {
+                            padding: 25, // 增加图例项之间的间距
+                            usePointStyle: true,
+                            pointStyle: 'rect', // 使用正方形而不是圆形
+                            pointStyleWidth: 22, // 增加正方形宽度
+                            pointStyleHeight: 22, // 增加正方形高度
+                            font: {
+                                size: 13, // 增加字体大小
+                                weight: '500'
+                            },
+                            color: '#374151',
+                            generateLabels: function(chart) {
+                                const data = chart.data;
+                                if (data.labels.length && data.datasets.length) {
+                                    return data.labels.map(function(label, i) {
+                                        return {
+                                            text: label, // 只显示支付方式名称
+                                            fillStyle: data.datasets[0].backgroundColor[i],
+                                            hidden: false,
+                                            lineCap: 'butt',
+                                            lineDash: [],
+                                            lineDashOffset: 0,
+                                            lineJoin: 'miter',
+                                            lineWidth: 1,
+                                            strokeStyle: data.datasets[0].backgroundColor[i],
+                                            pointStyle: 'rect',
+                                            rotation: 0
+                                        };
+                                    });
+                                }
+                                return [];
+                            }
+                        },
+                        align: 'center' // 居中对齐
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        titleColor: '#374151',
+                        bodyColor: '#374151',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        cornerRadius: 6,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ¥${value.toLocaleString()} (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '0%', // 完整饼图，不是环形图
+                radius: `${Math.min(100, (actualRadius / (chartHeight / 2)) * 100)}%`, // 动态计算半径百分比，最大100%
+                animation: {
+                    animateScale: true,
+                    animateRotate: true,
+                    duration: 800, // 缩短动画时间
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    } else {
+        console.error('Payment method chart canvas not found');
+        // 如果canvas元素不存在，等待一段时间再试
+        setTimeout(initPaymentMethodPieChart, 100);
+    }
+}
+
+// Render total revenue card - 移除不需要的部分
+function renderTotalRevenueCard() {
+    const container = document.getElementById('total-revenue-container');
+    if (!container) {
+        console.error('Total revenue container not found');
+        return;
+    }
+    
+    const growthClass = totalRevenueStats.growth >= 0 ? 'revenue-trend-up' : 'revenue-trend-down';
+    const growthIcon = totalRevenueStats.growth >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
+    
+    container.innerHTML = `
+        <div class="total-revenue-card">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div class="w-full">
+                    <p class="text-white/80 text-sm mb-1">Total Revenue (Current Month)</p>
+                    <h3 class="text-3xl font-bold mb-2">¥${totalRevenueStats.currentMonth.toLocaleString()}</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="${growthClass} text-sm font-medium">
+                            <i class="fa ${growthIcon} mr-1"></i>${Math.abs(totalRevenueStats.growth)}%
+                        </span>
+                        <span class="text-white/70 text-sm">vs last month (¥${totalRevenueStats.lastMonth.toLocaleString()})</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// 渲染按日期收入图表（带日期选择器）
+function renderRevenueByDateChart() {
+    const container = document.getElementById('revenue-by-date-chart-container');
+    if (!container) {
+        console.error('Revenue by date chart container not found');
+        return;
+    }
+    
+    // 获取当前日期和30天前的日期
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    // 格式化日期为YYYY-MM-DD
+    const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+    
+    // 默认日期范围：最近30天
+    const defaultStartDate = formatDate(thirtyDaysAgo);
+    const defaultEndDate = formatDate(today);
+    
+    // 创建日期选择器和图表容器 - 使用紧凑布局，添加onfocus事件
+    container.innerHTML = `
+        <div class="flex flex-col mb-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                <h3 class="font-semibold text-lg">Revenue by Date</h3>
+                <div class="compact-date-selector">
+                    <input type="date" id="revenue-start-date" class="compact-date-input" value="${defaultStartDate}" lang="en" onfocus="this.showPicker()">
+                    <span class="text-gray-500 text-sm">to</span>
+                    <input type="date" id="revenue-end-date" class="compact-date-input" value="${defaultEndDate}" lang="en" onfocus="this.showPicker()">
+                    <button id="update-revenue-chart" class="btn-primary text-sm px-3 py-2">Update</button>
+                </div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="revenue-by-date-chart" class="chart-responsive"></canvas>
+        </div>
+    `;
+    
+    // 初始化图表
+    updateRevenueChart();
+    
+    // 添加事件监听器 - 使用事件委托避免重复绑定问题
+    setTimeout(() => {
+        const updateBtn = document.getElementById('update-revenue-chart');
+        if (updateBtn) {
+            // 移除可能存在的旧监听器
+            updateBtn.removeEventListener('click', updateRevenueChart);
+            // 添加新监听器
+            updateBtn.addEventListener('click', updateRevenueChart);
+        }
     }, 100);
 }
 
-// Income distribution charts - modified for book category analysis
-function initIncomeStatsCharts() {
-    // Book category revenue pie chart
-    const bookCategoryCtx = document.getElementById('book-category-pie-chart');
-    if (bookCategoryCtx) {
-        if (window.bookCategoryPieChart) window.bookCategoryPieChart.destroy();
-        window.bookCategoryPieChart = new Chart(bookCategoryCtx.getContext('2d'), {
-            type: 'pie',
-            data: {
-                labels: bookCategoryData.categoryDistribution.labels,
-                datasets: [{
-                    data: bookCategoryData.categoryDistribution.data,
-                    backgroundColor: bookCategoryData.categoryDistribution.colors,
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'right' },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => `${ctx.label}: ¥${ctx.raw.toLocaleString()} (${Math.round((ctx.raw / ctx.dataset.data.reduce((a, b) => a + b, 0)) * 100)}%)`
+// 更新收入图表数据
+function updateRevenueChart() {
+    const startDateInput = document.getElementById('revenue-start-date');
+    const endDateInput = document.getElementById('revenue-end-date');
+    
+    if (!startDateInput || !endDateInput) {
+        console.error('Date inputs not found for revenue chart');
+        return;
+    }
+    
+    const startDate = new Date(startDateInput.value);
+    const endDate = new Date(endDateInput.value);
+    
+    // 验证日期范围
+    if (startDate > endDate) {
+        alert('Start date must be before end date');
+        return;
+    }
+    
+    // 计算日期范围内的数据
+    const chartData = generateRevenueDataForDateRange(startDate, endDate);
+    
+    // 获取图表上下文
+    const revenueDateCanvas = document.getElementById('revenue-by-date-chart');
+    if (!revenueDateCanvas) {
+        console.error('Revenue by date chart canvas not found');
+        return;
+    }
+    
+    const ctx = revenueDateCanvas.getContext('2d');
+    if (!ctx) {
+        console.error('Cannot get 2D context for revenue chart');
+        return;
+    }
+    
+    // 销毁现有图表
+    if (revenueByDateChart) {
+        revenueByDateChart.destroy();
+    }
+    
+    // 创建新图表 - 调整配置以压缩高度
+    revenueByDateChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartData.labels,
+            datasets: [{
+                label: 'Daily Revenue',
+                data: chartData.data,
+                borderColor: '#8B5A2B',
+                backgroundColor: 'rgba(139, 90, 43, 0.1)',
+                tension: 0.3, // 降低曲线平滑度，让图表更紧凑
+                fill: true,
+                pointRadius: 2, // 减小点半径
+                pointBackgroundColor: '#8B5A2B',
+                pointBorderColor: '#FFFFFF',
+                pointBorderWidth: 1,
+                pointHoverRadius: 4,
+                borderWidth: 1.5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false, // 允许调整宽高比
+            plugins: { 
+                legend: { 
+                    display: false 
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            return `¥${context.raw.toLocaleString()}`;
+                        },
+                        title: function(tooltipItems) {
+                            // 简化标题显示
+                            return tooltipItems[0].label;
                         }
                     }
                 }
-            }
-        });
-    }
-
-    // Monthly revenue trend chart - single line chart
-    const bookRevenueCtx = document.getElementById('book-revenue-trend-chart');
-    if (bookRevenueCtx) {
-        if (window.bookRevenueTrendChart) window.bookRevenueTrendChart.destroy();
-        window.bookRevenueTrendChart = new Chart(bookRevenueCtx.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: bookCategoryData.monthlyTrend.labels,
-                datasets: [{
-                    label: 'Total Revenue',
-                    data: bookCategoryData.monthlyTrend.data,
-                    borderColor: '#8B5A2B',
-                    backgroundColor: 'rgba(139, 90, 43, 0.1)',
-                    tension: 0.3,
-                    fill: true,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#8B5A2B'
-                }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { 
-                    legend: { display: false } 
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: { 
+                        callback: function(value) {
+                            if (value >= 10000) {
+                                return '¥' + (value/1000).toFixed(0) + 'k';
+                            }
+                            return '¥' + value.toLocaleString();
+                        },
+                        padding: 5,
+                        font: {
+                            size: 10
+                        }
+                    },
+                    grid: {
+                        drawBorder: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Amount (¥)',
+                        font: {
+                            size: 11
+                        }
+                    }
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { callback: value => '¥' + value.toLocaleString() }
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        maxRotation: 30,
+                        minRotation: 30,
+                        font: {
+                            size: 9
+                        },
+                        callback: function(value, index) {
+                            // 如果数据点太多，只显示部分标签
+                            const labels = this.chart.data.labels;
+                            if (labels.length > 20) {
+                                if (index % Math.ceil(labels.length / 10) === 0) {
+                                    return labels[index];
+                                }
+                                return '';
+                            }
+                            return labels[index];
+                        }
                     }
                 }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
+            elements: {
+                line: {
+                    tension: 0.3 // 降低线条平滑度，让图表更紧凑
+                }
             }
-        });
-    }
-
-    // Render book category table
-    renderBookCategoryTable();
-}
-
-// Render book category table
-function renderBookCategoryTable() {
-    const container = document.getElementById('book-category-table-body');
-    if (!container) return;
-
-    container.innerHTML = '';
-    bookCategoryData.categoryDetails.forEach(category => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 transition-colors';
-
-        row.innerHTML = `
-            <td class="px-4 py-4 text-sm font-medium">${category.category}</td>
-            <td class="px-4 py-4 text-sm">¥${category.thisMonth.toLocaleString()}</td>
-            <td class="px-4 py-4 text-sm">¥${category.lastMonth.toLocaleString()}</td>
-            <td class="px-4 py-4 text-sm"><span class="text-green-600">+${category.growth}%</span></td>
-            <td class="px-4 py-4 text-sm">${category.percentage}%</td>
-            <td class="px-4 py-4 text-sm"><i class="fa fa-arrow-up text-green-500"></i></td>
-        `;
-        container.appendChild(row);
+        }
     });
 }
 
-// Show order details
-function showOrderDetails(orderId) {
-    const order = orderData[orderId];
-    if (!order) return;
-
-    const detailElems = {
-        orderId: document.getElementById('detail-order-id'),
-        memberId: document.getElementById('detail-member-id'),
-        status: document.getElementById('detail-status'),
-        createdDate: document.getElementById('detail-created-date'),
-        updatedDate: document.getElementById('detail-updated-date'),
-        totalAmount: document.getElementById('detail-total-amount')
+// 渲染按日期进货成本图表（带日期选择器）- 修复：确保正确初始化
+function renderPurchaseCostByDateChart() {
+    const container = document.getElementById('purchase-cost-by-date-chart-container');
+    if (!container) {
+        console.error('Purchase cost by date chart container not found');
+        return;
+    }
+    
+    // 获取当前日期和30天前的日期
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    // 格式化日期为YYYY-MM-DD
+    const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     };
+    
+    // 默认日期范围：最近30天
+    const defaultStartDate = formatDate(thirtyDaysAgo);
+    const defaultEndDate = formatDate(today);
+    
+    // 创建日期选择器和图表容器 - 使用紧凑布局，添加onfocus事件
+    container.innerHTML = `
+        <div class="flex flex-col mb-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                <h3 class="font-semibold text-lg">Purchase Cost by Date</h3>
+                <div class="compact-date-selector">
+                    <input type="date" id="purchase-cost-start-date" class="compact-date-input" value="${defaultStartDate}" lang="en" onfocus="this.showPicker()">
+                    <span class="text-gray-500 text-sm">to</span>
+                    <input type="date" id="purchase-cost-end-date" class="compact-date-input" value="${defaultEndDate}" lang="en" onfocus="this.showPicker()">
+                    <button id="update-purchase-cost-chart" class="btn-primary text-sm px-3 py-2">Update</button>
+                </div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="purchase-cost-by-date-chart" class="chart-responsive"></canvas>
+        </div>
+    `;
+    
+    // 初始化图表
+    initPurchaseCostChart();
+    
+    // 添加事件监听器 - 使用事件委托避免重复绑定问题
+    setTimeout(() => {
+        const updateBtn = document.getElementById('update-purchase-cost-chart');
+        if (updateBtn) {
+            // 移除可能存在的旧监听器
+            updateBtn.removeEventListener('click', updatePurchaseCostChart);
+            // 添加新监听器
+            updateBtn.addEventListener('click', updatePurchaseCostChart);
+        }
+    }, 100);
+}
 
-    Object.keys(detailElems).forEach(key => {
-        if (detailElems[key]) detailElems[key].textContent = order[key];
-    });
-
-    const itemsContainer = document.getElementById('order-items-list');
-    if (itemsContainer) {
-        itemsContainer.innerHTML = '';
-        order.items.forEach(item => {
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50 transition-colors';
-            row.innerHTML = `
-                <td class="px-4 py-2 text-sm">${item.name}</td>
-                <td class="px-4 py-2 text-sm text-gray-500">${item.isbn}</td>
-                <td class="px-4 py-2 text-sm">${item.quantity}</td>
-                <td class="px-4 py-2 text-sm">${item.unitPrice}</td>
-                <td class="px-4 py-2 text-sm">${item.subtotal}</td>
-            `;
-            itemsContainer.appendChild(row);
-        });
+// 初始化进货成本图表 - 修复：单独的函数来初始化图表
+function initPurchaseCostChart() {
+    const startDateInput = document.getElementById('purchase-cost-start-date');
+    const endDateInput = document.getElementById('purchase-cost-end-date');
+    
+    if (!startDateInput || !endDateInput) {
+        console.error('Date inputs not found for purchase cost chart');
+        return;
     }
-
-    document.getElementById('order-details').classList.remove('hidden');
+    
+    const startDate = new Date(startDateInput.value);
+    const endDate = new Date(endDateInput.value);
+    
+    // 验证日期范围
+    if (startDate > endDate) {
+        alert('Start date must be before end date');
+        return;
+    }
+    
+    // 计算日期范围内的数据
+    const chartData = generatePurchaseCostDataForDateRange(startDate, endDate);
+    
+    // 获取图表上下文
+    const purchaseCostCanvas = document.getElementById('purchase-cost-by-date-chart');
+    if (!purchaseCostCanvas) {
+        console.error('Purchase cost by date chart canvas not found');
+        return;
+    }
+    
+    const ctx = purchaseCostCanvas.getContext('2d');
+    if (!ctx) {
+        console.error('Cannot get 2D context for purchase cost chart');
+        return;
+    }
+    
+    // 销毁现有图表
+    if (purchaseCostByDateChart) {
+        purchaseCostByDateChart.destroy();
+    }
+    
+    // 创建新图表 - 调整配置以压缩高度
+    purchaseCostByDateChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: chartData.labels,
+            datasets: [{
+                label: 'Daily Purchase Cost',
+                data: chartData.data,
+                backgroundColor: 'rgba(74, 85, 104, 0.8)',
+                borderColor: 'rgba(74, 85, 104, 1)',
+                borderWidth: 1,
+                borderRadius: 2,
+                hoverBackgroundColor: 'rgba(74, 85, 104, 1)',
+                barPercentage: 0.6, // 减小条形宽度
+                categoryPercentage: 0.7
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false, // 允许调整宽高比
+            plugins: { 
+                legend: { 
+                    display: false 
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            return `¥${context.raw.toLocaleString()}`;
+                        },
+                        title: function(tooltipItems) {
+                            // 简化标题显示
+                            return tooltipItems[0].label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { 
+                        callback: function(value) {
+                            if (value >= 10000) {
+                                return '¥' + (value/1000).toFixed(0) + 'k';
+                            }
+                            return '¥' + value.toLocaleString();
+                        },
+                        padding: 5,
+                        font: {
+                            size: 10
+                        }
+                    },
+                    grid: {
+                        drawBorder: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Purchase Cost (¥)',
+                        font: {
+                            size: 11
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        maxRotation: 30,
+                        minRotation: 30,
+                        font: {
+                            size: 9
+                        },
+                        callback: function(value, index) {
+                            // 如果数据点太多，只显示部分标签
+                            const labels = this.chart.data.labels;
+                            if (labels.length > 20) {
+                                if (index % Math.ceil(labels.length / 10) === 0) {
+                                    return labels[index];
+                                }
+                                return '';
+                            }
+                            return labels[index];
+                        }
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
 }
 
-// Update order status
-function updateOrderStatus(orderId, newStatus) {
-    if (!orderData[orderId]) return;
-    orderData[orderId].status = newStatus;
-    orderData[orderId].updatedDate = new Date().toLocaleString('en-US', {
-        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-    }).replace(',', '');
-
-    const currentOrderId = document.getElementById('detail-order-id')?.textContent;
-    if (currentOrderId === orderId) showOrderDetails(orderId);
+// 更新进货成本图表数据 - 修复：修复事件监听问题
+function updatePurchaseCostChart() {
+    const startDateInput = document.getElementById('purchase-cost-start-date');
+    const endDateInput = document.getElementById('purchase-cost-end-date');
+    
+    if (!startDateInput || !endDateInput) {
+        console.error('Date inputs not found for purchase cost chart');
+        return;
+    }
+    
+    const startDate = new Date(startDateInput.value);
+    const endDate = new Date(endDateInput.value);
+    
+    // 验证日期范围
+    if (startDate > endDate) {
+        alert('Start date must be before end date');
+        return;
+    }
+    
+    // 计算日期范围内的数据
+    const chartData = generatePurchaseCostDataForDateRange(startDate, endDate);
+    
+    // 获取图表上下文
+    const purchaseCostCanvas = document.getElementById('purchase-cost-by-date-chart');
+    if (!purchaseCostCanvas) {
+        console.error('Purchase cost by date chart canvas not found');
+        return;
+    }
+    
+    const ctx = purchaseCostCanvas.getContext('2d');
+    if (!ctx) {
+        console.error('Cannot get 2D context for purchase cost chart');
+        return;
+    }
+    
+    // 销毁现有图表
+    if (purchaseCostByDateChart) {
+        purchaseCostByDateChart.destroy();
+    }
+    
+    // 创建新图表 - 调整配置以压缩高度
+    purchaseCostByDateChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: chartData.labels,
+            datasets: [{
+                label: 'Daily Purchase Cost',
+                data: chartData.data,
+                backgroundColor: 'rgba(74, 85, 104, 0.8)',
+                borderColor: 'rgba(74, 85, 104, 1)',
+                borderWidth: 1,
+                borderRadius: 2,
+                hoverBackgroundColor: 'rgba(74, 85, 104, 1)',
+                barPercentage: 0.6, // 减小条形宽度
+                categoryPercentage: 0.7
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false, // 允许调整宽高比
+            plugins: { 
+                legend: { 
+                    display: false 
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            return `¥${context.raw.toLocaleString()}`;
+                        },
+                        title: function(tooltipItems) {
+                            // 简化标题显示
+                            return tooltipItems[0].label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { 
+                        callback: function(value) {
+                            if (value >= 10000) {
+                                return '¥' + (value/1000).toFixed(0) + 'k';
+                            }
+                            return '¥' + value.toLocaleString();
+                        },
+                        padding: 5,
+                        font: {
+                            size: 10
+                        }
+                    },
+                    grid: {
+                        drawBorder: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Purchase Cost (¥)',
+                        font: {
+                            size: 11
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        maxRotation: 30,
+                        minRotation: 30,
+                        font: {
+                            size: 9
+                        },
+                        callback: function(value, index) {
+                            // 如果数据点太多，只显示部分标签
+                            const labels = this.chart.data.labels;
+                            if (labels.length > 20) {
+                                if (index % Math.ceil(labels.length / 10) === 0) {
+                                    return labels[index];
+                                }
+                                return '';
+                            }
+                            return labels[index];
+                        }
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
 }
 
-// Invoice management functionality
+// 为日期范围生成模拟的收入数据
+function generateRevenueDataForDateRange(startDate, endDate) {
+    const labels = [];
+    const data = [];
+    
+    // 计算日期范围内的天数
+    const daysDiff = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
+    
+    // 如果天数太多，使用每周数据而不是每日数据
+    const useWeekly = daysDiff > 60;
+    const interval = useWeekly ? 7 : 1;
+    
+    // 生成日期范围内的数据
+    let i = 0;
+    while (i <= daysDiff) {
+        const currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + i);
+        
+        // 添加日期标签
+        let formattedDate;
+        if (useWeekly) {
+            // 如果是每周数据，显示周数
+            const weekNum = Math.floor(i / 7) + 1;
+            formattedDate = `Week ${weekNum}`;
+        } else {
+            // 每日数据，简化日期显示
+            formattedDate = currentDate.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+        
+        labels.push(formattedDate);
+        
+        // 生成模拟收入数据
+        const baseRevenue = 8000 + Math.random() * 4000;
+        const trendFactor = 1 + (i / daysDiff) * 0.5; // 趋势增长
+        
+        let dailyRevenue;
+        if (useWeekly) {
+            // 每周数据是7天的总和
+            let weeklySum = 0;
+            for (let j = 0; j < 7 && (i + j) <= daysDiff; j++) {
+                weeklySum += Math.floor(baseRevenue * trendFactor + Math.random() * 2000 - 1000);
+            }
+            dailyRevenue = weeklySum;
+        } else {
+            dailyRevenue = Math.floor(baseRevenue * trendFactor + Math.random() * 2000 - 1000);
+        }
+        
+        data.push(dailyRevenue);
+        
+        i += interval;
+    }
+    
+    return { labels, data };
+}
+
+// 为日期范围生成模拟的进货成本数据
+function generatePurchaseCostDataForDateRange(startDate, endDate) {
+    const labels = [];
+    const data = [];
+    
+    // 计算日期范围内的天数
+    const daysDiff = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
+    
+    // 如果天数太多，使用每周数据而不是每日数据
+    const useWeekly = daysDiff > 60;
+    const interval = useWeekly ? 7 : 1;
+    
+    // 生成日期范围内的数据
+    let i = 0;
+    while (i <= daysDiff) {
+        const currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + i);
+        
+        // 添加日期标签
+        let formattedDate;
+        if (useWeekly) {
+            // 如果是每周数据，显示周数
+            const weekNum = Math.floor(i / 7) + 1;
+            formattedDate = `Week ${weekNum}`;
+        } else {
+            // 每日数据，简化日期显示
+            formattedDate = currentDate.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+        
+        labels.push(formattedDate);
+        
+        // 生成模拟进货成本数据
+        const baseCost = 5000 + Math.random() * 3000;
+        const trendFactor = 1 + (i / daysDiff) * 0.3; // 趋势增长较平缓
+        
+        let dailyCost;
+        if (useWeekly) {
+            // 每周数据是7天的总和
+            let weeklySum = 0;
+            for (let j = 0; j < 7 && (i + j) <= daysDiff; j++) {
+                weeklySum += Math.floor(baseCost * trendFactor + Math.random() * 1500 - 750);
+            }
+            dailyCost = weeklySum;
+        } else {
+            dailyCost = Math.floor(baseCost * trendFactor + Math.random() * 1500 - 750);
+        }
+        
+        data.push(dailyCost);
+        
+        i += interval;
+    }
+    
+    return { labels, data };
+}
+
+// Invoice management functionality - 保持不变
 function initInvoicePage() {
     console.log('Initializing Invoice page...');
     renderInvoiceList();
     initInvoiceFilters();
 }
 
-// Render invoice list
+// Render invoice list - 保持不变
 function renderInvoiceList(invoices = Object.values(invoiceData)) {
     const container = document.getElementById('invoice-table-body');
     if (!container) return;
@@ -514,17 +1157,50 @@ function renderInvoiceList(invoices = Object.values(invoiceData)) {
 
     // Update pagination info
     updateInvoicePaginationInfo(invoices.length);
+    
+    // Add event listeners to buttons
+    addInvoiceEventListeners();
 }
 
-// Update invoice pagination info
+// Add event listeners to invoice buttons - 保持不变
+function addInvoiceEventListeners() {
+    // View invoice details
+    document.querySelectorAll('.view-invoice').forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const invoiceNo = button.getAttribute('data-invoice');
+            showInvoiceDetails(invoiceNo);
+        });
+    });
+    
+    // Edit invoice
+    document.querySelectorAll('.edit-invoice').forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const invoiceNo = button.getAttribute('data-invoice');
+            editInvoice(invoiceNo);
+        });
+    });
+    
+    // Delete invoice
+    document.querySelectorAll('.delete-invoice').forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const invoiceNo = button.getAttribute('data-invoice');
+            deleteInvoice(invoiceNo);
+        });
+    });
+}
+
+// Update invoice pagination info - 保持不变
 function updateInvoicePaginationInfo(total) {
     const infoElem = document.getElementById('invoice-pagination-info');
     if (infoElem) {
-        infoElem.textContent = `Showing 1 to ${total} of ${total} invoices`;
+        infoElem.textContent = `Total: ${total} invoices`;
     }
 }
 
-// Initialize invoice filters
+// Initialize invoice filters - 保持不变
 function initInvoiceFilters() {
     const searchInput = document.getElementById('invoice-search');
     const statusSelect = document.getElementById('invoice-status-filter');
@@ -558,7 +1234,7 @@ function initInvoiceFilters() {
     }
 }
 
-// Filter invoices
+// Filter invoices - 保持不变
 function filterInvoices() {
     const searchInput = document.getElementById('invoice-search');
     const statusSelect = document.getElementById('invoice-status-filter');
@@ -602,7 +1278,7 @@ function filterInvoices() {
     renderFilteredInvoices(filteredInvoices);
 }
 
-// Render filtered invoices
+// Render filtered invoices - 保持不变
 function renderFilteredInvoices(invoices) {
     const container = document.getElementById('invoice-table-body');
     if (!container) return;
@@ -673,9 +1349,10 @@ function renderFilteredInvoices(invoices) {
     });
 
     updateInvoicePaginationInfo(invoices.length);
+    addInvoiceEventListeners();
 }
 
-// Reset invoice filters
+// Reset invoice filters - 保持不变
 function resetInvoiceFilters() {
     const searchInput = document.getElementById('invoice-search');
     const statusSelect = document.getElementById('invoice-status-filter');
@@ -694,7 +1371,7 @@ function resetInvoiceFilters() {
     renderInvoiceList();
 }
 
-// Show invoice details
+// Show invoice details - 保持不变
 function showInvoiceDetails(invoiceNo) {
     const invoice = invoiceData[invoiceNo];
     if (!invoice) return;
@@ -772,7 +1449,7 @@ function showInvoiceDetails(invoiceNo) {
                         <div class="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <span class="text-gray-500">Order Status:</span>
-                                <span class="ml-2 px-2 py-1 text-xs ${getOrderStatusClass(order.status)} rounded-full">
+                                <span class="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
                                     ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                                 </span>
                             </div>
@@ -858,7 +1535,7 @@ function showInvoiceDetails(invoiceNo) {
 
     // Create modal
     const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 modal';
     modal.innerHTML = detailsHtml;
     document.body.appendChild(modal);
 
@@ -899,7 +1576,7 @@ function showInvoiceDetails(invoiceNo) {
     });
 }
 
-// Edit invoice notes
+// Edit invoice notes - 保持不变
 function editInvoiceNotes(invoiceNo, modal) {
     const invoice = invoiceData[invoiceNo];
     if (!invoice) return;
@@ -933,7 +1610,7 @@ function editInvoiceNotes(invoiceNo, modal) {
 
     // Create edit modal
     const editModal = document.createElement('div');
-    editModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+    editModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 modal';
     editModal.innerHTML = editFormHtml;
     document.body.appendChild(editModal);
 
@@ -974,7 +1651,7 @@ function editInvoiceNotes(invoiceNo, modal) {
     });
 }
 
-// Get status class
+// Get status class - 保持不变
 function getStatusClass(status) {
     switch (status) {
         case 'draft': return 'invoice-draft';
@@ -986,105 +1663,72 @@ function getStatusClass(status) {
     }
 }
 
-// Get order status class
-function getOrderStatusClass(status) {
-    switch (status) {
-        case 'created': return 'bg-blue-100 text-blue-800';
-        case 'paid': return 'bg-green-100 text-green-800';
-        case 'cancelled': return 'bg-red-100 text-red-800';
-        case 'refunded': return 'bg-yellow-100 text-yellow-800';
-        default: return 'bg-gray-100 text-gray-800';
-    }
-}
-
-// Edit invoice
+// Edit invoice - 保持不变
 function editInvoice(invoiceNo) {
     const invoice = invoiceData[invoiceNo];
     if (!invoice) return;
 
-    // Here you can add invoice edit form
     alert(`Edit Invoice: ${invoice.invoiceNo}\n\nThis would open an edit form with fields for:\n- Order ID: ${invoice.orderId}\n- Staff ID: ${invoice.staffId}\n- Status: ${invoice.status}\n- Issue Date: ${invoice.issueDate}\n- Due Date: ${invoice.dueDate}\n- Amount: ¥${invoice.amount}\n- Tax Amount: ¥${invoice.taxAmount}`);
 }
 
-// Delete invoice
+// Delete invoice - 保持不变
 function deleteInvoice(invoiceNo) {
     if (confirm(`Are you sure you want to delete invoice ${invoiceNo}?`)) {
-        // Here you can add invoice deletion logic
         delete invoiceData[invoiceNo];
         alert(`Invoice ${invoiceNo} deleted successfully!`);
         renderInvoiceList();
     }
 }
 
-// Initialize event listeners
-function initEventListeners() {
-    // Sidebar toggle
-    document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
-        const sidebar = document.getElementById('sidebar');
-        if (sidebar) sidebar.classList.toggle('hidden');
-    });
-
-    // Navigation toggle
-    document.querySelectorAll('.sidebar-link[data-page]').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            switchPage(link.dataset.page);
-        });
-    });
-
-    // Logout button
-    document.getElementById('logout-btn')?.addEventListener('click', () => {
-        if (confirm('Are you sure you want to log out?')) {
-            window.location.href = 'login.html';
-        }
-    });
-
-    // Regular order click
-    const transactionTable = document.querySelector('#income-expense-page table');
-    if (transactionTable) {
-        transactionTable.addEventListener('click', (e) => {
-            const row = e.target.closest('tr[data-order-id]');
-            if (row) showOrderDetails(row.dataset.orderId);
-        });
-    }
-
-    // Invoice operations
-    document.addEventListener('click', (e) => {
-        if (e.target.closest('.view-invoice')) {
-            const invoiceNo = e.target.closest('.view-invoice').dataset.invoice;
-            showInvoiceDetails(invoiceNo);
-        } else if (e.target.closest('.edit-invoice')) {
-            const invoiceNo = e.target.closest('.edit-invoice').dataset.invoice;
-            editInvoice(invoiceNo);
-        } else if (e.target.closest('.delete-invoice')) {
-            const invoiceNo = e.target.closest('.delete-invoice').dataset.invoice;
-            deleteInvoice(invoiceNo);
-        }
-    });
-
-    // Create invoice button
-    const createInvoiceBtn = document.querySelector('#invoice-page .btn-primary');
-    if (createInvoiceBtn && !createInvoiceBtn.id) {
-        createInvoiceBtn.addEventListener('click', () => {
-            alert('Create new invoice functionality would go here');
-        });
-    }
-}
-
-// Page load initialization
+// 全局事件监听器 - 添加创建发票按钮的监听器
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Finance page loaded');
     addStatusStyles();
-    initDateDisplay();
-    initOverviewCharts();
-    initPeriodSwitcher();
-    renderRecentTransactions();
-    initEventListeners();
     
-    // Ensure overview page is visible by default
+    // 设置初始页面
+    const currentPage = sessionStorage.getItem('currentPage') || 'income-stats';
+    console.log('Setting initial page to:', currentPage);
+    
+    // 确保收入分布页面是默认显示的
     document.querySelectorAll('.page-content').forEach(page => {
-        if (page.id !== 'overview-page') {
+        const pageId = page.id.replace('-page', '');
+        if (pageId === currentPage) {
+            page.classList.remove('hidden');
+        } else {
             page.classList.add('hidden');
+        }
+    });
+    
+    // 初始化当前页面内容
+    setTimeout(() => {
+        if (currentPage === 'income-stats') {
+            initIncomeStatsCharts();
+        } else if (currentPage === 'invoice') {
+            initInvoicePage();
+        }
+    }, 100);
+    
+    // 延迟设置菜单高亮，确保侧边栏已渲染
+    setTimeout(() => {
+        if (typeof updateActiveMenu === 'function') {
+            updateActiveMenu(currentPage);
+        }
+    }, 500);
+    
+    // 添加创建发票按钮的事件监听器
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('#create-invoice-btn')) {
+            alert('Create Invoice: This would open a form to create a new invoice.');
+        }
+    });
+    
+    // 添加更新按钮的事件委托监听器
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('#update-revenue-chart')) {
+            updateRevenueChart();
+        }
+        if (e.target.closest('#update-purchase-cost-chart')) {
+            updatePurchaseCostChart();
         }
     });
 });

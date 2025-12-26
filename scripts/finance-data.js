@@ -87,7 +87,7 @@ const invoiceData = {
         customerNotes: "Draft invoice - pending final approval. We will notify you once the invoice is officially issued.",
         internalFlag: "pending_approval",
         lastEditedBy: "STAFF-003",
-        lastEditDate: "2023-06-15 11:20"
+        lastEditDate: "2025-10-03 11:20"
     },
     "INV-2023-005": {
         invoiceNo: "INV-2023-005",
@@ -109,7 +109,7 @@ const invoiceData = {
         customerNotes: "Bulk order discount applied. Payment terms: 3 installments as per agreement. First installment received.",
         internalFlag: "installment_payment",
         lastEditedBy: "STAFF-002",
-        lastEditDate: "2023-06-20 13:10"
+        lastEditDate: "2025-10-04 13:10"
     },
     "INV-2023-006": {
         invoiceNo: "INV-2023-006",
@@ -163,7 +163,7 @@ const staffData = {
     }
 };
 
-// Order Data
+// Order Data - 更新状态为只有 created 和 paid
 const orderData = {
     "ORD-001": {
         orderId: "ORD-001",
@@ -197,7 +197,7 @@ const orderData = {
         orderId: "ORD-003",
         branchId: "1",
         memberId: "MEM-002",
-        status: "cancelled",
+        status: "created", // 原为cancelled，改为created
         createdDate: "2025-10-04 15:30",
         updatedDate: "2025-10-04 16:14",
         paymentMethod: "paypal",
@@ -210,7 +210,7 @@ const orderData = {
         orderId: "ORD-004",
         branchId: "3",
         memberId: "MEM-005",
-        status: "refunded",
+        status: "paid", // 原为refunded，改为paid
         createdDate: "2025-10-04 12:20",
         updatedDate: "2025-10-07 09:15",
         paymentMethod: "credit card",
@@ -221,25 +221,19 @@ const orderData = {
     }
 };
 
-// Book Category Data
-const bookCategoryData = {
-    categoryDistribution: {
-        labels: ['Fiction', 'Non-Fiction', 'Science', 'History', 'Biography', 'Children'],
-        data: [28420, 21500, 12800, 9800, 7500, 6400],
-        colors:['#774b30', '#9f5933', '#a9805b', '#cca278','#e1c7ac','#e8dfce']
-    },
-    monthlyTrend: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        data: [72000, 78000, 82000, 80000, 85000, 86420]
-    },
-    categoryDetails: [
-        { category: 'Fiction', thisMonth: 28420, lastMonth: 26500, growth: 7.2, percentage: 32.9, trend: 'up' },
-        { category: 'Non-Fiction', thisMonth: 21500, lastMonth: 19800, growth: 8.6, percentage: 24.9, trend: 'up' },
-        { category: 'Science', thisMonth: 12800, lastMonth: 11500, growth: 11.3, percentage: 14.8, trend: 'up' },
-        { category: 'History', thisMonth: 9800, lastMonth: 9200, growth: 6.5, percentage: 11.3, trend: 'up' },
-        { category: 'Biography', thisMonth: 7500, lastMonth: 7200, growth: 4.2, percentage: 8.7, trend: 'up' },
-        { category: 'Children', thisMonth: 6400, lastMonth: 5800, growth: 10.3, percentage: 7.4, trend: 'up' }
-    ]
+// 注释：移除重复定义的 paymentMethodData，因为它已经在 finance.js 中定义了
+
+// 新增：每日收入数据
+const dailyRevenueData = {
+    labels: ['Oct 1', 'Oct 2', 'Oct 3', 'Oct 4', 'Oct 5', 'Oct 6', 'Oct 7'],
+    data: [12000, 15000, 13500, 14200, 16800, 18500, 17200]
+};
+
+// 新增：每日进货成本数据
+const dailyCostData = {
+    labels: ['Oct 1', 'Oct 2', 'Oct 3', 'Oct 4', 'Oct 5', 'Oct 6', 'Oct 7'],
+    data: [8200, 10500, 9200, 8800, 12100, 13400, 11800],
+    categories: ['Fiction', 'Non-Fiction', 'Science', 'History', 'Biography', 'Children', 'Reference']
 };
 
 // Merge all order data
