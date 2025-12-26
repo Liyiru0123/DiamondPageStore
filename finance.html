@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diamond Page Store - Finance Dashboard</title>
+    
+    <!-- External Resources -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+
+    <!-- 布局管理系统 -->
+    <script src="../scripts/layout.js"></script>
+    
+    <!-- 财务页面特有样式 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .book-shadow {
+                box-shadow: 0 4px 6px -1px rgba(139, 90, 43, 0.1), 0 2px 4px -1px rgba(139, 90, 43, 0.06);
+            }
+            .btn-primary {
+                @apply bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-all duration-300 shadow-md hover:shadow-lg;
+            }
+            .btn-secondary {
+                @apply bg-secondary border border-primary/30 text-primary px-4 py-2 rounded-lg hover:bg-accent/20 transition-all duration-300;
+            }
+            .card {
+                @apply bg-white rounded-xl p-5 book-shadow hover:shadow-lg transition-all duration-300;
+            }
+            .form-input {
+                @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all;
+            }
+            .income-bg {
+                background: linear-gradient(135deg, #8B5A2B 0%, #D2B48C 100%);
+            }
+            .expense-bg {
+                background: linear-gradient(135deg, #4F7942 0%, #90EE90 100%);
+            }
+            
+            /* Custom date input styling */
+            input[type="date"] {
+                font-family: 'Inter', 'system-ui', sans-serif;
+            }
+            
+            /* For Webkit browsers */
+            input[type="date"]::-webkit-datetime-edit {
+                color: #374151;
+            }
+            input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+                color: #374151;
+            }
+            input[type="date"]::-webkit-datetime-edit-text {
+                color: #374151;
+            }
+            input[type="date"]::-webkit-datetime-edit-month-field {
+                color: #374151;
+            }
+            input[type="date"]::-webkit-datetime-edit-day-field {
+                color: #374151;
+            }
+            input[type="date"]::-webkit-datetime-edit-year-field {
+                color: #374151;
+            }
+            input[type="date"]::-webkit-inner-spin-button {
+                display: none;
+            }
+            input[type="date"]::-webkit-calendar-picker-indicator {
+                color: #6B7280;
+                opacity: 0.7;
+            }
+            
+            /* 修复图表容器高度 */
+            .chart-container {
+                position: relative;
+                width: 100%;
+                height: 100%;
+            }
+            
+            /* 响应式图表高度 */
+            .chart-responsive {
+                height: 320px !important; /* 增加图表高度 */
+            }
+            
+            /* 饼图专用容器 - 大幅增加高度 */
+            .pie-chart-wrapper {
+                position: relative;
+                width: 100%;
+                height: 400px !important; /* 大幅增加饼图容器高度 */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            @media (min-width: 1024px) {
+                .chart-responsive {
+                    height: 340px !important;
+                }
+                .pie-chart-wrapper {
+                    height: 450px !important; /* 桌面端更大 */
+                }
+            }
+            
+            @media (max-width: 768px) {
+                .chart-responsive {
+                    height: 280px !important;
+                }
+                .pie-chart-wrapper {
+                    height: 350px !important;
+                }
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 font-sans text-dark min-h-screen flex flex-col">
+    <!-- 布局容器 -->
+    <div id="main-system" class="flex flex-col h-screen">
+        <!-- Header将由layout.js渲染 -->
+        <div id="layout-header"></div>
+        
+        <div class="flex flex-1 overflow-hidden">
+            <!-- Sidebar将由layout.js渲染 -->
+            <div id="layout-sidebar"></div>
+            
+            <!-- Main Content Area -->
+            <main class="flex-1 overflow-y-auto bg-gray-50 p-4 lg:p-6">
+                <!-- Financial Overview Dashboard Page -->
+                <div id="income-stats-page" class="page-content">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                        <div>
+                            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Financial Overview Dashboard</h2>
+                            <p class="text-gray-500">Analyze total financial condition</p>
+                        </div>
+                        <div class="mt-4 md:mt-0 flex gap-3">
+                            <button class="btn-secondary flex items-center gap-2">
+                                <i class="fa fa-calendar"></i> Export Report
+                            </button>
+                            <button class="btn-primary flex items-center gap-2">
+                                <i class="fa fa-download"></i> Download Data
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Total Revenue Card -->
+                    <div class="mb-6" id="total-revenue-container">
+                        <!-- Total revenue card will be populated by JavaScript -->
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <div class="card">
+                            <h3 class="font-semibold text-lg mb-4">Revenue by Payment Method</h3>
+                            <div class="pie-chart-wrapper">
+                                <canvas id="payment-method-pie-chart" class="chart-responsive"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card" id="revenue-by-date-chart-container">
+                            <!-- Revenue by Date chart with date selector will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Purchase Cost by Date Chart -->
+                    <div class="mb-6">
+                        <div class="card" id="purchase-cost-by-date-chart-container">
+                            <!-- Purchase Cost by Date chart with date selector will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Invoice Management Page -->
+                <div id="invoice-page" class="page-content hidden">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                        <div>
+                            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Invoice Management</h2>
+                            <p class="text-gray-500">Manage and track all invoices</p>
+                        </div>
+                        <div class="mt-4 md:mt-0 flex gap-3">
+                            <div class="relative">
+                                <input type="text" placeholder="Search invoices..." id="invoice-search"
+                                    class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
+                                    <i class="fa fa-search"></i>
+                                </span>
+                            </div>
+                            <button class="btn-primary flex items-center gap-2" id="create-invoice-btn">
+                                <i class="fa fa-plus"></i> Create Invoice
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card mb-6">
+                        <h3 class="font-semibold text-lg mb-4">Filter Criteria</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+                                <div class="flex gap-2">
+                                    <input type="date" class="form-input" id="invoice-start-date" lang="en" onfocus="this.showPicker()">
+                                    <span class="flex items-center text-gray-500">to</span>
+                                    <input type="date" class="form-input" id="invoice-end-date" lang="en" onfocus="this.showPicker()">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Invoice Status</label>
+                                <select class="form-input" id="invoice-status-filter">
+                                    <option value="">All Statuses</option>
+                                    <option value="draft">Draft</option>
+                                    <option value="sent">Sent</option>
+                                    <option value="paid">Paid</option>
+                                    <option value="overdue">Overdue</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Staff</label>
+                                <select class="form-input" id="invoice-staff-filter">
+                                    <option value="">All Staff</option>
+                                    <option value="STAFF-001">John Accountant</option>
+                                    <option value="STAFF-002">Sarah Manager</option>
+                                    <option value="STAFF-003">Mike Clerk</option>
+                                    <option value="STAFF-004">Lisa Assistant</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Order ID</label>
+                                <input type="text" placeholder="Order ID" id="invoice-order-filter" class="form-input">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Actions</label>
+                                <div class="flex gap-2 pt-2">
+                                    <button class="btn-primary flex-1" id="invoice-search-btn">Search</button>
+                                    <button class="btn-secondary flex-1" id="invoice-reset-btn">Reset</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                    <tr>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                                            Invoice No</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Order ID</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Staff ID</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Status</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Issue Date</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Due Date</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Amount</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Tax Amount</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Update Date</th>
+                                        <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                                            Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="invoice-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- Invoice data will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="flex justify-between items-center mt-5">
+                            <p class="text-sm text-gray-500" id="invoice-pagination-info">Total: 6 invoices</p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 数据文件 -->
+    <script src="../scripts/finance-data.js"></script>
+    
+    <!-- 财务功能 -->
+    <script src="../scripts/finance.js"></script>
+    
+    <!-- 初始化脚本 -->
+    <script>
+        // 确保DOM加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Finance page initialized');
+            // 初始化布局为财务角色，默认页面为概览
+            if (typeof initLayout === 'function') {
+                window.initLayout('finance', 'income-stats');
+            } else {
+                console.error('initLayout function not found. Make sure layout.js is loaded.');
+                // 如果layout.js未加载，显示所有页面
+                document.querySelectorAll('.page-content').forEach(page => {
+                    if (page.id === 'income-stats-page') {
+                        page.classList.remove('hidden');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

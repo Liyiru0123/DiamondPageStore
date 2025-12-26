@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diamond Page Store - Manager Dashboard</title>
+    
+    <!-- External Resources -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    
+    <!-- 引入 layout.js 处理通用布局 -->
+    <script src="../scripts/layout.js"></script>
+    
+    <!-- Custom Styles -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .book-shadow {
+        box-shadow: 0 4px 6px -1px rgba(139, 90, 43, 0.1), 0 2px 4px -1px rgba(139, 90, 43, 0.06);
+      }
+      .btn-primary {
+        @apply bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-all duration-300 shadow-md hover:shadow-lg;
+      }
+      .btn-secondary {
+        @apply bg-secondary border border-primary/30 text-primary px-4 py-2 rounded-lg hover:bg-accent/20 transition-all duration-300;
+      }
+      .card {
+        @apply bg-white rounded-xl p-5 book-shadow hover:shadow-lg transition-all duration-300;
+      }
+      .form-input {
+        @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all;
+      }
+      .income-bg {
+        background: linear-gradient(135deg, #8B5A2B 0%, #D2B48C 100%);
+      }
+      .expense-bg {
+        background: linear-gradient(135deg, #4F7942 0%, #90EE90 100%);
+      }
+      
+      /* Custom date input styling */
+      input[type="date"] {
+        font-family: 'Inter', 'system-ui', sans-serif;
+      }
+      
+      /* For Webkit browsers */
+      input[type="date"]::-webkit-datetime-edit {
+        color: #374151;
+      }
+      input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+        color: #374151;
+      }
+      input[type="date"]::-webkit-datetime-edit-text {
+        color: #374151;
+      }
+      input[type="date"]::-webkit-datetime-edit-month-field {
+        color: #374151;
+      }
+      input[type="date"]::-webkit-datetime-edit-day-field {
+        color: #374151;
+      }
+      input[type="date"]::-webkit-datetime-edit-year-field {
+        color: #374151;
+      }
+      input[type="date"]::-webkit-inner-spin-button {
+        display: none;
+      }
+      input[type="date"]::-webkit-calendar-picker-indicator {
+        color: #6B7280;
+        opacity: 0.7;
+      }
+
+      /* Status badges */
+      .role-manager { background-color: #8B5A2B; color: white; }
+      .role-finance { background-color: #A0522D; color: white; }
+      .role-staff { background-color: #D2B48C; color: #3E2723; }
+      .stock-low { background-color: #fef3c7; color: #92400e; }
+      .stock-medium { background-color: #dbeafe; color: #1e40af; }
+      .stock-high { background-color: #dcfce7; color: #166534; }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 font-sans text-dark min-h-screen flex flex-col">
+    <!-- Main System - 布局将由 layout.js 动态生成 -->
+    <div id="main-system" class="flex flex-col h-screen">
+        <!-- 头部将由 layout.js 动态生成 -->
+        <div id="layout-header"></div>
+        
+        <div class="flex flex-1 overflow-hidden">
+            <!-- 侧边栏将由 layout.js 动态生成 -->
+            <div id="layout-sidebar"></div>
+            
+            <!-- Main Content Area -->
+            <main class="flex-1 overflow-y-auto bg-gray-50 p-4 lg:p-6">
+                <!-- Overview Page -->
+                <div id="overview-page" class="page-content">
+                    <div class="flex justify-between items-center mb-6">
+                        <h1 class="text-2xl font-bold">Store Manager Overview</h1>
+                        <div id="current-date" class="text-gray-600"></div>
+                    </div>
+
+                    <!-- Key Metrics -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-white p-5 rounded-lg shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-500 mb-1">Total Orders (Today)</p>
+                                    <p class="text-2xl font-bold">156</p>
+                                </div>
+                                <div class="bg-blue-50 p-3 rounded-full">
+                                    <i class="fa fa-shopping-cart text-blue-600 text-xl"></i>
+                                </div>
+                            </div>
+                            <p class="text-sm text-green-600 mt-2">+8.5% from yesterday</p>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-lg shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-500 mb-1">Total Revenue (Today)</p>
+                                    <p class="text-2xl font-bold">¥10,250</p>
+                                </div>
+                                <div class="bg-green-50 p-3 rounded-full">
+                                    <i class="fa fa-money text-green-600 text-xl"></i>
+                                </div>
+                            </div>
+                            <p class="text-sm text-green-600 mt-2">+12.5% from yesterday</p>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-lg shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-500 mb-1">Average Order Value</p>
+                                    <p class="text-2xl font-bold">¥65.70</p>
+                                </div>
+                                <div class="bg-purple-50 p-3 rounded-full">
+                                    <i class="fa fa-line-chart text-purple-600 text-xl"></i>
+                                </div>
+                            </div>
+                            <p class="text-sm text-green-600 mt-2">+4.2% from yesterday</p>
+                        </div>
+                    </div>
+
+                    <!-- Comparison Charts -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <!-- 订单数对比 -->
+                        <div class="card">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-semibold">Order Count Comparison</h3>
+                                <div class="text-sm text-gray-500">
+                                    <i class="fa fa-info-circle"></i> Monthly Data
+                                </div>
+                            </div>
+                            <div class="chart-container h-64">
+                                <canvas id="order-comparison-chart"></canvas>
+                            </div>
+                            <div class="mt-3 text-sm text-gray-600">
+                                <p>Central Plaza leads with 156 orders, showing strong performance.</p>
+                            </div>
+                        </div>
+
+                        <!-- 销售分析 - 支付方式对比 -->
+                        <div class="card">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-semibold">Sales Analysis by Payment Method</h3>
+                                <div class="text-sm text-gray-500">
+                                    <i class="fa fa-credit-card"></i> All Stores
+                                </div>
+                            </div>
+                            <div class="chart-container h-64">
+                                <canvas id="payment-method-chart"></canvas>
+                            </div>
+                            <div class="mt-3 text-sm text-gray-600">
+                                <p>Credit Card payments dominate with 42% of total sales.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 热销图书分类对比 -->
+                    <div class="card mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold">Best-Selling Book Categories</h3>
+                            <div class="text-sm text-gray-500">
+                                <i class="fa fa-book"></i> Sales Performance
+                            </div>
+                        </div>
+                        <div class="chart-container h-64">
+                            <canvas id="book-category-chart"></canvas>
+                        </div>
+                        <div class="mt-3 text-sm text-gray-600">
+                            <p>Fiction books generate the highest revenue at ¥35,000 (35% of total).</p>
+                        </div>
+                    </div>
+
+                    <!-- Summary Statistics -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-primary/10 p-4 rounded-lg">
+                            <div class="flex items-center mb-2">
+                                <div class="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center mr-2">
+                                    <i class="fa fa-store text-primary text-sm"></i>
+                                </div>
+                                <h4 class="font-medium">Top Performing Branch</h4>
+                            </div>
+                            <p class="text-2xl font-bold">Central Plaza</p>
+                            <p class="text-sm text-gray-600 mt-1">156 orders | ¥8,420 revenue</p>
+                        </div>
+
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <div class="flex items-center mb-2">
+                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-2">
+                                    <i class="fa fa-credit-card text-blue-600 text-sm"></i>
+                                </div>
+                                <h4 class="font-medium">Most Popular Payment</h4>
+                            </div>
+                            <p class="text-2xl font-bold">Credit Card</p>
+                            <p class="text-sm text-gray-600 mt-1">42% of all transactions</p>
+                        </div>
+
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <div class="flex items-center mb-2">
+                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-2">
+                                    <i class="fa fa-book text-green-600 text-sm"></i>
+                                </div>
+                                <h4 class="font-medium">Top Category</h4>
+                            </div>
+                            <p class="text-2xl font-bold">Fiction</p>
+                            <p class="text-sm text-gray-600 mt-1">35% of total book sales</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inventory Management Page -->
+                <div id="inventory-page" class="page-content hidden">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                        <div>
+                            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Inventory
+                                Management</h2>
+                            <p class="text-gray-500">Manage book inventory across all branches</p>
+                        </div>
+                        <div class="mt-4 md:mt-0 flex gap-3">
+                            <div class="relative">
+                                <input type="text" placeholder="Search books..."
+                                    class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
+                                    <i class="fa fa-search"></i>
+                                </span>
+                            </div>
+                            <button class="btn-primary flex items-center gap-2">
+                                <i class="fa fa-plus"></i> Add Book
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Branch Filter -->
+                    <div class="card mb-6">
+                        <h3 class="font-semibold text-lg mb-4">Filter by Branch</h3>
+                        <div class="flex gap-3 items-end">
+                            <div class="w-full md:w-64">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Select Branch</label>
+                                <select id="branch-filter-select" class="form-input">
+                                    <option value="all">All Branches</option>
+                                    <option value="central">Central Plaza</option>
+                                    <option value="riverside">Riverside</option>
+                                    <option value="westside">Westside</option>
+                                </select>
+                            </div>
+                            <button id="apply-branch-filter" class="btn-primary h-10">Apply</button>
+                        </div>
+                    </div>
+
+                    <!-- Inventory Table -->
+                    <div class="card">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                    <tr>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                                            Book Title</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            ISBN</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            SKU ID</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Branch</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Current Stock</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Last Restock</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                                            Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventory-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- Data will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div class="flex justify-between items-center mt-5">
+                            <p class="text-sm text-gray-500">Showing 1 to 10 of 248 records</p>
+                            <div class="flex gap-1">
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                    disabled>
+                                    <i class="fa fa-chevron-left text-xs"></i>
+                                </button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-primary bg-primary text-white">1</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">2</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">3</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">4</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">5</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50">
+                                    <i class="fa fa-chevron-right text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Staff Management Page -->
+                <div id="staff-page" class="page-content hidden">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                        <div>
+                            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Staff
+                                Management</h2>
+                            <p class="text-gray-500">Manage employees across all branches</p>
+                        </div>
+                        <div class="mt-4 md:mt-0 flex gap-3">
+                            <div class="relative">
+                                <input type="text" placeholder="Search staff..."
+                                    class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
+                                    <i class="fa fa-search"></i>
+                                </span>
+                            </div>
+                            <button class="btn-primary flex items-center gap-2">
+                                <i class="fa fa-plus"></i> Add Staff
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Staff Filters -->
+                    <div class="card mb-6">
+                        <h3 class="font-semibold text-lg mb-4">Filter Staff</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                                <select class="form-input" id="branch-filter">
+                                    <option value="all">All Branches</option>
+                                    <option value="central">Central Plaza</option>
+                                    <option value="riverside">Riverside</option>
+                                    <option value="westside">Westside</option>
+                                    <option value="northgate">Northgate</option>
+                                    <option value="southpoint">Southpoint</option>
+                                    <option value="eastview">Eastview</option>
+                                    <option value="downtown">Downtown</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Position</label>
+                                <select class="form-input" id="position-filter">
+                                    <option value="all">All Positions</option>
+                                    <option value="manager">Manager</option>
+                                    <option value="finance">Finance</option>
+                                    <option value="staff">Staff</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Actions</label>
+                                <div class="flex gap-2 pt-2">
+                                    <button class="btn-primary flex-1" id="apply-filters">Apply</button>
+                                    <button class="btn-secondary flex-1" id="reset-filters">Reset</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Staff Table -->
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-semibold text-lg">All Staff Members</h3>
+                            <div class="text-sm text-gray-500">
+                                Showing <span id="staff-count">24</span> employees
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                    <tr>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                                            Employee ID</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            User ID</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Branch</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Name</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Position</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Phone</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                                            Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="staff-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- Data will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div class="flex justify-between items-center mt-5">
+                            <p class="text-sm text-gray-500">Showing 1 to 10 of 24 employees</p>
+                            <div class="flex gap-1">
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                    disabled>
+                                    <i class="fa fa-chevron-left text-xs"></i>
+                                </button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-primary bg-primary text-white">1</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">2</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">3</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50">
+                                    <i class="fa fa-chevron-right text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sales Management Page -->
+                <div id="pricing-page" class="page-content hidden">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                        <div>
+                            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Sales
+                                Management</h2>
+                            <p class="text-gray-500">Adjust book prices and manage promotions</p>
+                        </div>
+                    </div>
+
+                    <!-- Bestsellers and Need Promotion in Compact Layout -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <!-- Bestsellers Compact -->
+                        <div class="card">
+                            <h3 class="font-semibold text-lg mb-3">Bestsellers</h3>
+                            <div class="space-y-2" id="bestsellers-list">
+                                <div class="flex items-center justify-between p-2 bg-green-50 rounded">
+                                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                                        <div
+                                            class="w-6 h-6 bg-primary/10 rounded flex items-center justify-center flex-shrink-0">
+                                            <i class="fa fa-book text-primary text-xs"></i>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="font-medium text-sm truncate">Atomic Habits</p>
+                                            <p class="text-xs text-gray-500 truncate">42 sold</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between p-2 bg-green-50 rounded">
+                                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                                        <div
+                                            class="w-6 h-6 bg-primary/10 rounded flex items-center justify-center flex-shrink-0">
+                                            <i class="fa fa-book text-primary text-xs"></i>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="font-medium text-sm truncate">The Midnight Library</p>
+                                            <p class="text-xs text-gray-500 truncate">38 sold</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between p-2 bg-green-50 rounded">
+                                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                                        <div
+                                            class="w-6 h-6 bg-primary/10 rounded flex items-center justify-center flex-shrink-0">
+                                            <i class="fa fa-book text-primary text-xs"></i>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="font-medium text-sm truncate">Sapiens</p>
+                                            <p class="text-xs text-gray-500 truncate">35 sold</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Books Needing Promotion Compact -->
+                        <div class="card">
+                            <h3 class="font-semibold text-lg mb-3">Need Promotion</h3>
+                            <div class="space-y-2" id="promotion-list">
+                                <div class="flex items-center justify-between p-2 bg-yellow-50 rounded">
+                                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                                        <div
+                                            class="w-6 h-6 bg-primary/10 rounded flex items-center justify-center flex-shrink-0">
+                                            <i class="fa fa-book text-primary text-xs"></i>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="font-medium text-sm truncate">Pride & Prejudice</p>
+                                            <p class="text-xs text-gray-500 truncate">8 weeks</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        class="text-primary hover:text-primary/80 text-xs font-medium flex-shrink-0 ml-2">Promote</button>
+                                </div>
+                                <div class="flex items-center justify-between p-2 bg-yellow-50 rounded">
+                                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                                        <div
+                                            class="w-6 h-6 bg-primary/10 rounded flex items-center justify-center flex-shrink-0">
+                                            <i class="fa fa-book text-primary text-xs"></i>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="font-medium text-sm truncate">Moby Dick</p>
+                                            <p class="text-xs text-gray-500 truncate">6 weeks</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        class="text-primary hover:text-primary/80 text-xs font-medium flex-shrink-0 ml-2">Promote</button>
+                                </div>
+                                <div class="flex items-center justify-between p-2 bg-yellow-50 rounded">
+                                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                                        <div
+                                            class="w-6 h-6 bg-primary/10 rounded flex items-center justify-center flex-shrink-0">
+                                            <i class="fa fa-book text-primary text-xs"></i>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="font-medium text-sm truncate">War and Peace</p>
+                                            <p class="text-xs text-gray-500 truncate">10 weeks</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        class="text-primary hover:text-primary/80 text-xs font-medium flex-shrink-0 ml-2">Promote</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pricing Table -->
+                    <div class="card">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+                            <h3 class="font-semibold text-lg mb-4 md:mb-0">Book Pricing</h3>
+                            <div class="flex flex-col sm:flex-row gap-3">
+                                <!-- 书籍搜索框 -->
+                                <div class="relative">
+                                    <input type="text" placeholder="Search by title or ISBN..."
+                                        class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+                                        id="book-search-input">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
+                                        <i class="fa fa-search"></i>
+                                    </span>
+                                </div>
+                                <!-- 添加书籍信息按钮 -->
+                                <button class="btn-primary flex items-center gap-2" id="add-book-info-btn">
+                                    <i class="fa fa-plus"></i> Add Book Info
+                                </button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                    <tr>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                                            Book Title</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            ISBN</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Current Price</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                                            Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pricing-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- Data will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Management Page -->
+                <div id="user-management-page" class="page-content hidden">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                        <div>
+                            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">User Management
+                            </h2>
+                            <p class="text-gray-500">Manage user accounts, permissions and status</p>
+                        </div>
+                        <div class="mt-4 md:mt-0 flex gap-3">
+                            <div class="relative">
+                                <input type="text" placeholder="Search users..."
+                                    class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
+                                    <i class="fa fa-search"></i>
+                                </span>
+                            </div>
+                            <button class="btn-primary flex items-center gap-2">
+                                <i class="fa fa-plus"></i> Add User
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- User Management Table -->
+                    <div class="card">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                    <tr>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                                            User ID</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Account Role</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Account Status</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            User Type</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Email</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Join Date</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                                            Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="user-management-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- Data will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div class="flex justify-between items-center mt-5">
+                            <p class="text-sm text-gray-500">Showing 1 to 10 of 48 users</p>
+                            <div class="flex gap-1">
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                    disabled>
+                                    <i class="fa fa-chevron-left text-xs"></i>
+                                </button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-primary bg-primary text-white">1</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">2</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">3</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">4</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">5</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50">
+                                    <i class="fa fa-chevron-right text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notifications Page -->
+                <div id="notifications-page" class="page-content hidden">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                        <div>
+                            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Notifications
+                            </h2>
+                            <p class="text-gray-500">Send announcements and notifications</p>
+                        </div>
+                        <div class="mt-4 md:mt-0 flex gap-3">
+                            <button class="btn-primary flex items-center gap-2" id="compose-notification-btn">
+                                <i class="fa fa-plus"></i> Compose Message
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Compose Notification Form -->
+                    <div id="compose-notification" class="card mb-6 hidden">
+                        <h3 class="font-semibold text-lg mb-4">Compose Notification</h3>
+                        <form id="notification-form">
+                            <div class="grid grid-cols-1 gap-4">
+                                <div class="bg-blue-50 p-3 rounded-lg">
+                                    <p class="text-sm text-blue-600 mb-1"><i class="fa fa-info-circle"></i> This
+                                        notification will be sent to the shopping system homepage.</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                                    <input type="text" class="form-input" placeholder="Enter notification subject"
+                                        id="notification-subject" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                                    <textarea class="form-input" rows="5" placeholder="Enter your message"
+                                        id="notification-message" required></textarea>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="submit" class="btn-primary">Send</button>
+                                    <button type="button" class="btn-secondary" id="cancel-notification">Cancel</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Notifications List -->
+                    <div class="card">
+                        <h3 class="font-semibold text-lg mb-4">Recent Notifications</h3>
+                        <div class="space-y-4" id="notifications-list">
+                            <!-- Notifications will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 添加书籍信息模态框 -->
+                <div id="add-book-modal"
+                    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+                    <div class="bg-white rounded-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+                        <div class="p-6">
+                            <h3 class="text-lg font-semibold mb-4">Add New Book Information</h3>
+                            <form id="add-book-form">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Book Title *</label>
+                                        <input type="text" id="add-book-title" class="form-input" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">ISBN *</label>
+                                        <input type="text" id="add-book-isbn" class="form-input" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Author *</label>
+                                        <input type="text" id="add-book-author" class="form-input" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Publisher *</label>
+                                        <input type="text" id="add-book-publisher" class="form-input" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Language *</label>
+                                        <input type="text" id="add-book-language" class="form-input" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                                        <select id="add-book-category" class="form-input" required>
+                                            <option value="">Select Category</option>
+                                            <option value="Fiction">Fiction</option>
+                                            <option value="Non-Fiction">Non-Fiction</option>
+                                            <option value="Science">Science</option>
+                                            <option value="History">History</option>
+                                            <option value="Biography">Biography</option>
+                                            <option value="Children">Children</option>
+                                            <option value="Self-help">Self-help</option>
+                                            <option value="Classic">Classic</option>
+                                            <option value="Memoir">Memoir</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">SKU ID *</label>
+                                        <input type="text" id="add-book-sku" class="form-input" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Current Price
+                                            *</label>
+                                        <input type="text" id="add-book-price" class="form-input" placeholder="¥0.00"
+                                            required>
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Comment</label>
+                                        <textarea id="add-book-comment" class="form-input" rows="3"
+                                            placeholder="Add any additional notes about this book"></textarea>
+                                    </div>
+                                </div>
+                                <div class="flex justify-end gap-3 mt-6">
+                                    <button type="button" id="cancel-add-book" class="btn-secondary">Cancel</button>
+                                    <button type="submit" class="btn-primary">Add Book</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Book Modal -->
+                <div id="edit-book-modal"
+                    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+                    <div class="bg-white rounded-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+                        <div class="p-6">
+                            <h3 class="text-lg font-semibold mb-4">Edit Book Details</h3>
+                            <form id="edit-book-form">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Book Title</label>
+                                        <input type="text" id="edit-book-title" class="form-input" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">ISBN</label>
+                                        <input type="text" id="edit-book-isbn" class="form-input" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Author</label>
+                                        <input type="text" id="edit-book-author" class="form-input" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Publisher</label>
+                                        <input type="text" id="edit-book-publisher" class="form-input" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Language</label>
+                                        <input type="text" id="edit-book-language" class="form-input" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                                        <input type="text" id="edit-book-category" class="form-input" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">SKU ID</label>
+                                        <input type="text" id="edit-book-sku" class="form-input" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Current
+                                            Price</label>
+                                        <input type="text" id="edit-book-price" class="form-input" required>
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Comment</label>
+                                        <textarea id="edit-book-comment" class="form-input" rows="3"></textarea>
+                                    </div>
+                                </div>
+                                <div class="flex justify-end gap-3 mt-6">
+                                    <button type="button" id="cancel-edit-book" class="btn-secondary">Cancel</button>
+                                    <button type="submit" class="btn-primary">Save Changes</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <!-- Manager-specific scripts -->
+    <script src="../scripts/manager-data.js"></script>
+    <script src="../scripts/manager.js"></script>
+    
+    <!-- 初始化布局 -->
+    <script>
+        // 等待DOM加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化布局，角色为manager，默认页面为overview
+            window.initLayout('manager', 'overview');
+        });
+    </script>
+</body>
+</html>
