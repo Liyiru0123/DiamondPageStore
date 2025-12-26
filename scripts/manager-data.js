@@ -290,7 +290,7 @@ const pricingData = [
     }
 ];
 
-// Overview页面数据 - 添加新的对比数据
+// Overview页面数据 - 修改为分店对比数据
 const overviewData = {
     // 订单数对比数据
     branchOrderComparison: [
@@ -302,22 +302,138 @@ const overviewData = {
         { branch: 'Eastview', orders: 78, trend: '+10%' }
     ],
     
-    // 销售分析 - 支付方式对比数据
-    paymentMethodComparison: [
-        { method: 'Credit Card', amount: 42000, percentage: 42 },
-        { method: 'WeChat Pay', amount: 28000, percentage: 28 },
-        { method: 'Alipay', amount: 19500, percentage: 19.5 },
-        { method: 'Cash', amount: 10500, percentage: 10.5 }
+    // 销售分析 - 各分店支付方式对比数据（三种支付方式）
+    branchPaymentComparison: [
+        {
+            branch: 'Central Plaza',
+            payments: [
+                { method: 'Credit Card', amount: 18000, percentage: 45 },
+                { method: 'Third-party payment', amount: 15000, percentage: 37.5 },
+                { method: 'Cash', amount: 7000, percentage: 17.5 }
+            ],
+            total: 40000
+        },
+        {
+            branch: 'Riverside',
+            payments: [
+                { method: 'Credit Card', amount: 15000, percentage: 42.9 },
+                { method: 'Third-party payment', amount: 12000, percentage: 34.3 },
+                { method: 'Cash', amount: 8000, percentage: 22.8 }
+            ],
+            total: 35000
+        },
+        {
+            branch: 'Westside',
+            payments: [
+                { method: 'Credit Card', amount: 10000, percentage: 40 },
+                { method: 'Third-party payment', amount: 11000, percentage: 44 },
+                { method: 'Cash', amount: 4000, percentage: 16 }
+            ],
+            total: 25000
+        },
+        {
+            branch: 'Northgate',
+            payments: [
+                { method: 'Credit Card', amount: 8000, percentage: 44.4 },
+                { method: 'Third-party payment', amount: 7000, percentage: 38.9 },
+                { method: 'Cash', amount: 3000, percentage: 16.7 }
+            ],
+            total: 18000
+        },
+        {
+            branch: 'Southpoint',
+            payments: [
+                { method: 'Credit Card', amount: 5000, percentage: 38.5 },
+                { method: 'Third-party payment', amount: 6000, percentage: 46.2 },
+                { method: 'Cash', amount: 2000, percentage: 15.4 }
+            ],
+            total: 13000
+        },
+        {
+            branch: 'Eastview',
+            payments: [
+                { method: 'Credit Card', amount: 7000, percentage: 43.8 },
+                { method: 'Third-party payment', amount: 7000, percentage: 43.8 },
+                { method: 'Cash', amount: 2000, percentage: 12.5 }
+            ],
+            total: 16000
+        }
     ],
     
-    // 热销图书分类对比数据
-    bookCategoryComparison: [
-        { category: 'Fiction', sales: 35000, percentage: 35, color: '#8B5A2B' },
-        { category: 'Non-Fiction', sales: 25000, percentage: 25, color: '#A0522D' },
-        { category: 'Science', sales: 15000, percentage: 15, color: '#D2691E' },
-        { category: 'History', sales: 12000, percentage: 12, color: '#CD853F' },
-        { category: 'Biography', sales: 8000, percentage: 8, color: '#D2B48C' },
-        { category: 'Children', sales: 5000, percentage: 5, color: '#F5DEB3' }
+    // 热销图书分类对比数据（改为分店之间的对比）
+    branchCategoryComparison: [
+        {
+            branch: 'Central Plaza',
+            categories: [
+                { category: 'Fiction', sales: 14000, percentage: 35 },
+                { category: 'Non-Fiction', sales: 10000, percentage: 25 },
+                { category: 'Science', sales: 6000, percentage: 15 },
+                { category: 'History', sales: 5000, percentage: 12.5 },
+                { category: 'Biography', sales: 3000, percentage: 7.5 },
+                { category: 'Children', sales: 2000, percentage: 5 }
+            ],
+            total: 40000
+        },
+        {
+            branch: 'Riverside',
+            categories: [
+                { category: 'Fiction', sales: 12250, percentage: 35 },
+                { category: 'Non-Fiction', sales: 8750, percentage: 25 },
+                { category: 'Science', sales: 5250, percentage: 15 },
+                { category: 'History', sales: 4375, percentage: 12.5 },
+                { category: 'Biography', sales: 2625, percentage: 7.5 },
+                { category: 'Children', sales: 1750, percentage: 5 }
+            ],
+            total: 35000
+        },
+        {
+            branch: 'Westside',
+            categories: [
+                { category: 'Fiction', sales: 8750, percentage: 35 },
+                { category: 'Non-Fiction', sales: 6250, percentage: 25 },
+                { category: 'Science', sales: 3750, percentage: 15 },
+                { category: 'History', sales: 3125, percentage: 12.5 },
+                { category: 'Biography', sales: 1875, percentage: 7.5 },
+                { category: 'Children', sales: 1250, percentage: 5 }
+            ],
+            total: 25000
+        },
+        {
+            branch: 'Northgate',
+            categories: [
+                { category: 'Fiction', sales: 6300, percentage: 35 },
+                { category: 'Non-Fiction', sales: 4500, percentage: 25 },
+                { category: 'Science', sales: 2700, percentage: 15 },
+                { category: 'History', sales: 2250, percentage: 12.5 },
+                { category: 'Biography', sales: 1350, percentage: 7.5 },
+                { category: 'Children', sales: 900, percentage: 5 }
+            ],
+            total: 18000
+        },
+        {
+            branch: 'Southpoint',
+            categories: [
+                { category: 'Fiction', sales: 4550, percentage: 35 },
+                { category: 'Non-Fiction', sales: 3250, percentage: 25 },
+                { category: 'Science', sales: 1950, percentage: 15 },
+                { category: 'History', sales: 1625, percentage: 12.5 },
+                { category: 'Biography', sales: 975, percentage: 7.5 },
+                { category: 'Children', sales: 650, percentage: 5 }
+            ],
+            total: 13000
+        },
+        {
+            branch: 'Eastview',
+            categories: [
+                { category: 'Fiction', sales: 5600, percentage: 35 },
+                { category: 'Non-Fiction', sales: 4000, percentage: 25 },
+                { category: 'Science', sales: 2400, percentage: 15 },
+                { category: 'History', sales: 2000, percentage: 12.5 },
+                { category: 'Biography', sales: 1200, percentage: 7.5 },
+                { category: 'Children', sales: 800, percentage: 5 }
+            ],
+            total: 16000
+        }
     ]
 };
 
@@ -348,3 +464,317 @@ const notifications = [
         type: 'announcement'
     }
 ];
+
+// manager-data.js - 在现有数据后面添加
+
+// 分店补货申请数据
+const replenishmentRequests = [
+    {
+        id: 'REQ001',
+        branchId: 'ST001',
+        branchName: 'Central Plaza',
+        requestTime: '2025-06-15 10:30:00',
+        skuCount: 5,
+        totalQuantity: 42,
+        status: 'pending',
+        urgency: 'high',
+        note: 'Multiple bestsellers running low',
+        items: [
+            { title: 'Atomic Habits', sku: 'BK-ATOM-001', isbn: '978-0735211292', requested: 15, suggestedCost: 35.00 },
+            { title: 'The Midnight Library', sku: 'BK-MIDN-002', isbn: '978-0525559474', requested: 10, suggestedCost: 40.00 },
+            { title: 'Sapiens', sku: 'BK-SAPI-003', isbn: '978-0062316097', requested: 8, suggestedCost: 45.00 },
+            { title: 'Educated', sku: 'BK-EDUC-004', isbn: '978-0399590504', requested: 5, suggestedCost: 30.00 },
+            { title: '1984', sku: 'BK-1984-007', isbn: '978-0451524935', requested: 4, suggestedCost: 25.00 }
+        ]
+    },
+    {
+        id: 'REQ002',
+        branchId: 'ST002',
+        branchName: 'Riverside',
+        requestTime: '2025-06-14 14:20:00',
+        skuCount: 3,
+        totalQuantity: 20,
+        status: 'approved',
+        urgency: 'medium',
+        note: 'Regular restock for fiction section',
+        items: [
+            { title: 'Pride and Prejudice', sku: 'BK-PRIDE-008', isbn: '978-0141439518', requested: 8, suggestedCost: 28.00 },
+            { title: 'To Kill a Mockingbird', sku: 'BK-MOCK-006', isbn: '978-0061120084', requested: 7, suggestedCost: 32.00 },
+            { title: 'The Great Gatsby', sku: 'BK-GATSBY-005', isbn: '978-0743273565', requested: 5, suggestedCost: 30.00 }
+        ]
+    },
+    {
+        id: 'REQ003',
+        branchId: 'ST003',
+        branchName: 'Westside',
+        requestTime: '2025-06-13 09:15:00',
+        skuCount: 4,
+        totalQuantity: 25,
+        status: 'completed',
+        urgency: 'low',
+        note: 'Children section restock',
+        items: [
+            { title: 'Harry Potter 1', sku: 'BK-HP-009', isbn: '978-0439708180', requested: 8, suggestedCost: 38.00 },
+            { title: 'The Very Hungry Caterpillar', sku: 'BK-CATER-010', isbn: '978-0399226908', requested: 7, suggestedCost: 22.00 },
+            { title: 'Where the Wild Things Are', sku: 'BK-WILD-011', isbn: '978-0060254926', requested: 6, suggestedCost: 26.00 },
+            { title: 'Goodnight Moon', sku: 'BK-MOON-012', isbn: '978-0694003617', requested: 4, suggestedCost: 20.00 }
+        ]
+    },
+    {
+        id: 'REQ004',
+        branchId: 'ST004',
+        branchName: 'Northgate',
+        requestTime: '2025-06-12 16:45:00',
+        skuCount: 2,
+        totalQuantity: 12,
+        status: 'rejected',
+        urgency: 'medium',
+        note: 'Exceeds budget allocation',
+        items: [
+            { title: 'The Power of Habit', sku: 'BK-POWER-013', isbn: '978-0812981605', requested: 8, suggestedCost: 42.00 },
+            { title: 'Thinking, Fast and Slow', sku: 'BK-THINK-014', isbn: '978-0374533557', requested: 4, suggestedCost: 48.00 }
+        ]
+    },
+    {
+        id: 'REQ005',
+        branchId: 'ST005',
+        branchName: 'Southpoint',
+        requestTime: '2025-06-11 11:10:00',
+        skuCount: 6,
+        totalQuantity: 35,
+        status: 'pending',
+        urgency: 'high',
+        note: 'Urgent: School book fair next week',
+        items: [
+            { title: 'Diary of a Wimpy Kid', sku: 'BK-WIMPY-015', isbn: '978-0810993136', requested: 10, suggestedCost: 26.00 },
+            { title: 'Wonder', sku: 'BK-WONDER-016', isbn: '978-0375869020', requested: 8, suggestedCost: 34.00 },
+            { title: 'The Hobbit', sku: 'BK-HOBBIT-017', isbn: '978-0547928227', requested: 7, suggestedCost: 40.00 },
+            { title: 'The Catcher in the Rye', sku: 'BK-CATCHER-018', isbn: '978-0316769488', requested: 5, suggestedCost: 32.00 },
+            { title: 'Lord of the Flies', sku: 'BK-FLIES-019', isbn: '978-0399501487', requested: 3, suggestedCost: 28.00 },
+            { title: 'Brave New World', sku: 'BK-BRAVE-020', isbn: '978-0060850524', requested: 2, suggestedCost: 36.00 }
+        ]
+    },
+    {
+        id: 'REQ006',
+        branchId: 'ST001',
+        branchName: 'Central Plaza',
+        requestTime: '2025-06-10 13:25:00',
+        skuCount: 3,
+        totalQuantity: 18,
+        status: 'approved',
+        urgency: 'medium',
+        note: 'Non-fiction section update',
+        items: [
+            { title: 'Becoming', sku: 'BK-BECOMING-021', isbn: '978-1524763138', requested: 8, suggestedCost: 45.00 },
+            { title: 'Born a Crime', sku: 'BK-BORN-022', isbn: '978-0399588174', requested: 6, suggestedCost: 38.00 },
+            { title: 'The Body', sku: 'BK-BODY-023', isbn: '978-1984825463', requested: 4, suggestedCost: 42.00 }
+        ]
+    },
+    {
+        id: 'REQ007',
+        branchId: 'ST006',
+        branchName: 'Eastview',
+        requestTime: '2025-06-09 15:40:00',
+        skuCount: 4,
+        totalQuantity: 22,
+        status: 'pending',
+        urgency: 'medium',
+        note: 'Regular monthly restock',
+        items: [
+            { title: 'The Alchemist', sku: 'BK-ALCHEMIST-024', isbn: '978-0062315007', requested: 8, suggestedCost: 36.00 },
+            { title: 'The Four Agreements', sku: 'BK-FOUR-025', isbn: '978-1878424310', requested: 7, suggestedCost: 28.00 },
+            { title: 'The 7 Habits of Highly Effective People', sku: 'BK-7HABITS-026', isbn: '978-1982137274', requested: 5, suggestedCost: 40.00 },
+            { title: 'How to Win Friends and Influence People', sku: 'BK-WINFRIENDS-027', isbn: '978-0671027032', requested: 2, suggestedCost: 32.00 }
+        ]
+    },
+    {
+        id: 'REQ008',
+        branchId: 'ST007',
+        branchName: 'Downtown',
+        requestTime: '2025-06-08 10:05:00',
+        skuCount: 5,
+        totalQuantity: 30,
+        status: 'completed',
+        urgency: 'low',
+        note: 'Business books section',
+        items: [
+            { title: 'The Lean Startup', sku: 'BK-LEAN-028', isbn: '978-0307887894', requested: 8, suggestedCost: 42.00 },
+            { title: 'Zero to One', sku: 'BK-ZERO-029', isbn: '978-0804139298', requested: 7, suggestedCost: 38.00 },
+            { title: 'Good to Great', sku: 'BK-GREAT-030', isbn: '978-0066620992', requested: 6, suggestedCost: 45.00 },
+            { title: 'Start with Why', sku: 'BK-WHY-031', isbn: '978-1591842804', requested: 5, suggestedCost: 36.00 },
+            { title: 'The Hard Thing About Hard Things', sku: 'BK-HARD-032', isbn: '978-0062273208', requested: 4, suggestedCost: 40.00 }
+        ]
+    }
+];
+
+// 库存总览数据 - 按分店
+const stockOverviewByBranch = [
+    { sku: 'BK-ATOM-001', currentStock: 15, lastInbound: '2025-06-10', stockStatus: 'Good' },
+    { sku: 'BK-MIDN-002', currentStock: 5, lastInbound: '2025-06-05', stockStatus: 'Low' },
+    { sku: 'BK-SAPI-003', currentStock: 22, lastInbound: '2025-06-12', stockStatus: 'Good' },
+    { sku: 'BK-EDUC-004', currentStock: 8, lastInbound: '2025-06-08', stockStatus: 'Medium' },
+    { sku: 'BK-GATSBY-005', currentStock: 3, lastInbound: '2025-06-02', stockStatus: 'Low' },
+    { sku: 'BK-MOCK-006', currentStock: 12, lastInbound: '2025-06-15', stockStatus: 'Good' },
+    { sku: 'BK-1984-007', currentStock: 18, lastInbound: '2025-06-11', stockStatus: 'Good' },
+    { sku: 'BK-PRIDE-008', currentStock: 7, lastInbound: '2025-06-09', stockStatus: 'Medium' }
+];
+
+// 库存总览数据 - 按SKU分布
+const stockOverviewBySKU = [
+    { 
+        sku: 'BK-ATOM-001', 
+        title: 'Atomic Habits', 
+        centralPlaza: 15, 
+        riverside: 8, 
+        westside: 12, 
+        northgate: 6, 
+        southpoint: 5, 
+        eastview: 7, 
+        downtown: 10 
+    },
+    { 
+        sku: 'BK-MIDN-002', 
+        title: 'The Midnight Library', 
+        centralPlaza: 5, 
+        riverside: 4, 
+        westside: 6, 
+        northgate: 3, 
+        southpoint: 2, 
+        eastview: 4, 
+        downtown: 5 
+    },
+    { 
+        sku: 'BK-SAPI-003', 
+        title: 'Sapiens', 
+        centralPlaza: 22, 
+        riverside: 15, 
+        westside: 18, 
+        northgate: 12, 
+        southpoint: 8, 
+        eastview: 10, 
+        downtown: 14 
+    },
+    { 
+        sku: 'BK-EDUC-004', 
+        title: 'Educated', 
+        centralPlaza: 8, 
+        riverside: 6, 
+        westside: 9, 
+        northgate: 4, 
+        southpoint: 3, 
+        eastview: 5, 
+        downtown: 7 
+    },
+    { 
+        sku: 'BK-GATSBY-005', 
+        title: 'The Great Gatsby', 
+        centralPlaza: 3, 
+        riverside: 2, 
+        westside: 4, 
+        northgate: 1, 
+        southpoint: 1, 
+        eastview: 2, 
+        downtown: 3 
+    }
+];
+
+// 完整的库存数据 - 按分店的详细库存数据
+const stockOverviewByBranchDetail = [
+    // Central Plaza (ST001)
+    { sku: 'BK-ATOM-001', title: 'Atomic Habits', branchId: 'ST001', branchName: 'Central Plaza', currentStock: 15, lastInbound: '2025-06-10', stockStatus: 'Good', category: 'Self-help', price: 52.00 },
+    { sku: 'BK-MIDN-002', title: 'The Midnight Library', branchId: 'ST001', branchName: 'Central Plaza', currentStock: 5, lastInbound: '2025-06-05', stockStatus: 'Low', category: 'Fiction', price: 68.00 },
+    { sku: 'BK-SAPI-003', title: 'Sapiens', branchId: 'ST001', branchName: 'Central Plaza', currentStock: 22, lastInbound: '2025-06-12', stockStatus: 'Good', category: 'History', price: 68.00 },
+    { sku: 'BK-EDUC-004', title: 'Educated', branchId: 'ST001', branchName: 'Central Plaza', currentStock: 8, lastInbound: '2025-06-08', stockStatus: 'Medium', category: 'Memoir', price: 45.00 },
+    { sku: 'BK-1984-007', title: '1984', branchId: 'ST001', branchName: 'Central Plaza', currentStock: 18, lastInbound: '2025-06-11', stockStatus: 'Good', category: 'Classic', price: 35.00 },
+    { sku: 'BK-BECOMING-021', title: 'Becoming', branchId: 'ST001', branchName: 'Central Plaza', currentStock: 12, lastInbound: '2025-06-09', stockStatus: 'Good', category: 'Biography', price: 45.00 },
+    { sku: 'BK-BORN-022', title: 'Born a Crime', branchId: 'ST001', branchName: 'Central Plaza', currentStock: 7, lastInbound: '2025-06-07', stockStatus: 'Medium', category: 'Biography', price: 38.00 },
+    
+    // Riverside (ST002)
+    { sku: 'BK-ATOM-001', title: 'Atomic Habits', branchId: 'ST002', branchName: 'Riverside', currentStock: 8, lastInbound: '2025-06-09', stockStatus: 'Medium', category: 'Self-help', price: 52.00 },
+    { sku: 'BK-MIDN-002', title: 'The Midnight Library', branchId: 'ST002', branchName: 'Riverside', currentStock: 4, lastInbound: '2025-06-03', stockStatus: 'Low', category: 'Fiction', price: 68.00 },
+    { sku: 'BK-PRIDE-008', title: 'Pride and Prejudice', branchId: 'ST002', branchName: 'Riverside', currentStock: 7, lastInbound: '2025-06-09', stockStatus: 'Medium', category: 'Classic', price: 28.00 },
+    { sku: 'BK-GATSBY-005', title: 'The Great Gatsby', branchId: 'ST002', branchName: 'Riverside', currentStock: 3, lastInbound: '2025-06-02', stockStatus: 'Low', category: 'Classic', price: 30.00 },
+    { sku: 'BK-MOCK-006', title: 'To Kill a Mockingbird', branchId: 'ST002', branchName: 'Riverside', currentStock: 9, lastInbound: '2025-06-10', stockStatus: 'Medium', category: 'Classic', price: 32.00 },
+    { sku: 'BK-BODY-023', title: 'The Body', branchId: 'ST002', branchName: 'Riverside', currentStock: 6, lastInbound: '2025-06-06', stockStatus: 'Medium', category: 'Science', price: 42.00 },
+    
+    // Westside (ST003)
+    { sku: 'BK-ATOM-001', title: 'Atomic Habits', branchId: 'ST003', branchName: 'Westside', currentStock: 12, lastInbound: '2025-06-11', stockStatus: 'Good', category: 'Self-help', price: 52.00 },
+    { sku: 'BK-SAPI-003', title: 'Sapiens', branchId: 'ST003', branchName: 'Westside', currentStock: 18, lastInbound: '2025-06-14', stockStatus: 'Good', category: 'History', price: 68.00 },
+    { sku: 'BK-MOCK-006', title: 'To Kill a Mockingbird', branchId: 'ST003', branchName: 'Westside', currentStock: 12, lastInbound: '2025-06-15', stockStatus: 'Good', category: 'Classic', price: 32.00 },
+    { sku: 'BK-1984-007', title: '1984', branchId: 'ST003', branchName: 'Westside', currentStock: 14, lastInbound: '2025-06-12', stockStatus: 'Good', category: 'Classic', price: 35.00 },
+    { sku: 'BK-HP-009', title: 'Harry Potter 1', branchId: 'ST003', branchName: 'Westside', currentStock: 10, lastInbound: '2025-06-10', stockStatus: 'Good', category: 'Fiction', price: 38.00 },
+    { sku: 'BK-WILD-011', title: 'Where the Wild Things Are', branchId: 'ST003', branchName: 'Westside', currentStock: 8, lastInbound: '2025-06-08', stockStatus: 'Medium', category: 'Children', price: 26.00 },
+    
+    // Northgate (ST004)
+    { sku: 'BK-ATOM-001', title: 'Atomic Habits', branchId: 'ST004', branchName: 'Northgate', currentStock: 6, lastInbound: '2025-06-07', stockStatus: 'Medium', category: 'Self-help', price: 52.00 },
+    { sku: 'BK-EDUC-004', title: 'Educated', branchId: 'ST004', branchName: 'Northgate', currentStock: 4, lastInbound: '2025-06-05', stockStatus: 'Low', category: 'Memoir', price: 45.00 },
+    { sku: 'BK-SAPI-003', title: 'Sapiens', branchId: 'ST004', branchName: 'Northgate', currentStock: 12, lastInbound: '2025-06-10', stockStatus: 'Good', category: 'History', price: 68.00 },
+    { sku: 'BK-POWER-013', title: 'The Power of Habit', branchId: 'ST004', branchName: 'Northgate', currentStock: 5, lastInbound: '2025-06-04', stockStatus: 'Low', category: 'Self-help', price: 42.00 },
+    { sku: 'BK-THINK-014', title: 'Thinking, Fast and Slow', branchId: 'ST004', branchName: 'Northgate', currentStock: 3, lastInbound: '2025-06-01', stockStatus: 'Low', category: 'Science', price: 48.00 },
+    
+    // Southpoint (ST005)
+    { sku: 'BK-ATOM-001', title: 'Atomic Habits', branchId: 'ST005', branchName: 'Southpoint', currentStock: 5, lastInbound: '2025-06-06', stockStatus: 'Low', category: 'Self-help', price: 52.00 },
+    { sku: 'BK-WIMPY-015', title: 'Diary of a Wimpy Kid', branchId: 'ST005', branchName: 'Southpoint', currentStock: 10, lastInbound: '2025-06-08', stockStatus: 'Good', category: 'Children', price: 26.00 },
+    { sku: 'BK-WONDER-016', title: 'Wonder', branchId: 'ST005', branchName: 'Southpoint', currentStock: 8, lastInbound: '2025-06-07', stockStatus: 'Medium', category: 'Children', price: 34.00 },
+    { sku: 'BK-HOBBIT-017', title: 'The Hobbit', branchId: 'ST005', branchName: 'Southpoint', currentStock: 7, lastInbound: '2025-06-05', stockStatus: 'Medium', category: 'Fiction', price: 40.00 },
+    { sku: 'BK-CATCHER-018', title: 'The Catcher in the Rye', branchId: 'ST005', branchName: 'Southpoint', currentStock: 4, lastInbound: '2025-06-03', stockStatus: 'Low', category: 'Classic', price: 32.00 },
+    
+    // Eastview (ST006)
+    { sku: 'BK-ATOM-001', title: 'Atomic Habits', branchId: 'ST006', branchName: 'Eastview', currentStock: 7, lastInbound: '2025-06-08', stockStatus: 'Medium', category: 'Self-help', price: 52.00 },
+    { sku: 'BK-MIDN-002', title: 'The Midnight Library', branchId: 'ST006', branchName: 'Eastview', currentStock: 4, lastInbound: '2025-06-04', stockStatus: 'Low', category: 'Fiction', price: 68.00 },
+    { sku: 'BK-ALCHEMIST-024', title: 'The Alchemist', branchId: 'ST006', branchName: 'Eastview', currentStock: 8, lastInbound: '2025-06-07', stockStatus: 'Medium', category: 'Fiction', price: 36.00 },
+    { sku: 'BK-FOUR-025', title: 'The Four Agreements', branchId: 'ST006', branchName: 'Eastview', currentStock: 7, lastInbound: '2025-06-06', stockStatus: 'Medium', category: 'Self-help', price: 28.00 },
+    { sku: 'BK-7HABITS-026', title: 'The 7 Habits of Highly Effective People', branchId: 'ST006', branchName: 'Eastview', currentStock: 5, lastInbound: '2025-06-04', stockStatus: 'Low', category: 'Self-help', price: 40.00 },
+    
+    // Downtown (ST007)
+    { sku: 'BK-ATOM-001', title: 'Atomic Habits', branchId: 'ST007', branchName: 'Downtown', currentStock: 10, lastInbound: '2025-06-09', stockStatus: 'Good', category: 'Self-help', price: 52.00 },
+    { sku: 'BK-SAPI-003', title: 'Sapiens', branchId: 'ST007', branchName: 'Downtown', currentStock: 14, lastInbound: '2025-06-11', stockStatus: 'Good', category: 'History', price: 68.00 },
+    { sku: 'BK-LEAN-028', title: 'The Lean Startup', branchId: 'ST007', branchName: 'Downtown', currentStock: 8, lastInbound: '2025-06-08', stockStatus: 'Medium', category: 'Business', price: 42.00 },
+    { sku: 'BK-ZERO-029', title: 'Zero to One', branchId: 'ST007', branchName: 'Downtown', currentStock: 7, lastInbound: '2025-06-07', stockStatus: 'Medium', category: 'Business', price: 38.00 },
+    { sku: 'BK-GREAT-030', title: 'Good to Great', branchId: 'ST007', branchName: 'Downtown', currentStock: 6, lastInbound: '2025-06-06', stockStatus: 'Medium', category: 'Business', price: 45.00 }
+];
+
+// 所有SKU的完整列表
+const allSKUs = [
+    'BK-ATOM-001',
+    'BK-MIDN-002',
+    'BK-SAPI-003',
+    'BK-EDUC-004',
+    'BK-GATSBY-005',
+    'BK-MOCK-006',
+    'BK-1984-007',
+    'BK-PRIDE-008',
+    'BK-HP-009',
+    'BK-CATER-010',
+    'BK-WILD-011',
+    'BK-MOON-012',
+    'BK-POWER-013',
+    'BK-THINK-014',
+    'BK-WIMPY-015',
+    'BK-WONDER-016',
+    'BK-HOBBIT-017',
+    'BK-CATCHER-018',
+    'BK-FLIES-019',
+    'BK-BRAVE-020',
+    'BK-BECOMING-021',
+    'BK-BORN-022',
+    'BK-BODY-023',
+    'BK-ALCHEMIST-024',
+    'BK-FOUR-025',
+    'BK-7HABITS-026',
+    'BK-WINFRIENDS-027',
+    'BK-LEAN-028',
+    'BK-ZERO-029',
+    'BK-GREAT-030'
+];
+
+// 分店映射关系
+const branchMap = {
+    'ST001': { id: 'ST001', name: 'Central Plaza', color: 'bg-primary text-white' },
+    'ST002': { id: 'ST002', name: 'Riverside', color: 'bg-blue-100 text-blue-800' },
+    'ST003': { id: 'ST003', name: 'Westside', color: 'bg-green-100 text-green-800' },
+    'ST004': { id: 'ST004', name: 'Northgate', color: 'bg-purple-100 text-purple-800' },
+    'ST005': { id: 'ST005', name: 'Southpoint', color: 'bg-yellow-100 text-yellow-800' },
+    'ST006': { id: 'ST006', name: 'Eastview', color: 'bg-pink-100 text-pink-800' },
+    'ST007': { id: 'ST007', name: 'Downtown', color: 'bg-indigo-100 text-indigo-800' }
+};
