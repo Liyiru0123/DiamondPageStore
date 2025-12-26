@@ -11,7 +11,7 @@ const branchMapping = {
     'ST007': 'Downtown'
 };
 
-// 员工数据（用于搜索功能）- 添加了password字段
+// 员工数据（用于搜索功能）- 添加了phone字段
 const staffData = [
     {
         id: 1,
@@ -22,7 +22,7 @@ const staffData = [
         name: 'John Doe',
         position: 'manager',
         performance: 'Excellent',
-        password: 'password123' // 添加密码字段
+        phone: '555-0101'
     },
     {
         id: 2,
@@ -33,7 +33,7 @@ const staffData = [
         name: 'Sarah Miller',
         position: 'manager',
         performance: 'Good',
-        password: 'securepass456' // 添加密码字段
+        phone: '555-0102'
     },
     {
         id: 3,
@@ -44,7 +44,7 @@ const staffData = [
         name: 'Michael Thompson',
         position: 'staff',
         performance: 'Good',
-        password: 'mikepass789' // 添加密码字段
+        phone: '555-0103'
     },
     {
         id: 4,
@@ -55,7 +55,7 @@ const staffData = [
         name: 'Emily Roberts',
         position: 'finance',
         performance: 'Average',
-        password: 'emilyfinance2025' // 添加密码字段
+        phone: '555-0104'
     },
     {
         id: 5,
@@ -66,7 +66,7 @@ const staffData = [
         name: 'David Lee',
         position: 'staff',
         performance: 'Excellent',
-        password: 'davidpass321' // 添加密码字段
+        phone: '555-0105'
     },
     {
         id: 6,
@@ -77,7 +77,7 @@ const staffData = [
         name: 'Jennifer Wilson',
         position: 'manager',
         performance: 'Excellent',
-        password: 'jenniferadmin' // 添加密码字段
+        phone: '555-0106'
     },
     {
         id: 7,
@@ -88,7 +88,7 @@ const staffData = [
         name: 'Robert Garcia',
         position: 'manager',
         performance: 'Good',
-        password: 'robertpass999' // 添加密码字段
+        phone: '555-0107'
     },
     {
         id: 8,
@@ -99,7 +99,7 @@ const staffData = [
         name: 'Lisa Chen',
         position: 'staff',
         performance: 'Good',
-        password: 'lisachenpass' // 添加密码字段
+        phone: '555-0108'
     },
     {
         id: 9,
@@ -110,7 +110,7 @@ const staffData = [
         name: 'James Brown',
         position: 'finance',
         performance: 'Average',
-        password: 'jamesfin2025' // 添加密码字段
+        phone: '555-0109'
     },
     {
         id: 10,
@@ -121,268 +121,103 @@ const staffData = [
         name: 'Amanda Taylor',
         position: 'staff',
         performance: 'Good',
-        password: 'amandapass777' // 添加密码字段
+        phone: '555-0110'
     }
 ];
 
-// 分店订单数据
-const branchOrderData = {
-    "ORD-005": {
-        orderId: "ORD-005",
-        branchId: "1",
-        memberId: "MEM-007",
-        status: "paid",
-        createdDate: "2025-06-02 11:45",
-        updatedDate: "2025-06-02 11:45",
-        paymentMethod: "cash",
-        totalAmount: "¥200.00",
-        items: [
-            { name: "The Great Gatsby", isbn: "978-0743273565", quantity: 1, unitPrice: "¥200.00", subtotal: "¥200.00" }
-        ]
+// 用户管理数据
+const userManagementData = [
+    {
+        id: 1,
+        userId: 'USER001',
+        userRole: 'Admin',
+        accountStatus: 'Active',
+        userType: 'Manager',
+        email: 'john.doe@diamondpage.com',
+        joinDate: '2024-01-15'
     },
-    "ORD-006": {
-        orderId: "ORD-006",
-        branchId: "1",
-        memberId: "MEM-008",
-        status: "refunded",
-        createdDate: "2025-06-14 16:30",
-        updatedDate: "2025-06-15 10:00",
-        paymentMethod: "credit card",
-        totalAmount: "¥125.00",
-        items: [
-            { name: "To Kill a Mockingbird", isbn: "978-0061120084", quantity: 1, unitPrice: "¥125.00", subtotal: "¥125.00" }
-        ]
+    {
+        id: 2,
+        userId: 'USER002',
+        userRole: 'User',
+        accountStatus: 'Active',
+        userType: 'Staff',
+        email: 'sarah.miller@diamondpage.com',
+        joinDate: '2024-02-20'
     },
-    "ORD-007": {
-        orderId: "ORD-007",
-        branchId: "2",
-        memberId: "MEM-009",
-        status: "paid",
-        createdDate: "2025-06-15 10:30",
-        updatedDate: "2025-06-15 10:30",
-        paymentMethod: "WeChat Pay",
-        totalAmount: "¥52.00",
-        items: [
-            { name: "1984", isbn: "978-0451524935", quantity: 1, unitPrice: "¥52.00", subtotal: "¥52.00" }
-        ]
+    {
+        id: 3,
+        userId: 'USER003',
+        userRole: 'User',
+        accountStatus: 'Suspended',
+        userType: 'Staff',
+        email: 'michael.thompson@diamondpage.com',
+        joinDate: '2024-03-10'
     },
-    "ORD-008": {
-        orderId: "ORD-008",
-        branchId: "2",
-        memberId: "MEM-010",
-        status: "cancelled",
-        createdDate: "2025-06-15 09:45",
-        updatedDate: "2025-06-15 10:20",
-        paymentMethod: "Alipay",
-        totalAmount: "¥45.00",
-        items: [
-            { name: "Pride and Prejudice", isbn: "978-0141439518", quantity: 1, unitPrice: "¥45.00", subtotal: "¥45.00" }
-        ]
+    {
+        id: 4,
+        userId: 'USER004',
+        userRole: 'Admin',
+        accountStatus: 'Active',
+        userType: 'Finance',
+        email: 'emily.roberts@diamondpage.com',
+        joinDate: '2024-01-25'
     },
-    "ORD-009": {
-        orderId: "ORD-009",
-        branchId: "2",
-        memberId: "MEM-011",
-        status: "paid",
-        createdDate: "2025-06-14 18:20",
-        updatedDate: "2025-06-14 18:20",
-        paymentMethod: "cash",
-        totalAmount: "¥89.00",
-        items: [
-            { name: "The Catcher in the Rye", isbn: "978-0316769174", quantity: 1, unitPrice: "¥89.00", subtotal: "¥89.00" }
-        ]
+    {
+        id: 5,
+        userId: 'USER005',
+        userRole: 'User',
+        accountStatus: 'Active',
+        userType: 'Staff',
+        email: 'david.lee@diamondpage.com',
+        joinDate: '2024-02-28'
     },
-    "ORD-010": {
-        orderId: "ORD-010",
-        branchId: "3",
-        memberId: "MEM-012",
-        status: "created",
-        createdDate: "2025-06-15 11:15",
-        updatedDate: "2025-06-15 11:15",
-        paymentMethod: "credit card",
-        totalAmount: "¥78.00",
-        items: [
-            { name: "Brave New World", isbn: "978-0060850524", quantity: 1, unitPrice: "¥78.00", subtotal: "¥78.00" }
-        ]
+    {
+        id: 6,
+        userId: 'USER006',
+        userRole: 'Admin',
+        accountStatus: 'Active',
+        userType: 'Manager',
+        email: 'jennifer.wilson@diamondpage.com',
+        joinDate: '2024-03-05'
     },
-    "ORD-011": {
-        orderId: "ORD-011",
-        branchId: "3",
-        memberId: "MEM-013",
-        status: "paid",
-        createdDate: "2025-06-15 10:30",
-        updatedDate: "2025-06-15 10:30",
-        paymentMethod: "WeChat Pay",
-        totalAmount: "¥150.00",
-        items: [
-            { name: "The Hobbit", isbn: "978-0547928227", quantity: 1, unitPrice: "¥150.00", subtotal: "¥150.00" }
-        ]
+    {
+        id: 7,
+        userId: 'USER007',
+        userRole: 'User',
+        accountStatus: 'Inactive',
+        userType: 'Staff',
+        email: 'robert.garcia@diamondpage.com',
+        joinDate: '2024-01-30'
     },
-    "ORD-012": {
-        orderId: "ORD-012",
-        branchId: "3",
-        memberId: "MEM-014",
-        status: "paid",
-        createdDate: "2025-06-14 17:45",
-        updatedDate: "2025-06-14 17:45",
-        paymentMethod: "Alipay",
-        totalAmount: "¥210.00",
-        items: [
-            { name: "Lord of the Flies", isbn: "978-0571056866", quantity: 1, unitPrice: "¥85.00", subtotal: "¥85.00" },
-            { name: "Animal Farm", isbn: "978-0451526342", quantity: 1, unitPrice: "¥125.00", subtotal: "¥125.00" }
-        ]
+    {
+        id: 8,
+        userId: 'USER008',
+        userRole: 'User',
+        accountStatus: 'Active',
+        userType: 'Staff',
+        email: 'lisa.chen@diamondpage.com',
+        joinDate: '2024-02-15'
     },
-    "ORD-013": {
-        orderId: "ORD-013",
-        branchId: "4",
-        memberId: "MEM-015",
-        status: "paid",
-        createdDate: "2025-06-15 14:20",
-        updatedDate: "2025-06-15 14:20",
-        paymentMethod: "cash",
-        totalAmount: "¥45.00",
-        items: [
-            { name: "The Little Prince", isbn: "978-0156012195", quantity: 1, unitPrice: "¥45.00", subtotal: "¥45.00" }
-        ]
+    {
+        id: 9,
+        userId: 'USER009',
+        userRole: 'Admin',
+        accountStatus: 'Active',
+        userType: 'Finance',
+        email: 'james.brown@diamondpage.com',
+        joinDate: '2024-03-01'
     },
-    "ORD-014": {
-        orderId: "ORD-014",
-        branchId: "4",
-        memberId: "MEM-016",
-        status: "paid",
-        createdDate: "2025-06-14 16:10",
-        updatedDate: "2025-06-14 16:10",
-        paymentMethod: "credit card",
-        totalAmount: "¥78.00",
-        items: [
-            { name: "Charlotte's Web", isbn: "978-0061124952", quantity: 1, unitPrice: "¥78.00", subtotal: "¥78.00" }
-        ]
+    {
+        id: 10,
+        userId: 'USER010',
+        userRole: 'User',
+        accountStatus: 'Active',
+        userType: 'Staff',
+        email: 'amanda.taylor@diamondpage.com',
+        joinDate: '2024-02-10'
     }
-};
-
-// 分店数据
-const branchData = {
-    1: {
-        name: "Central Main Store",
-        address: "123 Main Street Downtown",
-        phone: "2125551001",
-        status: "Open",
-        isTopSales: true,
-        weekly: {
-            revenue: 5800,
-            profit: 2900,
-            change: "+15% vs last week",
-            trendData: [1200, 1400, 1100, 1300, 1500, 1600, 1700]
-        },
-        monthly: {
-            revenue: 24580,
-            profit: 12240,
-            change: "+12% vs last month",
-            trendData: [22000, 23500, 21800, 24580]
-        },
-        quarterly: {
-            revenue: 74580,
-            profit: 37290,
-            change: "+8% vs last quarter",
-            trendData: [68000, 72000, 74580]
-        },
-        transactions: [
-            { date: "2025-06-15 09:24", orderId: "ORD-001", totalAmount: "¥68.00", status: "created" },
-            { date: "2025-06-15 10:15", orderId: "ORD-002", totalAmount: "¥159.00", status: "paid" },
-            { date: "2025-06-14 19:42", orderId: "ORD-005", totalAmount: "¥200.00", status: "paid" },
-            { date: "2025-06-14 16:30", orderId: "ORD-006", totalAmount: "¥125.00", status: "refunded" }
-        ]
-    },
-    2: {
-        name: "Westside Branch",
-        address: "456 West Avenue Westside",
-        phone: "2125551002",
-        status: "Open",
-        isTopSales: false,
-        weekly: {
-            revenue: 4200,
-            profit: 2100,
-            change: "+8% vs last week",
-            trendData: [1000, 1100, 1200, 900, 1300, 1400, 1500]
-        },
-        monthly: {
-            revenue: 18920,
-            profit: 9560,
-            change: "+10% vs last month",
-            trendData: [17500, 18200, 16800, 18920]
-        },
-        quarterly: {
-            revenue: 56820,
-            profit: 28410,
-            change: "+6% vs last quarter",
-            trendData: [52000, 55000, 56820]
-        },
-        transactions: [
-            { date: "2025-06-15 10:30", orderId: "ORD-007", totalAmount: "¥52.00", status: "paid" },
-            { date: "2025-06-15 09:45", orderId: "ORD-008", totalAmount: "¥45.00", status: "cancelled" },
-            { date: "2025-06-14 18:20", orderId: "ORD-009", totalAmount: "¥89.00", status: "paid" }
-        ]
-    },
-    3: {
-        name: "Eastside Branch",
-        address: "789 East Boulevard Eastside",
-        phone: "2125551003",
-        status: "Open",
-        isTopSales: false,
-        weekly: {
-            revenue: 5100,
-            profit: 2550,
-            change: "+12% vs last week",
-            trendData: [1100, 1200, 1300, 1400, 1500, 1600, 1700]
-        },
-        monthly: {
-            revenue: 22150,
-            profit: 11200,
-            change: "+9% vs last month",
-            trendData: [19800, 20500, 21200, 22150]
-        },
-        quarterly: {
-            revenue: 65200,
-            profit: 32600,
-            change: "+7% vs last quarter",
-            trendData: [61000, 63500, 65200]
-        },
-        transactions: [
-            { date: "2025-06-15 11:15", orderId: "ORD-010", totalAmount: "¥78.00", status: "created" },
-            { date: "2025-06-15 10:30", orderId: "ORD-011", totalAmount: "¥150.00", status: "paid" },
-            { date: "2025-06-14 17:45", orderId: "ORD-012", totalAmount: "¥210.00", status: "paid" }
-        ]
-    },
-    4: {
-        name: "Southpoint Branch",
-        address: "654 South Lane Southgate",
-        phone: "2125551005",
-        status: "Closed",
-        isTopSales: false,
-        weekly: {
-            revenue: 0,
-            profit: 0,
-            change: "0% vs last week",
-            trendData: [0, 0, 0, 0, 0, 0, 0]
-        },
-        monthly: {
-            revenue: 0,
-            profit: 0,
-            change: "0% vs last month",
-            trendData: [0, 0, 0, 0]
-        },
-        quarterly: {
-            revenue: 0,
-            profit: 0,
-            change: "0% vs last quarter",
-            trendData: [0, 0, 0]
-        },
-        transactions: []
-    }
-};
-
-// 为分支页面合并订单数据
-const allBranchOrderData = { ...branchOrderData };
+];
 
 // 库存数据
 const inventoryData = [
@@ -455,50 +290,36 @@ const pricingData = [
     }
 ];
 
-// 分店绩效数据
-const branchPerformance = [
-    { name: 'Central Plaza', sales: '¥8,420', performance: 'Excellent', status: 'Open' },
-    { name: 'Riverside', sales: '¥6,150', performance: 'Good', status: 'Open' },
-    { name: 'Westside', sales: '¥5,780', performance: 'Good', status: 'Open' },
-    { name: 'Northgate', sales: '¥3,240', performance: 'Average', status: 'Open' }
-];
-
-// 促销数据
-const promotionsData = [
-    {
-        id: 1,
-        title: 'Member Tier Discount',
-        discount: 'Up to 25% OFF',
-        period: 'Ongoing',
-        status: 'Active',
-        startDate: '2025-06-01',
-        endDate: '2025-12-31',
-        description: 'Special discount for all member tiers',
-        recipients: 'Shopping System Homepage'
-    },
-    {
-        id: 2,
-        title: 'Student Discount',
-        discount: '15% OFF',
-        period: 'Ongoing',
-        status: 'Active',
-        startDate: '2025-06-01',
-        endDate: '2025-12-31',
-        description: 'Discount for students with valid ID',
-        recipients: 'Shopping System Homepage'
-    },
-    {
-        id: 3,
-        title: 'Bestseller Bundle',
-        discount: 'Buy 2 Get 1 Free',
-        period: 'Jun 15 - Jun 30',
-        status: 'Upcoming',
-        startDate: '2025-06-15',
-        endDate: '2025-06-30',
-        description: 'Special bundle offer for bestselling books',
-        recipients: 'Shopping System Homepage'
-    }
-];
+// Overview页面数据 - 添加新的对比数据
+const overviewData = {
+    // 订单数对比数据
+    branchOrderComparison: [
+        { branch: 'Central Plaza', orders: 156, trend: '+12%' },
+        { branch: 'Riverside', orders: 124, trend: '+8%' },
+        { branch: 'Westside', orders: 89, trend: '+15%' },
+        { branch: 'Northgate', orders: 67, trend: '+5%' },
+        { branch: 'Southpoint', orders: 45, trend: '-3%' },
+        { branch: 'Eastview', orders: 78, trend: '+10%' }
+    ],
+    
+    // 销售分析 - 支付方式对比数据
+    paymentMethodComparison: [
+        { method: 'Credit Card', amount: 42000, percentage: 42 },
+        { method: 'WeChat Pay', amount: 28000, percentage: 28 },
+        { method: 'Alipay', amount: 19500, percentage: 19.5 },
+        { method: 'Cash', amount: 10500, percentage: 10.5 }
+    ],
+    
+    // 热销图书分类对比数据
+    bookCategoryComparison: [
+        { category: 'Fiction', sales: 35000, percentage: 35, color: '#8B5A2B' },
+        { category: 'Non-Fiction', sales: 25000, percentage: 25, color: '#A0522D' },
+        { category: 'Science', sales: 15000, percentage: 15, color: '#D2691E' },
+        { category: 'History', sales: 12000, percentage: 12, color: '#CD853F' },
+        { category: 'Biography', sales: 8000, percentage: 8, color: '#D2B48C' },
+        { category: 'Children', sales: 5000, percentage: 5, color: '#F5DEB3' }
+    ]
+};
 
 // 通知数据 - 所有通知默认发送到购物系统首页
 const notifications = [
@@ -525,21 +346,5 @@ const notifications = [
         date: '2025-06-10',
         recipients: 'Shopping System Homepage',
         type: 'announcement'
-    },
-    {
-        id: 4,
-        title: 'Member Tier Discount Promotion',
-        message: 'New promotion: Up to 25% OFF for all member tiers. Promotion is now active.',
-        date: '2025-06-01',
-        recipients: 'Shopping System Homepage',
-        type: 'promotion'
-    },
-    {
-        id: 5,
-        title: 'Student Discount Promotion',
-        message: 'New promotion: 15% OFF for students with valid ID. Promotion is now active.',
-        date: '2025-06-01',
-        recipients: 'Shopping System Homepage',
-        type: 'promotion'
     }
 ];

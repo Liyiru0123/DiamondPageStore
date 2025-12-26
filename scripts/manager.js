@@ -1,4 +1,42 @@
-// Manager Dashboard JavaScript - 完整整合版
+// Manager Dashboard JavaScript - 与layout.js整合版
+
+/**
+ * Manager 系统页面切换函数 (供layout.js调用)
+ */
+window.managerSwitchPage = function(pageId) {
+    console.log('Manager switchPage called:', pageId);
+    
+    // Hide all pages
+    document.querySelectorAll('.page-content').forEach(page => {
+        page.classList.add('hidden');
+    });
+
+    // Show target page
+    const targetPage = document.getElementById(`${pageId}-page`);
+    if (targetPage) {
+        targetPage.classList.remove('hidden');
+    }
+
+    // Load page-specific data
+    if (pageId === 'inventory') {
+        loadInventoryData();
+    } else if (pageId === 'staff') {
+        loadStaffData();
+    } else if (pageId === 'pricing') {
+        loadPricingData();
+        initBookSearch();
+    } else if (pageId === 'notifications') {
+        loadNotifications();
+    } else if (pageId === 'user-management') {
+        loadUserManagementData();
+    } else if (pageId === 'overview') {
+        // 确保图表已初始化
+        if (typeof initCharts === 'function') {
+            setTimeout(initCharts, 100);
+        }
+    }
+};
+
 document.addEventListener('DOMContentLoaded', function () {
     // Initialize date display
     initDateDisplay();
@@ -6,14 +44,11 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize charts
     initCharts();
 
-    // Initialize event listeners
+    // Initialize event listeners (移除与layout.js冲突的监听器)
     initEventListeners();
 
     // Load initial data
     loadInitialData();
-
-    // Set default page
-    switchPage('overview');
 });
 
 // Initialize date display
@@ -26,7 +61,184 @@ function initDateDisplay() {
 
 // Initialize charts
 function initCharts() {
-    // Sales Trend Chart
+    // 1. 订单数对比图表
+    const orderComparisonCtx = document.getElementById('order-comparison-chart');
+    if (orderComparisonCtx) {
+        const orderData = overviewData.branchOrderComparison;
+        
+        new Chart(orderComparisonCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: orderData.map(item => item.branch),
+                datasets: [{
+                    label: '订单数',
+                    data: orderData.map(item => item.orders),
+                    backgroundColor: [
+                        'rgba(139, 90, 43, 0.7)',
+                        'rgba(160, 82, 45, 0.7)',
+                        'rgba(210, 105, 30, 0.7)',
+                        'rgba(205, 133, 63, 0.7)',
+                        'rgba(210, 180, 140, 0.7)',
+                        'rgba(245, 222, 179, 0.7)'
+                    ],
+                    borderColor: [
+                        '#8B5A2B',
+                        '#A0522D',
+                        '#D2691E',
+                        '#CD853F',
+                        '#D2B48C',
+                        '#F5DEB3'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const data = orderData[context.dataIndex];
+                                return `订单数: ${data.orders} (${data.trend} vs last month)`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2. 销售分析 - 支付方式对比图表
+    const paymentMethodCtx = document.getElementById('payment-method-chart');
+    if (paymentMethodCtx) {
+        const paymentData = overviewData.paymentMethodComparison;
+        
+        new Chart(paymentMethodCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: paymentData.map(item => `${item.method} (${item.percentage}%)`),
+                datasets: [{
+                    data: paymentData.map(item => item.amount),
+                    backgroundColor: [
+                        '#8B5A2B',  // Credit Card
+                        '#A0522D',  // WeChat Pay
+                        '#D2691E',  // Alipay
+                        '#CD853F'   // Cash
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 15
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const data = paymentData[context.dataIndex];
+                                return `${data.method}: ¥${data.amount.toLocaleString()} (${data.percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '60%'
+            }
+        });
+    }
+
+    // 3. 热销图书分类对比图表
+    const bookCategoryCtx = document.getElementById('book-category-chart');
+    if (bookCategoryCtx) {
+        const categoryData = overviewData.bookCategoryComparison;
+        
+        new Chart(bookCategoryCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: categoryData.map(item => item.category),
+                datasets: [{
+                    label: '销售额 (¥)',
+                    data: categoryData.map(item => item.sales),
+                    backgroundColor: categoryData.map(item => item.color),
+                    borderColor: categoryData.map(item => {
+                        // 深色边框
+                        const hex = item.color.substring(1);
+                        const r = parseInt(hex.substr(0, 2), 16);
+                        const g = parseInt(hex.substr(2, 2), 16);
+                        const b = parseInt(hex.substr(4, 2), 16);
+                        return `rgb(${Math.max(0, r - 40)}, ${Math.max(0, g - 40)}, ${Math.max(0, b - 40)})`;
+                    }),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const data = categoryData[context.dataIndex];
+                                return `¥${data.sales.toLocaleString()} (${data.percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '¥' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 4. Sales Trend Chart (保留原有图表)
     const salesTrendCtx = document.getElementById('sales-trend-chart');
     if (salesTrendCtx) {
         new Chart(salesTrendCtx.getContext('2d'), {
@@ -58,7 +270,7 @@ function initCharts() {
         });
     }
 
-    // Category Sales Chart
+    // 5. Category Sales Chart (保留原有图表)
     const categorySalesCtx = document.getElementById('category-sales-chart');
     if (categorySalesCtx) {
         new Chart(categorySalesCtx.getContext('2d'), {
@@ -82,28 +294,13 @@ function initCharts() {
     }
 }
 
-// Initialize event listeners
+// Initialize event listeners (移除与layout.js冲突的部分)
 function initEventListeners() {
-    // Sidebar toggle
-    document.getElementById('sidebar-toggle').addEventListener('click', () => {
-        const sidebar = document.getElementById('sidebar');
-        sidebar.classList.toggle('hidden');
-    });
-
-    // Navigation
-    document.querySelectorAll('.sidebar-link[data-page]').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            switchPage(link.dataset.page);
-        });
-    });
-
-    // Logout button
-    document.getElementById('logout-btn').addEventListener('click', () => {
-        if (confirm('Are you sure you want to log out?')) {
-            window.location.href = 'login.html';
-        }
-    });
+    // 注意: 侧边栏切换、导航、登出按钮现在由layout.js处理
+    // 移除了以下冲突的监听器:
+    // - sidebar-toggle
+    // - sidebar-link[data-page]
+    // - logout-btn
 
     // Trend period buttons
     document.querySelectorAll('.trend-period-btn').forEach(btn => {
@@ -136,39 +333,6 @@ function initEventListeners() {
     document.getElementById('cancel-notification')?.addEventListener('click', () => {
         document.getElementById('compose-notification').classList.add('hidden');
         document.getElementById('notification-form').reset();
-    });
-
-    // Create promotion button (顶部按钮)
-    document.getElementById('create-promotion-btn')?.addEventListener('click', () => {
-        showCreatePromotionForm();
-    });
-
-    // Add promotion button (Active Promotions部分)
-    document.getElementById('add-promotion-btn')?.addEventListener('click', () => {
-        showCreatePromotionForm();
-    });
-
-    // Cancel promotion button
-    document.getElementById('cancel-promotion')?.addEventListener('click', () => {
-        document.getElementById('create-promotion-form').classList.add('hidden');
-        document.getElementById('promotion-form').reset();
-    });
-
-    // Promotion form submission
-    document.getElementById('promotion-form')?.addEventListener('submit', (e) => {
-        e.preventDefault();
-        createPromotion();
-    });
-
-    // Cancel edit promotion button
-    document.getElementById('cancel-edit-promotion')?.addEventListener('click', () => {
-        document.getElementById('edit-promotion-modal').classList.add('hidden');
-    });
-
-    // Edit promotion form submission
-    document.getElementById('edit-promotion-form')?.addEventListener('submit', (e) => {
-        e.preventDefault();
-        updatePromotion();
     });
 
     // Notification form submission
@@ -209,6 +373,19 @@ function initEventListeners() {
 
     // 初始化搜索框
     initSearchBoxes();
+
+    // 用户管理搜索
+    const userSearch = document.querySelector('#user-management-page input[placeholder*="Search users"]');
+    if (userSearch) {
+        const debouncedSearch = debounce(function(e) {
+            const searchTerm = e.target.value;
+            if (searchTerm.length >= 2 || searchTerm.length === 0) {
+                performUserSearch(searchTerm);
+            }
+        }, 300);
+        
+        userSearch.addEventListener('input', debouncedSearch);
+    }
 }
 
 // Show add book modal
@@ -281,166 +458,6 @@ function addNewBook() {
     document.getElementById('pricing-table-body').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// Show create promotion form
-function showCreatePromotionForm() {
-    document.getElementById('create-promotion-form').classList.remove('hidden');
-    // 设置默认日期
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('promotion-start-date').value = today;
-    
-    const nextMonth = new Date();
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-    document.getElementById('promotion-end-date').value = nextMonth.toISOString().split('T')[0];
-    
-    // 滚动到表单位置
-    document.getElementById('create-promotion-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-// Show edit promotion form
-function showEditPromotionForm(promotionId) {
-    const promotion = promotionsData.find(p => p.id == promotionId);
-    if (!promotion) return;
-
-    // 填充表单数据
-    document.getElementById('edit-promotion-id').value = promotion.id;
-    document.getElementById('edit-promotion-title').value = promotion.title;
-    document.getElementById('edit-promotion-discount').value = promotion.discount;
-    document.getElementById('edit-promotion-start-date').value = promotion.startDate;
-    document.getElementById('edit-promotion-end-date').value = promotion.endDate;
-    document.getElementById('edit-promotion-status').value = promotion.status;
-    document.getElementById('edit-promotion-description').value = promotion.description;
-
-    // 显示编辑模态框
-    document.getElementById('edit-promotion-modal').classList.remove('hidden');
-}
-
-// Create promotion
-function createPromotion() {
-    const title = document.getElementById('promotion-title').value;
-    const discount = document.getElementById('promotion-discount').value;
-    const startDate = document.getElementById('promotion-start-date').value;
-    const endDate = document.getElementById('promotion-end-date').value;
-    const status = document.getElementById('promotion-status').value;
-    const description = document.getElementById('promotion-description').value;
-
-    // 创建促销对象
-    const newPromotion = {
-        id: promotionsData.length > 0 ? Math.max(...promotionsData.map(p => p.id)) + 1 : 1,
-        title: title,
-        discount: discount,
-        period: `${formatDate(startDate)} - ${formatDate(endDate)}`,
-        status: status,
-        startDate: startDate,
-        endDate: endDate,
-        description: description,
-        recipients: 'Shopping System Homepage'
-    };
-
-    // 添加到促销数据
-    promotionsData.push(newPromotion);
-
-    // 创建通知对象
-    const newNotification = {
-        id: notifications.length > 0 ? Math.max(...notifications.map(n => n.id)) + 1 : 1,
-        title: `${title} Promotion`,
-        message: `New promotion: ${discount}. ${description}. Promotion period: ${formatDate(startDate)} to ${formatDate(endDate)}.`,
-        date: new Date().toISOString().split('T')[0],
-        recipients: 'Shopping System Homepage',
-        type: 'promotion'
-    };
-
-    // 添加到通知数据
-    notifications.unshift(newNotification);
-
-    // 重新加载通知和促销
-    loadNotifications();
-    loadPromotions();
-
-    // 隐藏表单并重置
-    document.getElementById('create-promotion-form').classList.add('hidden');
-    document.getElementById('promotion-form').reset();
-
-    alert('Promotion created and sent to shopping system homepage successfully!');
-}
-
-// Update promotion
-function updatePromotion() {
-    const promotionId = parseInt(document.getElementById('edit-promotion-id').value);
-    const title = document.getElementById('edit-promotion-title').value;
-    const discount = document.getElementById('edit-promotion-discount').value;
-    const startDate = document.getElementById('edit-promotion-start-date').value;
-    const endDate = document.getElementById('edit-promotion-end-date').value;
-    const status = document.getElementById('edit-promotion-status').value;
-    const description = document.getElementById('edit-promotion-description').value;
-
-    // 查找并更新促销
-    const promotionIndex = promotionsData.findIndex(p => p.id === promotionId);
-    if (promotionIndex !== -1) {
-        promotionsData[promotionIndex].title = title;
-        promotionsData[promotionIndex].discount = discount;
-        promotionsData[promotionIndex].period = `${formatDate(startDate)} - ${formatDate(endDate)}`;
-        promotionsData[promotionIndex].status = status;
-        promotionsData[promotionIndex].startDate = startDate;
-        promotionsData[promotionIndex].endDate = endDate;
-        promotionsData[promotionIndex].description = description;
-
-        // 创建更新通知
-        const updateNotification = {
-            id: notifications.length > 0 ? Math.max(...notifications.map(n => n.id)) + 1 : 1,
-            title: `${title} Promotion Updated`,
-            message: `Promotion updated: ${discount}. ${description}. Promotion period: ${formatDate(startDate)} to ${formatDate(endDate)}.`,
-            date: new Date().toISOString().split('T')[0],
-            recipients: 'Shopping System Homepage',
-            type: 'promotion'
-        };
-
-        // 添加到通知数据
-        notifications.unshift(updateNotification);
-
-        // 重新加载通知和促销
-        loadNotifications();
-        loadPromotions();
-
-        // 隐藏编辑模态框
-        document.getElementById('edit-promotion-modal').classList.add('hidden');
-
-        alert('Promotion updated and notification sent to shopping system homepage successfully!');
-    }
-}
-
-// Delete promotion
-function deletePromotion(promotionId) {
-    if (confirm('Are you sure you want to delete this promotion?')) {
-        // 查找促销
-        const promotionIndex = promotionsData.findIndex(p => p.id === promotionId);
-        if (promotionIndex !== -1) {
-            const promotion = promotionsData[promotionIndex];
-            
-            // 从促销数据中删除
-            promotionsData.splice(promotionIndex, 1);
-            
-            // 创建删除通知
-            const deleteNotification = {
-                id: notifications.length > 0 ? Math.max(...notifications.map(n => n.id)) + 1 : 1,
-                title: `${promotion.title} Promotion Ended`,
-                message: `Promotion "${promotion.title}" has been ended.`,
-                date: new Date().toISOString().split('T')[0],
-                recipients: 'Shopping System Homepage',
-                type: 'promotion'
-            };
-            
-            // 添加到通知数据
-            notifications.unshift(deleteNotification);
-            
-            // 重新加载通知和促销
-            loadNotifications();
-            loadPromotions();
-            
-            alert('Promotion deleted and notification sent to shopping system homepage!');
-        }
-    }
-}
-
 // Format date
 function formatDate(dateString) {
     const date = new Date(dateString);
@@ -449,48 +466,9 @@ function formatDate(dateString) {
     return `${month} ${day}`;
 }
 
-// Page switching
-function switchPage(pageId) {
-    // Hide all pages
-    document.querySelectorAll('.page-content').forEach(page => {
-        page.classList.add('hidden');
-    });
-
-    // Show target page
-    const targetPage = document.getElementById(`${pageId}-page`);
-    if (targetPage) {
-        targetPage.classList.remove('hidden');
-    }
-
-    // Update active link
-    document.querySelectorAll('.sidebar-link').forEach(link => {
-        link.classList.remove('active');
-    });
-    const activeLink = document.querySelector(`.sidebar-link[data-page="${pageId}"]`);
-    if (activeLink) {
-        activeLink.classList.add('active');
-    }
-
-    // Load page-specific data
-    if (pageId === 'inventory') {
-        loadInventoryData();
-    } else if (pageId === 'staff') {
-        loadStaffData();
-    } else if (pageId === 'pricing') {
-        loadPricingData();
-        // 初始化书籍搜索功能
-        initBookSearch();
-    } else if (pageId === 'notifications') {
-        loadNotifications();
-        loadPromotions();
-    } else if (pageId === 'branch-finance') {
-        // 初始化分支财务页面
-        initBranchFinancePage();
-    }
-}
-
 // Load initial data
 function loadInitialData() {
+    // Overview页面数据会在图表初始化时自动加载
     loadBranchPerformance();
 }
 
@@ -638,7 +616,7 @@ function loadStaffData() {
                 <td class="px-4 py-4 text-sm">
                     <span class="px-2 py-1 text-xs ${roleClass} rounded-full">${staff.position}</span>
                 </td>
-                <td class="px-4 py-4 text-sm font-mono text-gray-700">${staff.password}</td>
+                <td class="px-4 py-4 text-sm">${staff.phone}</td>
                 <td class="px-4 py-4 text-sm">
                     <div class="flex gap-2">
                         <button class="text-primary hover:text-primary/80 edit-staff" title="Edit">
@@ -681,9 +659,9 @@ function addStaffActionButtonListeners() {
             const branchName = row.cells[2].textContent;
             const name = row.cells[3].textContent;
             const position = row.cells[4].textContent;
-            const password = row.cells[5].textContent;
+            const phone = row.cells[5].textContent;
 
-            alert(`Staff Details:\n\nEmployee ID: ${employeeID}\nUser ID: ${userID}\nBranch: ${branchName}\nName: ${name}\nPosition: ${position}\nPassword: ${password}`);
+            alert(`Staff Details:\n\nEmployee ID: ${employeeID}\nUser ID: ${userID}\nBranch: ${branchName}\nName: ${name}\nPosition: ${position}\nPhone: ${phone}`);
         });
     });
 
@@ -815,174 +793,158 @@ function openEditBookModal(bookData) {
     document.getElementById('edit-book-modal').classList.remove('hidden');
 }
 
-// Show branch order details
-function showBranchOrderDetails(orderId) {
-    const order = allBranchOrderData[orderId];
-    if (!order) return;
-    const detailContainer = document.getElementById('branch-order-details');
-    if (!detailContainer) return;
-
-    if (!detailContainer.querySelector('#branch-detail-order-id')) {
-        detailContainer.innerHTML = `
-            <h4 class="font-semibold text-lg mb-3">Order Details</h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <h5 class="font-medium mb-2">Basic Information</h5>
-                    <div class="space-y-2">
-                        <div class="flex justify-between"><span class="text-sm text-gray-500">Order ID:</span><span class="text-sm font-medium" id="branch-detail-order-id">-</span></div>
-                        <div class="flex justify-between"><span class="text-sm text-gray-500">Branch ID:</span><span class="text-sm" id="branch-detail-branch-id">-</span></div>
-                        <div class="flex justify-between"><span class="text-sm text-gray-500">Member ID:</span><span class="text-sm" id="branch-detail-member-id">-</span></div>
-                        <div class="flex justify-between"><span class="text-sm text-gray-500">Status:</span><span class="text-sm" id="branch-detail-status">-</span></div>
-                    </div>
-                </div>
-                <div>
-                    <h5 class="font-medium mb-2">Timeline</h5>
-                    <div class="space-y-2">
-                        <div class="flex justify-between"><span class="text-sm text-gray-500">Created Date:</span><span class="text-sm" id="branch-detail-created-date">-</span></div>
-                        <div class="flex justify-between"><span class="text-sm text-gray-500">Updated Date:</span><span class="text-sm" id="branch-detail-updated-date">-</span></div>
-                        <div class="flex justify-between"><span class="text-sm text-gray-500">Total Amount:</span><span class="text-sm font-medium" id="branch-detail-total-amount">-</span></div>
-                    </div>
-                </div>
-            </div>
-            <div class="mt-4">
-                <h5 class="font-medium mb-2">Order Items</h5>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead>
-                            <tr>
-                                <th class="px-4 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Book Name</th>
-                                <th class="px-4 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ISBN</th>
-                                <th class="px-4 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                                <th class="px-4 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price</th>
-                                <th class="px-4 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody id="branch-order-items-list" class="bg-white divide-y divide-gray-200"></tbody>
-                    </table>
-                </div>
-            </div>
-        `;
-    }
-
-    document.getElementById('branch-detail-order-id').textContent = order.orderId;
-    document.getElementById('branch-detail-branch-id').textContent = order.branchId || '-';
-    document.getElementById('branch-detail-member-id').textContent = order.memberId;
-    document.getElementById('branch-detail-status').textContent = order.status.charAt(0).toUpperCase() + order.status.slice(1);
-    document.getElementById('branch-detail-created-date').textContent = order.createdDate;
-    document.getElementById('branch-detail-updated-date').textContent = order.updatedDate;
-    document.getElementById('branch-detail-total-amount').textContent = order.totalAmount;
-
-    const itemsContainer = document.getElementById('branch-order-items-list');
-    if (itemsContainer) {
-        itemsContainer.innerHTML = '';
-        order.items.forEach(item => {
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50 transition-colors';
-            row.innerHTML = `
-                <td class="px-4 py-2 text-sm">${item.name}</td>
-                <td class="px-4 py-2 text-sm text-gray-500">${item.isbn}</td>
-                <td class="px-4 py-2 text-sm">${item.quantity}</td>
-                <td class="px-4 py-2 text-sm">${item.unitPrice}</td>
-                <td class="px-4 py-2 text-sm">${item.subtotal}</td>
-            `;
-            itemsContainer.appendChild(row);
-        });
-    }
-
-    detailContainer.classList.remove('hidden');
-    detailContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-// Load notifications
+// Load notifications with edit and delete functionality
 function loadNotifications() {
     const notificationsContainer = document.getElementById('notifications-list');
     if (notificationsContainer) {
         notificationsContainer.innerHTML = '';
         notifications.forEach(notification => {
             const notificationEl = document.createElement('div');
-            notificationEl.className = 'bg-white p-4 rounded-lg border border-gray-200';
-
-            // 为促销通知添加特殊样式
-            let typeBadge = '';
-            if (notification.type === 'promotion') {
-                typeBadge = '<span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full ml-2">Promotion</span>';
-            }
+            notificationEl.className = 'bg-white p-4 rounded-lg border border-gray-200 relative';
+            notificationEl.dataset.notificationId = notification.id;
 
             notificationEl.innerHTML = `
                 <div class="flex justify-between items-start mb-2">
                     <div class="flex items-center">
                         <h4 class="font-medium">${notification.title}</h4>
-                        ${typeBadge}
                     </div>
                     <span class="text-xs text-gray-500">${notification.date}</span>
                 </div>
                 <p class="text-sm text-gray-600 mb-3">${notification.message}</p>
-                <div class="text-xs text-gray-500">
-                    <span>To: ${notification.recipients}</span>
+                <div class="flex justify-between items-center">
+                    <div class="text-xs text-gray-500">
+                        <span>To: ${notification.recipients}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="text-primary hover:text-primary/80 edit-notification-btn" 
+                                title="Edit" data-notification-id="${notification.id}">
+                            <i class="fa fa-edit"></i> Edit
+                        </button>
+                        <button class="text-red-600 hover:text-red-800 delete-notification-btn" 
+                                title="Delete" data-notification-id="${notification.id}">
+                            <i class="fa fa-trash"></i> Delete
+                        </button>
+                    </div>
                 </div>
             `;
             notificationsContainer.appendChild(notificationEl);
         });
-    }
-}
 
-// Load promotions
-function loadPromotions() {
-    const promotionsContainer = document.getElementById('promotions-list');
-    if (promotionsContainer) {
-        promotionsContainer.innerHTML = '';
-        promotionsData.forEach(promo => {
-            const card = document.createElement('div');
-            card.className = 'bg-white p-4 rounded-lg border border-gray-200';
-
-            let statusClass = 'bg-green-100 text-green-800';
-            if (promo.status === 'Upcoming') statusClass = 'bg-yellow-100 text-yellow-800';
-            if (promo.status === 'Expired') statusClass = 'bg-gray-100 text-gray-800';
-
-            card.innerHTML = `
-                <div class="flex justify-between items-start mb-2">
-                    <h4 class="font-medium">${promo.title}</h4>
-                    <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${promo.status}</span>
-                </div>
-                <p class="text-lg font-bold text-primary mb-1">${promo.discount}</p>
-                <p class="text-sm text-gray-500 mb-3">${promo.period}</p>
-                <p class="text-sm text-gray-600 mb-3">${promo.description}</p>
-                <div class="flex justify-between items-center mt-3">
-                    <div class="text-xs text-gray-500">
-                        <span>Sent to: ${promo.recipients}</span>
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="text-primary hover:text-primary/80 edit-promotion-btn" title="Edit" data-promotion-id="${promo.id}">
-                            <i class="fa fa-edit"></i>
-                        </button>
-                        <button class="text-red-600 hover:text-red-800 delete-promotion-btn" title="Delete" data-promotion-id="${promo.id}">
-                            <i class="fa fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-            promotionsContainer.appendChild(card);
-        });
-
-        // 为编辑按钮添加事件监听
-        document.querySelectorAll('.edit-promotion-btn').forEach(button => {
+        // Add event listeners to edit notification buttons
+        document.querySelectorAll('.edit-notification-btn').forEach(button => {
             button.addEventListener('click', function () {
-                const promotionId = this.dataset.promotionId;
-                showEditPromotionForm(promotionId);
+                const notificationId = this.dataset.notificationId;
+                editNotification(notificationId);
             });
         });
 
-        // 为删除按钮添加事件监听
-        document.querySelectorAll('.delete-promotion-btn').forEach(button => {
+        // Add event listeners to delete notification buttons
+        document.querySelectorAll('.delete-notification-btn').forEach(button => {
             button.addEventListener('click', function () {
-                const promotionId = this.dataset.promotionId;
-                deletePromotion(promotionId);
+                const notificationId = this.dataset.notificationId;
+                deleteNotification(notificationId);
             });
         });
     }
 }
 
-// Send notification (修改：直接发送到购物系统首页)
+// Edit notification
+function editNotification(notificationId) {
+    const notification = notifications.find(n => n.id == notificationId);
+    if (!notification) return;
+
+    // Create edit modal if it doesn't exist
+    if (!document.getElementById('edit-notification-modal')) {
+        createEditNotificationModal();
+    }
+
+    // Fill form with notification data
+    document.getElementById('edit-notification-id').value = notification.id;
+    document.getElementById('edit-notification-subject').value = notification.title;
+    document.getElementById('edit-notification-message').value = notification.message;
+    
+    // Show modal
+    document.getElementById('edit-notification-modal').classList.remove('hidden');
+}
+
+// Create edit notification modal
+function createEditNotificationModal() {
+    const modal = document.createElement('div');
+    modal.id = 'edit-notification-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50';
+    
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <h3 class="text-lg font-semibold mb-4">Edit Notification</h3>
+                <form id="edit-notification-form">
+                    <input type="hidden" id="edit-notification-id">
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                            <input type="text" class="form-input" placeholder="Enter notification subject"
+                                id="edit-notification-subject" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                            <textarea class="form-input" rows="5" placeholder="Enter your message"
+                                id="edit-notification-message" required></textarea>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="submit" class="btn-primary">Update</button>
+                            <button type="button" class="btn-secondary" id="cancel-edit-notification">Cancel</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Add event listeners
+    document.getElementById('edit-notification-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        updateNotification();
+    });
+    
+    document.getElementById('cancel-edit-notification').addEventListener('click', () => {
+        document.getElementById('edit-notification-modal').classList.add('hidden');
+    });
+}
+
+// Update notification
+function updateNotification() {
+    const notificationId = parseInt(document.getElementById('edit-notification-id').value);
+    const subject = document.getElementById('edit-notification-subject').value;
+    const message = document.getElementById('edit-notification-message').value;
+    
+    const notificationIndex = notifications.findIndex(n => n.id === notificationId);
+    if (notificationIndex !== -1) {
+        notifications[notificationIndex].title = subject;
+        notifications[notificationIndex].message = message;
+        notifications[notificationIndex].date = new Date().toISOString().split('T')[0];
+        
+        loadNotifications();
+        document.getElementById('edit-notification-modal').classList.add('hidden');
+        
+        alert('Notification updated successfully!');
+    }
+}
+
+// Delete notification
+function deleteNotification(notificationId) {
+    if (confirm('Are you sure you want to delete this notification?')) {
+        const notificationIndex = notifications.findIndex(n => n.id == notificationId);
+        if (notificationIndex !== -1) {
+            notifications.splice(notificationIndex, 1);
+            loadNotifications();
+            alert('Notification deleted successfully!');
+        }
+    }
+}
+
+// Send notification
 function sendNotification() {
     const subject = document.getElementById('notification-subject').value;
     const message = document.getElementById('notification-message').value;
@@ -1011,253 +973,244 @@ function sendNotification() {
 }
 
 // ============================================
-// BRANCH FINANCE PAGE FUNCTIONS
+// USER MANAGEMENT PAGE FUNCTIONS
 // ============================================
 
-let branchTrendChart = null;
-let currentBranchPeriod = 'month';
-
-// 初始化分支财务页面
-function initBranchFinancePage() {
-    renderBranchList();
-    selectBranch('1');
-    
-    // 添加分支事件监听器
-    const branchesContainer = document.getElementById('branches-container');
-    if (branchesContainer) {
-        branchesContainer.addEventListener('click', (e) => {
-            const item = e.target.closest('.branch-item');
-            if (item) selectBranch(item.dataset.branchId);
-        });
-    }
-
-    const periodBtns = document.querySelectorAll('.period-btn');
-    periodBtns.forEach(btn => {
-        btn.addEventListener('click', () => switchBranchPeriod(btn.dataset.period));
-    });
-
-    const branchTransactions = document.getElementById('branch-transactions');
-    if (branchTransactions) {
-        branchTransactions.addEventListener('click', (e) => {
-            const row = e.target.closest('tr[data-order-id]');
-            if (row) showBranchOrderDetails(row.dataset.orderId);
-        });
-    }
-}
-
-// 渲染分支列表
-function renderBranchList() {
-    const container = document.getElementById('branches-container');
-    if (!container) return;
-
-    container.innerHTML = '';
-    Object.keys(branchData).forEach(branchId => {
-        const branch = branchData[branchId];
-        const item = document.createElement('div');
-        item.className = 'branch-item p-3 border border-gray-200 rounded-lg cursor-pointer transition-colors hover:bg-gray-50';
-        if (parseInt(branchId) === 1) {
-            item.classList.add('active', 'border-primary');
-        }
-        item.dataset.branchId = branchId;
-
-        let statusColor = 'bg-green-100 text-green-800';
-        if (branch.status === 'Limited') statusColor = 'bg-yellow-100 text-yellow-800';
-        else if (branch.status === 'Closed') statusColor = 'bg-red-100 text-red-800';
-
-        item.innerHTML = `
-            <div class="mb-2">
-                <div class="flex justify-between items-start">
-                    <h4 class="font-medium">${branch.name}</h4>
-                    <span class="px-2 py-1 text-xs ${statusColor} rounded-full">${branch.status}</span>
-                </div>
-                ${branch.isTopSales ? 
-                    '<div class="mt-1"><span class="px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded-full">Top Sales</span></div>' : ''
-                }
-            </div>
-            <p class="text-sm text-gray-500 mb-1">${branch.address}</p>
-            <p class="text-sm text-gray-500">${branch.phone}</p>
-            <div class="mt-2 text-xs text-gray-500">
-                <span>Revenue: ¥${branch.monthly.revenue.toLocaleString()}</span>
-            </div>
-        `;
-        container.appendChild(item);
-    });
-}
-
-// 选择分支
-function selectBranch(branchId) {
-    document.querySelectorAll('.branch-item').forEach(item => {
-        item.classList.remove('active', 'border-primary');
-        item.classList.add('border-gray-200');
-    });
-    
-    const selectedItem = document.querySelector(`.branch-item[data-branch-id="${branchId}"]`);
-    if (selectedItem) {
-        selectedItem.classList.add('active', 'border-primary');
-        selectedItem.classList.remove('border-gray-200');
-    }
-
-    const branch = branchData[branchId];
-    if (!branch) return;
-
-    document.getElementById('selected-branch-name').textContent = branch.name;
-    document.getElementById('selected-branch-address').textContent = `${branch.address} • ${branch.phone}`;
-    updateBranchFinancials(branchId, currentBranchPeriod);
-    initBranchTrendChart(branchId, currentBranchPeriod);
-
-    const transactionsContainer = document.getElementById('branch-transactions');
-    if (transactionsContainer) {
-        transactionsContainer.innerHTML = '';
-        branch.transactions.forEach(t => {
+// Load user management data
+function loadUserManagementData() {
+    const tableContainer = document.getElementById('user-management-table-body');
+    if (tableContainer) {
+        tableContainer.innerHTML = '';
+        userManagementData.forEach(user => {
             const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50 transition-colors cursor-pointer';
-            row.dataset.orderId = t.orderId;
+            row.className = 'hover:bg-gray-50 transition-colors';
+            row.dataset.userId = user.id;
 
+            // 账号状态样式
             let statusClass = '';
-            switch (t.status) {
-                case 'created': statusClass = 'bg-blue-100 text-blue-800'; break;
-                case 'paid': statusClass = 'bg-green-100 text-green-800'; break;
-                case 'cancelled': statusClass = 'bg-red-100 text-red-800'; break;
-                case 'refunded': statusClass = 'bg-yellow-100 text-yellow-800'; break;
-                default: statusClass = 'bg-gray-100 text-gray-800';
+            if (user.accountStatus === 'Active') {
+                statusClass = 'bg-green-100 text-green-800';
+            } else if (user.accountStatus === 'Suspended') {
+                statusClass = 'bg-yellow-100 text-yellow-800';
+            } else if (user.accountStatus === 'Inactive') {
+                statusClass = 'bg-red-100 text-red-800';
+            } else {
+                statusClass = 'bg-gray-100 text-gray-800';
+            }
+
+            // 用户权限样式
+            let roleClass = '';
+            if (user.userRole === 'Admin') {
+                roleClass = 'bg-purple-100 text-purple-800';
+            } else {
+                roleClass = 'bg-blue-100 text-blue-800';
+            }
+
+            // 用户身份样式
+            let typeClass = '';
+            if (user.userType === 'Manager') {
+                typeClass = 'bg-primary text-white';
+            } else if (user.userType === 'Finance') {
+                typeClass = 'bg-yellow-100 text-yellow-800';
+            } else {
+                typeClass = 'bg-gray-100 text-gray-800';
             }
 
             row.innerHTML = `
-                <td class="px-4 py-3 text-sm">${t.date}</td>
-                <td class="px-4 py-3 text-sm font-medium">${t.orderId}</td>
-                <td class="px-4 py-3 text-sm">${t.totalAmount}</td>
-                <td class="px-4 py-3 text-sm">
-                    <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${t.status.charAt(0).toUpperCase() + t.status.slice(1)}</span>
+                <td class="px-4 py-4 text-sm font-medium">${user.userId}</td>
+                <td class="px-4 py-4 text-sm">
+                    <span class="px-2 py-1 text-xs ${roleClass} rounded-full">${user.userRole}</span>
+                </td>
+                <td class="px-4 py-4 text-sm">
+                    <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${user.accountStatus}</span>
+                </td>
+                <td class="px-4 py-4 text-sm">
+                    <span class="px-2 py-1 text-xs ${typeClass} rounded-full">${user.userType}</span>
+                </td>
+                <td class="px-4 py-4 text-sm">${user.email}</td>
+                <td class="px-4 py-4 text-sm">${user.joinDate}</td>
+                <td class="px-4 py-4 text-sm">
+                    <div class="flex gap-2">
+                        <button class="text-primary hover:text-primary/80 edit-user-btn" title="Edit User">
+                            <i class="fa fa-edit"></i>
+                        </button>
+                        <button class="text-red-600 hover:text-red-800 delete-user-btn" title="Delete User">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                        <button class="text-blue-600 hover:text-blue-800 toggle-status-btn" title="Toggle Status">
+                            <i class="fa fa-power-off"></i>
+                        </button>
+                    </div>
                 </td>
             `;
-            transactionsContainer.appendChild(row);
+            tableContainer.appendChild(row);
         });
-    }
 
-    document.getElementById('branch-order-details')?.classList.add('hidden');
+        // Add event listeners to user action buttons
+        addUserActionButtonListeners();
+    }
 }
 
-// 更新分支财务数据
-function updateBranchFinancials(branchId, period = 'month') {
-    const branch = branchData[branchId];
-    if (!branch) return;
+// Add event listeners to user action buttons
+function addUserActionButtonListeners() {
+    // Edit buttons
+    document.querySelectorAll('#user-management-table-body .edit-user-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const row = this.closest('tr');
+            const userId = row.cells[0].textContent;
+            alert(`Editing user: ${userId}`);
+        });
+    });
 
-    const periodData = {
-        week: branch.weekly,
-        month: branch.monthly,
-        quarter: branch.quarterly
-    }[period] || branch.monthly;
-
-    const revenueElem = document.getElementById('branch-revenue');
-    const profitElem = document.getElementById('branch-profit');
-    const revenueChangeElem = document.getElementById('branch-revenue-change');
-    const profitChangeElem = document.getElementById('branch-profit-change');
-    
-    if (revenueElem) revenueElem.textContent = `¥${periodData.revenue.toLocaleString()}`;
-    if (profitElem) profitElem.textContent = `¥${periodData.profit.toLocaleString()}`;
-    if (revenueChangeElem) revenueChangeElem.textContent = periodData.change;
-    if (profitChangeElem) profitChangeElem.textContent = periodData.change;
-}
-
-// 初始化分支趋势图
-function initBranchTrendChart(branchId, period = 'month') {
-    const branch = branchData[branchId];
-    if (!branch) return;
-
-    const periodData = {
-        week: branch.weekly,
-        month: branch.monthly,
-        quarter: branch.quarterly
-    }[period] || branch.monthly;
-
-    let labels = [];
-    let dataLabel = '';
-
-    switch (period) {
-        case 'week':
-            labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-            dataLabel = 'Daily Revenue';
-            break;
-        case 'month':
-            labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
-            dataLabel = 'Weekly Revenue';
-            break;
-        case 'quarter':
-            labels = ['Month 1', 'Month 2', 'Month 3'];
-            dataLabel = 'Monthly Revenue';
-            break;
-    }
-
-    const chartCanvas = document.getElementById('branch-trend-chart');
-    if (!chartCanvas) return;
-
-    // 销毁现有图表
-    if (branchTrendChart) {
-        branchTrendChart.destroy();
-    }
-
-    branchTrendChart = new Chart(chartCanvas.getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: labels.slice(0, periodData.trendData.length),
-            datasets: [{
-                label: dataLabel,
-                data: periodData.trendData,
-                borderColor: '#8B5A2B',
-                backgroundColor: 'rgba(139, 90, 43, 0.1)',
-                tension: 0.3,
-                fill: true,
-                pointRadius: 3,
-                pointBackgroundColor: '#8B5A2B'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                x: {
-                    grid: {
-                        display: false
-                    }
-                },
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: value => '¥' + value.toLocaleString()
-                    }
-                }
+    // Delete buttons
+    document.querySelectorAll('#user-management-table-body .delete-user-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const row = this.closest('tr');
+            const userId = row.cells[0].textContent;
+            if (confirm(`Are you sure you want to delete user "${userId}"?`)) {
+                row.remove();
+                alert(`User "${userId}" has been deleted.`);
             }
-        }
+        });
+    });
+
+    // Toggle status buttons
+    document.querySelectorAll('#user-management-table-body .toggle-status-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const row = this.closest('tr');
+            const userId = row.cells[0].textContent;
+            const statusElement = row.cells[2].querySelector('span');
+            const currentStatus = statusElement.textContent;
+            
+            let newStatus = 'Active';
+            let newClass = 'bg-green-100 text-green-800';
+            
+            if (currentStatus === 'Active') {
+                newStatus = 'Suspended';
+                newClass = 'bg-yellow-100 text-yellow-800';
+            } else if (currentStatus === 'Suspended') {
+                newStatus = 'Inactive';
+                newClass = 'bg-red-100 text-red-800';
+            } else {
+                newStatus = 'Active';
+                newClass = 'bg-green-100 text-green-800';
+            }
+            
+            statusElement.textContent = newStatus;
+            statusElement.className = `px-2 py-1 text-xs ${newClass} rounded-full`;
+            
+            alert(`User "${userId}" status changed to ${newStatus}`);
+        });
     });
 }
 
-// 切换分支周期
-function switchBranchPeriod(period) {
-    currentBranchPeriod = period;
+// Perform user search
+function performUserSearch(searchTerm) {
+    let results;
+    
+    if (searchTerm) {
+        results = userManagementData.filter(user => 
+            user.userId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.userRole.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.userType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.accountStatus.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    } else {
+        results = userManagementData;
+    }
+    
+    updateUserManagementTable(results);
+}
 
-    // 更新按钮样式
-    document.querySelectorAll('.period-btn').forEach(btn => {
-        if (btn.dataset.period === period) {
-            btn.classList.remove('bg-gray-100', 'hover:bg-gray-200');
-            btn.classList.add('bg-primary', 'text-white');
+// Update user management table
+function updateUserManagementTable(data) {
+    const tableContainer = document.getElementById('user-management-table-body');
+    if (!tableContainer) return;
+    
+    tableContainer.innerHTML = '';
+    
+    if (data.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                <div class="flex flex-col items-center">
+                    <i class="fa fa-user-times text-3xl text-gray-300 mb-2"></i>
+                    <p>No users found matching your search</p>
+                </div>
+            </td>
+        `;
+        tableContainer.appendChild(row);
+        return;
+    }
+    
+    data.forEach(user => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50 transition-colors';
+        row.dataset.userId = user.id;
+
+        // 账号状态样式
+        let statusClass = '';
+        if (user.accountStatus === 'Active') {
+            statusClass = 'bg-green-100 text-green-800';
+        } else if (user.accountStatus === 'Suspended') {
+            statusClass = 'bg-yellow-100 text-yellow-800';
+        } else if (user.accountStatus === 'Inactive') {
+            statusClass = 'bg-red-100 text-red-800';
         } else {
-            btn.classList.remove('bg-primary', 'text-white');
-            btn.classList.add('bg-gray-100', 'hover:bg-gray-200');
+            statusClass = 'bg-gray-100 text-gray-800';
         }
+
+        // 用户权限样式
+        let roleClass = '';
+        if (user.userRole === 'Admin') {
+            roleClass = 'bg-purple-100 text-purple-800';
+        } else {
+            roleClass = 'bg-blue-100 text-blue-800';
+        }
+
+        // 用户身份样式
+        let typeClass = '';
+        if (user.userType === 'Manager') {
+            typeClass = 'bg-primary text-white';
+        } else if (user.userType === 'Finance') {
+            typeClass = 'bg-yellow-100 text-yellow-800';
+        } else {
+            typeClass = 'bg-gray-100 text-gray-800';
+        }
+
+        row.innerHTML = `
+            <td class="px-4 py-4 text-sm font-medium">${user.userId}</td>
+            <td class="px-4 py-4 text-sm">
+                <span class="px-2 py-1 text-xs ${roleClass} rounded-full">${user.userRole}</span>
+            </td>
+            <td class="px-4 py-4 text-sm">
+                <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${user.accountStatus}</span>
+            </td>
+            <td class="px-4 py-4 text-sm">
+                <span class="px-2 py-1 text-xs ${typeClass} rounded-full">${user.userType}</span>
+            </td>
+            <td class="px-4 py-4 text-sm">${user.email}</td>
+            <td class="px-4 py-4 text-sm">${user.joinDate}</td>
+            <td class="px-4 py-4 text-sm">
+                <div class="flex gap-2">
+                    <button class="text-primary hover:text-primary/80 edit-user-btn" title="Edit User">
+                        <i class="fa fa-edit"></i>
+                    </button>
+                    <button class="text-red-600 hover:text-red-800 delete-user-btn" title="Delete User">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                    <button class="text-blue-600 hover:text-blue-800 toggle-status-btn" title="Toggle Status">
+                        <i class="fa fa-power-off"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tableContainer.appendChild(row);
     });
 
-    // 更新当前选择的分支数据
-    const activeBranch = document.querySelector('.branch-item.active');
-    if (activeBranch) {
-        const branchId = activeBranch.dataset.branchId;
-        updateBranchFinancials(branchId, period);
-        initBranchTrendChart(branchId, period);
-    }
+    // Re-add event listeners
+    addUserActionButtonListeners();
 }
 
 // 初始化书籍搜索功能
@@ -1447,7 +1400,8 @@ function searchStaff(searchTerm) {
         item.employeeID.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.userID.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.branchName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.position.toLowerCase().includes(searchTerm.toLowerCase())
+        item.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.phone.toLowerCase().includes(searchTerm.toLowerCase())
     );
     
     return filtered;
@@ -1531,7 +1485,7 @@ function updateStaffTable(data) {
             <td class="px-4 py-4 text-sm">
                 <span class="px-2 py-1 text-xs ${roleClass} rounded-full">${staff.position}</span>
             </td>
-            <td class="px-4 py-4 text-sm font-mono text-gray-700">${staff.password}</td>
+            <td class="px-4 py-4 text-sm">${staff.phone}</td>
             <td class="px-4 py-4 text-sm">
                 <div class="flex gap-2">
                     <button class="text-primary hover:text-primary/80 edit-staff" title="Edit">
