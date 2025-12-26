@@ -9,7 +9,7 @@
 class Database {
     // AWS RDS Database credentials - UPDATE THESE!
     private $host = "your-aws-rds-endpoint.amazonaws.com";  // AWS RDS endpoint
-    private $db_name = "book_store";                         // Database name
+    private $db_name = "book_store";                     // Database name
     private $username = "root";                              // Database username
     private $password = "";                      // Database password
     private $port = "3306";
@@ -82,16 +82,7 @@ class DatabaseLocal extends Database {
 
 // Helper function to get appropriate database connection
 function getDB() {
-    // Check if running on localhost or AWS
-    $isLocal = ($_SERVER['SERVER_NAME'] === 'localhost' ||
-                $_SERVER['SERVER_NAME'] === '127.0.0.1');
-
-    if ($isLocal) {
-        $database = new DatabaseLocal();
-    } else {
-        $database = new Database();
-    }
-
+    $database = new DatabaseLocal();
     return $database->getConnection();
 }
 ?>
