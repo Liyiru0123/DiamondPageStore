@@ -45,18 +45,17 @@ const MENU_CONFIG = {
         { id: 'member', icon: 'fa-user', text: 'Membership Center', type: 'personal' }
     ],
     
-    // === 财务端菜单 (更新：只保留 income-stats 和 invoice) ===
+    // === 财务端菜单 (更新：添加订单管理) ===
     finance: [
         { id: 'income-stats', icon: 'fa-pie-chart', text: 'Financial Overview', type: 'admin' },
+        { id: 'order', icon: 'fa-shopping-cart', text: 'Order Management', type: 'admin' },
         { id: 'invoice', icon: 'fa-file-text', text: 'Invoice Management', type: 'admin' }
     ],
 
-    // === 店长/经理 (Manager) - 更新为 manager.html 中的菜单 ===
     manager: [
         { id: 'overview', icon: 'fa-tachometer', text: 'Overview', type: 'admin' },
-        { id: 'inventory', icon: 'fa-cubes', text: 'Inventory Management', type: 'admin' },
+        { id: 'inventory', icon: 'fa-cubes', text: 'Inventory & Pricing', type: 'admin' },
         { id: 'staff', icon: 'fa-users', text: 'Staff Management', type: 'admin' },
-        { id: 'pricing', icon: 'fa-tags', text: 'Sales Management', type: 'admin' },
         { id: 'user-management', icon: 'fa-user', text: 'User Management', type: 'admin' },
         { id: 'notifications', icon: 'fa-bullhorn', text: 'Notifications', type: 'admin' }
     ],
