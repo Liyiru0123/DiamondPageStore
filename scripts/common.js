@@ -147,10 +147,9 @@ function renderSearchResults(books) {
 }
 
 /**
- * 全局鉴权检查逻辑
+ * 全局鉴权检查逻辑，检查用户是否登录以及是否有权限
  * @param {Array} allowedRoles 允许访问该页面的角色列表
  */
-// 在 common.js 的 checkAuth 函数中修改内容
 function checkAuth(allowedRoles = []) {
     const token = localStorage.getItem('auth_token');
     const userRole = localStorage.getItem('user_role');
@@ -192,7 +191,7 @@ function getPaginatedData(data, currentPage, pageSize = 10) {
 }
 
 /**
- * 通用组件：渲染分页控制按钮
+ * 通用组件：生成分页按钮（上一页、1、2、3、下一页）的 HTML
  * @param {string} containerId 分页按钮所在的父容器 ID
  * @param {number} totalItems 总数据量
  * @param {number} currentPage 当前页码

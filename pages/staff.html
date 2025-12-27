@@ -12,7 +12,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="../styles/global.css">
 
-    <!-- 在各页面 head 标签最顶部插入 -->
+    <!-- 前端路由守卫, 判断登录者是否有对应权限 -->
+    <!-- 代码写在head里是防止加载过慢导致外部人员越权查看 -->
     <script>
         (function () {
             const token = localStorage.getItem('auth_token');
@@ -40,45 +41,13 @@
             }
         })();
     </script>
+
     <!-- 2. 引入布局脚本 -->
     <script src="../scripts/layout.js"></script>
 
     <!-- 3. 自定义样式补充 -->
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .content-auto { content-visibility: auto; }
-            .book-shadow { box-shadow: 0 4px 6px -1px rgba(139, 90, 43, 0.1), 0 2px 4px -1px rgba(139, 90, 43, 0.06); }
-            
-            /* 继承自原 staff.html 的特定组件样式 */
-            .card { @apply bg-white rounded-xl p-5 book-shadow hover:shadow-lg transition-all duration-300; }
-            .form-input { @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all; }
-            
-            .btn-primary { @apply bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-all duration-300 shadow-md hover:shadow-lg; }
-            .btn-secondary { @apply bg-secondary border border-primary/30 text-primary px-4 py-2 rounded-lg hover:bg-accent/20 transition-all duration-300; }
+    <link rel="stylesheet" href="../styles/staff.css">
 
-            /* 特定状态样式 */
-            .status-low { @apply bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium; }
-            .status-medium { @apply bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium; }
-            .status-high { @apply bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium; }
-            .status-pending { @apply bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium; }
-            .status-processing { @apply bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium; }
-            .status-shipped { @apply bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium; }
-            .status-cancelled { @apply bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium; }
-            .status-delivered { @apply bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium; }
-
-            /* 在 staff.html 的 @layer utilities 块内 */
-            /* 统一所有状态标签的基础样式 */
-            [class^="status-"] {
-                @apply px-2 py-1 rounded-full text-xs font-medium inline-block text-center min-w-[70px] border;
-            }
-
-            /* 颜色细分 */
-            .status-low, .status-cancelled, .status-error { @apply bg-red-100 text-red-800 border-red-200; }
-            .status-medium, .status-pending, .status-created { @apply bg-yellow-100 text-yellow-800 border-yellow-200; }
-            .status-high, .status-shipped, .status-delivered, .status-paid { @apply bg-green-100 text-green-800 border-green-200; }
-            .status-processing { @apply bg-blue-100 text-blue-800 border-blue-200; }
-        }
-    </style>
 </head>
 
 <body class="bg-gray-50 font-sans text-dark h-screen flex overflow-hidden">
@@ -616,17 +585,23 @@
         </div>
     </div>
 
-    <!-- 脚本引入区 -->
+    <!-- 1. 先引入公共库 -->
     <script src="../scripts/common.js"></script>
 
+    <!-- 2. 再引入 Layout (它定义了 window.switchPage 和 initLayout) -->
+    <script src="../scripts/layout.js"></script>
+
+    <!-- 3. 最后引入 Staff 业务逻辑 (它依赖 layout.js) -->
     <script src="../scripts/staff.js"></script>
 
-    <!-- 【必须】初始化 layout.js -->
+    <!-- 4. 启动页面 -->
     <script>
+        // 确保 layout.js 加载完成后再执行
         if (typeof initLayout === 'function') {
+            // 参数1: 角色 'staff', 参数2: 默认页面 'dashboard'
             initLayout('staff', 'dashboard');
         } else {
-            console.error('Layout script not loaded!');
+            console.error('Layout script failed to load!');
         }
     </script>
 </body>

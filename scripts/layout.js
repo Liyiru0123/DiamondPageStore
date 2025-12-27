@@ -70,35 +70,68 @@ const MENU_CONFIG = {
     ],
 };
 
+// window.switchPage = function(pageId) {
+//     console.log('Switching to:', pageId);
+//     sessionStorage.setItem('currentPage', pageId);
+    
+//     // 1. 更新所有具有 data-page 属性的元素高亮
+//     document.querySelectorAll('[data-page]').forEach(el => {
+//         const isMatch = el.getAttribute('data-page') === pageId;
+//         // 清除所有高亮类 (兼容前后台两种风格)
+//         el.classList.remove('sidebar-item-active', 'bg-accent/30', 'text-primary', 'font-medium', 'bg-brown-dark', 'border-l-4', 'border-white');
+        
+//         if (isMatch) {
+//             if (el.closest('.bg-gradient-to-b')) {
+//                 el.classList.add('bg-brown-dark', 'border-l-4', 'border-white');
+//             } else {
+//                 el.classList.add('bg-accent/30', 'text-primary', 'font-medium');
+//             }
+//         }
+//     });
+
+//     // 2. 切换页面显隐
+//     document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+//     const target = document.getElementById(`${pageId}-page`);
+//     if (target) {
+//         target.classList.remove('hidden');
+//     }
+
+//     // 3. 触发角色特定的回调函数 (如果同事写了的话)
+//     if (typeof window.financeSwitchPage === 'function') window.financeSwitchPage(pageId);
+//     if (typeof window.managerSwitchPage === 'function') window.managerSwitchPage(pageId);
+// };
+
 window.switchPage = function(pageId) {
-    console.log('Switching to:', pageId);
+    // 1. 记录状态 (Session)
     sessionStorage.setItem('currentPage', pageId);
     
-    // 1. 更新所有具有 data-page 属性的元素高亮
+    // 2. 更新侧边栏高亮 (同时兼容前台和后台的样式类名)
     document.querySelectorAll('[data-page]').forEach(el => {
-        const isMatch = el.getAttribute('data-page') === pageId;
-        // 清除所有高亮类 (兼容前后台两种风格)
+        // 移除所有可能的高亮类
         el.classList.remove('sidebar-item-active', 'bg-accent/30', 'text-primary', 'font-medium', 'bg-brown-dark', 'border-l-4', 'border-white');
         
-        if (isMatch) {
-            if (el.closest('.bg-gradient-to-b')) {
-                el.classList.add('bg-brown-dark', 'border-l-4', 'border-white');
+        // 如果匹配，添加高亮
+        if (el.getAttribute('data-page') === pageId) {
+            // 判断是后台(有bg-accent) 还是前台(bg-gradient)
+            if (document.getElementById('sidebar').classList.contains('bg-gradient-to-b')) {
+                // Customer 样式
+                el.classList.add('sidebar-item-active'); 
             } else {
+                // Admin/Staff 样式
                 el.classList.add('bg-accent/30', 'text-primary', 'font-medium');
             }
         }
     });
 
-    // 2. 切换页面显隐
+    // 3. 切换页面内容区域
     document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
     const target = document.getElementById(`${pageId}-page`);
     if (target) {
         target.classList.remove('hidden');
     }
 
-    // 3. 触发角色特定的回调函数 (如果同事写了的话)
-    if (typeof window.financeSwitchPage === 'function') window.financeSwitchPage(pageId);
-    if (typeof window.managerSwitchPage === 'function') window.managerSwitchPage(pageId);
+    // 4. 触发特定页面的回调 (可选，防止报错)
+    if (typeof window.staffPageInit === 'function') window.staffPageInit(pageId);
 };
 
 window.toggleSidebar = function () {
@@ -193,7 +226,7 @@ function renderStoreHeader(role) {
 }
 
 /**
- * 4. 渲染逻辑：后台 (Admin - Finance/Manager)
+ * 4. 渲染逻辑：后台 (Admin - Finance/Manager/Staff)
  */
 function renderAdminSidebar(role, activePage) {
     const container = document.getElementById('layout-sidebar');
@@ -277,6 +310,9 @@ function renderAdminHeader(role) {
     `;
 }
 
+/**
+ * 5. 入口函数。页面加载时调用它，它负责判断角色、渲染对应的头和侧边栏，并切换到默认页面。
+ */
 window.initLayout = function (role = 'customer', defaultPage = 'home') {
     // 1. 明确持久化逻辑：优先从 sessionStorage 获取之前所在的页面
     const savedPage = sessionStorage.getItem('currentPage');
