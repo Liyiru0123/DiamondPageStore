@@ -284,13 +284,11 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
                                     <select id="request-branch-filter" class="form-input">
                                         <option value="all">All Branches</option>
-                                        <option value="ST001">Central Plaza</option>
-                                        <option value="ST002">Riverside</option>
-                                        <option value="ST003">Westside</option>
-                                        <option value="ST004">Northgate</option>
-                                        <option value="ST005">Southpoint</option>
-                                        <option value="ST006">Eastview</option>
-                                        <option value="ST007">Downtown</option>
+                                        <option value="1">Downtown Store</option>
+                                        <option value="2">University Store</option>
+                                        <option value="3">Community Store</option>
+                                        <option value="4">Suburban Store</option>
+                                        <option value="5">Airport Store</option>
                                     </select>
                                 </div>
                                 <div>
@@ -516,31 +514,23 @@
                                             </th>
                                             <th
                                                 class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Central Plaza
+                                                Downtown Store
                                             </th>
                                             <th
                                                 class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Riverside
+                                                University Store
                                             </th>
                                             <th
                                                 class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Westside
+                                                Community Store
                                             </th>
                                             <th
                                                 class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Northgate
-                                            </th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Southpoint
-                                            </th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Eastview
+                                                Suburban Store
                                             </th>
                                             <th
                                                 class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
-                                                Downtown
+                                                Airport Store
                                             </th>
                                         </tr>
                                     </thead>
@@ -650,13 +640,11 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
                                 <select class="form-input" id="branch-filter">
                                     <option value="all">All Branches</option>
-                                    <option value="central">Central Plaza</option>
-                                    <option value="riverside">Riverside</option>
-                                    <option value="westside">Westside</option>
-                                    <option value="northgate">Northgate</option>
-                                    <option value="southpoint">Southpoint</option>
-                                    <option value="eastview">Eastview</option>
-                                    <option value="downtown">Downtown</option>
+                                    <option value="1">Downtown Store</option>
+                                    <option value="2">University Store</option>
+                                    <option value="3">Community Store</option>
+                                    <option value="4">Suburban Store</option>
+                                    <option value="5">Airport Store</option>
                                 </select>
                             </div>
                             <div>
@@ -882,19 +870,22 @@
                                             User ID</th>
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Account Role</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Account Status</th>
+                                            Username</th>
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             User Type</th>
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Email</th>
+                                            Full Name</th>
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Join Date</th>
+                                            Phone</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Created At</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Last Login</th>
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
                                             Actions</th>
@@ -1112,8 +1103,14 @@
     </div>
 
     <!-- Manager-specific scripts -->
+    <!-- API Functions -->
+    <script src="../scripts/manager-api.js"></script>
+    <!-- Mock Data (will be bypassed by API integration) -->
     <script src="../scripts/manager-data.js"></script>
+    <!-- Manager Logic -->
     <script src="../scripts/manager.js"></script>
+    <!-- API Integration (overrides mock data functions) -->
+    <script src="../scripts/manager-api-integration.js"></script>
 
     <!-- 初始化布局 -->
     <script>
