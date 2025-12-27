@@ -116,7 +116,7 @@ function getStoreDetail($conn) {
  * 获取店铺统计数据（来自vw_manager_store_performance视图）
  */
 function getStoreStats($conn) {
-    $sql = "SELECT * FROM vw_manager_store_performance ORDER BY total_revenue DESC";
+    $sql = "SELECT * FROM vw_manager_store_performance ORDER BY revenue DESC";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     $stats = $stmt->fetchAll();
