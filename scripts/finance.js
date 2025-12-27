@@ -52,7 +52,7 @@ let paymentMethodPieChart = null;
 let revenueByDateChart = null;
 let purchaseCostByDateChart = null;
 
-window.financeSwitchPage = function(pageId) {
+window.financeSwitchPage = function (pageId) {
     document.querySelectorAll('.page-content').forEach(page => page.classList.add('hidden'));
 
     const targetPage = document.getElementById(`${pageId}-page`);
@@ -201,7 +201,7 @@ function initPaymentMethodPieChart(summaryRows) {
                     cornerRadius: 6,
                     padding: 12,
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             const label = context.label || '';
                             const value = context.raw || 0;
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
@@ -214,6 +214,9 @@ function initPaymentMethodPieChart(summaryRows) {
         }
     });
 }
+
+// scripts/finance.js (修改后的部分)
+// 只需要修改 renderRevenueByDateChart 和 renderPurchaseCostByDateChart 这两个函数
 
 async function renderRevenueByDateChart(startDate, endDate) {
     const container = document.getElementById('revenue-by-date-chart-container');
@@ -247,17 +250,22 @@ async function renderRevenueByDateChart(startDate, endDate) {
         revenueByDateChart.destroy();
     }
 
+    // 改为折线图
     revenueByDateChart = new Chart(ctx, {
-        type: 'bar',
+        type: 'line', // 从 'bar' 改为 'line'
         data: {
             labels,
             datasets: [{
                 label: 'Revenue',
                 data: values,
-                backgroundColor: '#8B5A2B',
-                borderRadius: 6,
-                barPercentage: 0.6,
-                categoryPercentage: 0.7
+                backgroundColor: 'rgba(139, 90, 43, 0.1)', // 添加背景色用于填充
+                borderColor: '#8B5A2B',
+                borderWidth: 2,
+                tension: 0.3, // 添加曲线张力
+                fill: true, // 填充区域
+                pointBackgroundColor: '#8B5A2B',
+                pointRadius: 3,
+                pointHoverRadius: 5
             }]
         },
         options: {
@@ -271,7 +279,12 @@ async function renderRevenueByDateChart(startDate, endDate) {
                         callback: value => `${CURRENCY_SYMBOL}${value.toLocaleString()}`
                     }
                 },
-                x: { grid: { display: false } }
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        maxTicksLimit: 10 // 限制显示的刻度数量
+                    }
+                }
             },
             plugins: {
                 legend: { display: false },
@@ -330,21 +343,18 @@ async function renderPurchaseCostByDateChart(startDate, endDate) {
         purchaseCostByDateChart.destroy();
     }
 
+    // 改为柱状图
     purchaseCostByDateChart = new Chart(ctx, {
-        type: 'line',
+        type: 'bar', // 从 'line' 改为 'bar'
         data: {
             labels,
             datasets: [{
                 label: 'Purchase Cost',
                 data: values,
-                backgroundColor: 'rgba(79, 121, 66, 0.1)',
-                borderColor: '#4F7942',
-                borderWidth: 2,
-                tension: 0.3,
-                fill: true,
-                pointBackgroundColor: '#4F7942',
-                pointRadius: 3,
-                pointHoverRadius: 5
+                backgroundColor: '#4F7942', // 改为纯色
+                borderRadius: 6,
+                barPercentage: 0.6,
+                categoryPercentage: 0.7
             }]
         },
         options: {
@@ -358,7 +368,12 @@ async function renderPurchaseCostByDateChart(startDate, endDate) {
                         callback: value => `${CURRENCY_SYMBOL}${value.toLocaleString()}`
                     }
                 },
-                x: { grid: { display: false } }
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        maxTicksLimit: 10 // 限制显示的刻度数量
+                    }
+                }
             },
             plugins: {
                 legend: { display: false },
@@ -439,7 +454,7 @@ function renderOrderList(orders) {
     if (!orders || orders.length === 0) {
         container.innerHTML = `
             <tr>
-                <td colspan="9" class="px-4 py-8 text-center text-gray-500">
+                <td colspan="7" class="px-4 py-8 text-center text-gray-500">
                     No orders found matching your criteria.
                 </td>
             </tr>
@@ -487,8 +502,6 @@ function renderOrderList(orders) {
                 <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${statusText}</span>
             </td>
             <td class="px-4 py-4 text-sm">${formatDateTime(order.orderDate)}</td>
-            <td class="px-4 py-4 text-sm">${formatCurrency(order.payableAmount)}</td>
-            <td class="px-4 py-4 text-sm">${order.itemCount} items</td>
             <td class="px-4 py-4 text-sm truncate max-w-xs" title="${order.note || 'No note'}">
                 ${order.note ? (order.note.length > 30 ? order.note.substring(0, 30) + '...' : order.note) : 'None'}
             </td>
@@ -496,9 +509,6 @@ function renderOrderList(orders) {
                 <div class="flex gap-2">
                     <button class="text-[#8B5A2B] hover:text-[#8B5A2B]/80 view-order" data-order="${order.orderId}" title="View Details">
                         <i class="fa fa-eye"></i>
-                    </button>
-                    <button class="text-green-600 hover:text-green-800 create-invoice" data-order="${order.orderId}" title="Create Invoice">
-                        <i class="fa fa-file-text"></i>
                     </button>
                 </div>
             </td>
@@ -524,35 +534,240 @@ function addOrderEventListeners() {
             await viewOrderDetails(orderId);
         });
     });
-
-    document.querySelectorAll('.create-invoice').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const orderId = btn.getAttribute('data-order');
-            await createInvoice(orderId);
-        });
-    });
 }
 
 async function viewOrderDetails(orderId) {
     try {
         const data = await fetchOrderDetail(orderId);
-        console.log('Order detail:', data);
-        alert(`Order ${orderId} detail loaded. Check console for full data.`);
+        if (data) {
+            showOrderDetailModal(data);
+        } else {
+            alert(`Order ${orderId} not found.`);
+        }
     } catch (error) {
         console.error('Failed to load order detail:', error);
         alert('Failed to load order detail.');
     }
 }
 
-async function createInvoice(orderId) {
-    try {
-        const res = await createInvoiceForOrder(Number(orderId));
-        alert(res.message || 'Invoice created');
-        await loadInvoiceList();
-    } catch (error) {
-        console.error('Failed to create invoice:', error);
-        alert('Failed to create invoice.');
+function showOrderDetailModal(order) {
+    // 如果已经存在弹窗，先移除
+    const existingModal = document.getElementById('order-detail-modal');
+    if (existingModal) {
+        existingModal.remove();
     }
+
+    // 确保数据存在，使用安全访问
+    const orderId = order.orderId || 'N/A';
+    const memberName = order.memberName || 'N/A';
+    const memberId = order.memberId || 'N/A';
+    const storeName = order.storeName || 'N/A';
+    const orderDate = order.orderDate ? formatDateTime(order.orderDate) : 'N/A';
+    const paymentMethod = order.paymentMethod || 'Not specified';
+    const note = order.note || 'No note';
+    const shippingAddress = order.shippingAddress || 'Not specified';
+
+    // 计算各项数据，确保有默认值
+    const grossAmount = Number(order.grossAmount) || 0;
+    const discountRate = Number(order.discountRate) || 0;
+    const discountedAmount = Number(order.discountedAmount) || 0;
+    const redeemedPoints = Number(order.redeemedPoints) || 0;
+    const pointsDiscountAmount = Number(order.pointsDiscountAmount) || 0;
+    const payableAmount = Number(order.payableAmount) || 0;
+    const paidAmount = Number(order.paidAmount) || 0;
+    const itemCount = Number(order.itemCount) || 0;
+    const totalQuantity = Number(order.totalQuantity) || 0;
+
+    // 创建弹窗HTML - 修复标题中的undefined
+    const modalHTML = `
+        <div id="order-detail-modal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                <div class="flex justify-between items-center mb-6">
+                                    <h3 class="text-xl font-serif font-bold text-[#8B5A2B]" id="modal-title">
+                                        Order Details
+                                    </h3>
+                                    <button type="button" class="order-modal-close text-gray-400 hover:text-gray-500">
+                                        <i class="fa fa-times text-xl"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- 基本信息卡片 -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-500">Customer</p>
+                                        <p class="font-medium">${memberName} (${memberId})</p>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-500">Store</p>
+                                        <p class="font-medium">${storeName}</p>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-500">Order Date</p>
+                                        <p class="font-medium">${orderDate}</p>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-500">Payment Method</p>
+                                        <p class="font-medium">${paymentMethod}</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- 订单金额详情卡片 -->
+                                <div class="bg-[#F5E6D3] p-6 rounded-lg mb-6">
+                                    <h4 class="font-semibold text-lg mb-4 text-[#8B5A2B]">Order Amount Details</h4>
+                                    <div class="space-y-3">
+                                        <div class="flex justify-between items-center border-b pb-2">
+                                            <span class="text-gray-700">Gross Amount</span>
+                                            <span class="font-medium">${formatCurrency(grossAmount)}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center border-b pb-2">
+                                            <span class="text-gray-700">Discount Rate</span>
+                                            <span class="font-medium">${(discountRate * 100).toFixed(1)}%</span>
+                                        </div>
+                                        <div class="flex justify-between items-center border-b pb-2">
+                                            <span class="text-gray-700">Discounted Amount</span>
+                                            <span class="font-medium">${formatCurrency(discountedAmount)}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center border-b pb-2">
+                                            <span class="text-gray-700">Redeemed Points</span>
+                                            <span class="font-medium">${redeemedPoints.toLocaleString()} pts</span>
+                                        </div>
+                                        <div class="flex justify-between items-center border-b pb-2">
+                                            <span class="text-gray-700">Points Discount</span>
+                                            <span class="font-medium">${formatCurrency(pointsDiscountAmount)}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center border-b pb-2 text-lg font-semibold">
+                                            <span class="text-[#8B5A2B]">Payable Amount</span>
+                                            <span class="text-[#8B5A2B]">${formatCurrency(payableAmount)}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-700">Paid Amount</span>
+                                            <span class="font-medium ${paidAmount >= payableAmount ? 'text-green-600' : 'text-orange-600'}">
+                                                ${formatCurrency(paidAmount)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 商品数量信息 -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-500">Item Count (SKUs)</p>
+                                        <p class="font-medium text-lg">${itemCount} items</p>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-500">Total Quantity</p>
+                                        <p class="font-medium text-lg">${totalQuantity} units</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- 订单商品列表 -->
+                                ${order.items && order.items.length > 0 ? `
+                                <div class="mb-6">
+                                    <h4 class="font-semibold text-lg mb-3 text-[#8B5A2B]">Order Items</h4>
+                                    <div class="border rounded-lg overflow-hidden">
+                                        <table class="min-w-full divide-y divide-gray-200">
+                                            <thead class="bg-gray-100">
+                                                <tr>
+                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price</th>
+                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="bg-white divide-y divide-gray-200">
+                                                ${order.items.map(item => {
+        const sku = item.sku || 'N/A';
+        const name = item.name || 'N/A';
+        const quantity = item.quantity || 0;
+        const unitPrice = Number(item.unitPrice) || 0;
+        const subtotal = Number(item.subtotal) || 0;
+        return `
+                                                        <tr>
+                                                            <td class="px-4 py-3 text-sm">${sku}</td>
+                                                            <td class="px-4 py-3 text-sm">${name}</td>
+                                                            <td class="px-4 py-3 text-sm">${quantity}</td>
+                                                            <td class="px-4 py-3 text-sm">${formatCurrency(unitPrice)}</td>
+                                                            <td class="px-4 py-3 text-sm font-medium">${formatCurrency(subtotal)}</td>
+                                                        </tr>
+                                                    `;
+    }).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                ` : '<p class="text-gray-500 mb-6">No items found for this order.</p>'}
+                                
+                                <!-- 备注 -->
+                                ${note !== 'No note' ? `
+                                <div class="mb-6">
+                                    <h4 class="font-semibold text-lg mb-2 text-[#8B5A2B]">Notes</h4>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-gray-700">${note}</p>
+                                    </div>
+                                </div>
+                                ` : ''}
+                                
+                                <!-- 配送地址 -->
+                                ${shippingAddress !== 'Not specified' ? `
+                                <div class="mb-6">
+                                    <h4 class="font-semibold text-lg mb-2 text-[#8B5A2B]">Shipping Address</h4>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-gray-700">${shippingAddress}</p>
+                                    </div>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="button" class="order-modal-close btn-primary w-full sm:w-auto sm:ml-3">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // 将弹窗添加到页面
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // 添加关闭事件
+    document.querySelectorAll('.order-modal-close').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const modal = document.getElementById('order-detail-modal');
+            if (modal) {
+                modal.remove();
+            }
+        });
+    });
+
+    // 点击背景关闭
+    const modal = document.getElementById('order-detail-modal');
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+
+    // 添加ESC键关闭功能
+    const handleEscKey = (e) => {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('order-detail-modal');
+            if (modal) {
+                modal.remove();
+                document.removeEventListener('keydown', handleEscKey);
+            }
+        }
+    };
+    document.addEventListener('keydown', handleEscKey);
 }
 
 function initInvoicePage() {
@@ -576,7 +791,8 @@ async function filterInvoices() {
     const filters = {
         search: document.getElementById('invoice-search').value.trim(),
         status: document.getElementById('invoice-status-filter').value,
-        orderId: document.getElementById('invoice-order-filter').value.trim(),
+        // 删除 branch 筛选
+        orderOrInvoiceId: document.getElementById('invoice-order-filter').value.trim(), // 修改：改为搜索order或invoice id
         startDate: document.getElementById('invoice-start-date').value,
         endDate: document.getElementById('invoice-end-date').value
     };
@@ -656,7 +872,7 @@ function renderInvoiceList(invoices) {
             <td class="px-4 py-4 text-sm">
                 <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${statusText}</span>
             </td>
-            <td class="px-4 py-4 text-sm">${formatDateTime(invoice.issueDate)}</td>
+            <td class="px-4 py-4 text-sm">${formatDateTime(invoice.issuedAt || invoice.issueDate)}</td>
             <td class="px-4 py-4 text-sm">${formatDateTime(invoice.dueDate)}</td>
             <td class="px-4 py-4 text-sm">${formatCurrency(invoice.invoiceAmount)}</td>
             <td class="px-4 py-4 text-sm">${formatCurrency(invoice.paidAmount)}</td>
@@ -666,8 +882,11 @@ function renderInvoiceList(invoices) {
                     <button class="text-[#8B5A2B] hover:text-[#8B5A2B]/80 view-invoice" data-invoice="${invoice.invoiceId}" title="View Details">
                         <i class="fa fa-eye"></i>
                     </button>
-                    <button class="text-green-600 hover:text-green-800 receive-payment" data-invoice="${invoice.invoiceId}" data-balance="${invoice.balanceAmount}" title="Receive Payment">
-                        <i class="fa fa-credit-card"></i>
+                    <button class="text-red-600 hover:text-red-800 void-invoice" data-invoice="${invoice.invoiceId}" data-status="${invoice.status}" title="Void Invoice" ${invoice.status === 'VOID' || invoice.status === 'PAID' ? 'disabled' : ''}>
+                        <i class="fa fa-ban"></i>
+                    </button>
+                    <button class="text-blue-600 hover:text-blue-800 print-invoice" data-invoice="${invoice.invoiceId}" title="Print/Export PDF">
+                        <i class="fa fa-print"></i>
                     </button>
                 </div>
             </td>
@@ -694,11 +913,31 @@ function addInvoiceEventListeners() {
         });
     });
 
-    document.querySelectorAll('.receive-payment').forEach(btn => {
+    document.querySelectorAll('.void-invoice').forEach(btn => {
         btn.addEventListener('click', async () => {
             const invoiceId = btn.getAttribute('data-invoice');
-            const balance = Number(btn.getAttribute('data-balance') || 0);
-            await receivePayment(invoiceId, balance);
+            const currentStatus = btn.getAttribute('data-status');
+
+            if (currentStatus === 'VOID') {
+                alert('This invoice is already voided.');
+                return;
+            }
+
+            if (currentStatus === 'PAID') {
+                alert('Cannot void a paid invoice.');
+                return;
+            }
+
+            if (confirm('Are you sure you want to void this invoice? This action cannot be undone.')) {
+                await voidInvoice(invoiceId);
+            }
+        });
+    });
+
+    document.querySelectorAll('.print-invoice').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const invoiceId = btn.getAttribute('data-invoice');
+            await printInvoice(invoiceId);
         });
     });
 }
@@ -706,11 +945,420 @@ function addInvoiceEventListeners() {
 async function viewInvoiceDetails(invoiceId) {
     try {
         const data = await fetchInvoiceDetail(invoiceId);
-        console.log('Invoice detail:', data);
-        alert(`Invoice ${invoiceId} detail loaded. Check console for full data.`);
+        if (data) {
+            showInvoiceDetailModal(data);
+        } else {
+            alert(`Invoice ${invoiceId} not found.`);
+        }
     } catch (error) {
         console.error('Failed to load invoice detail:', error);
         alert('Failed to load invoice detail.');
+    }
+}
+
+// 创建发票详情弹窗
+function showInvoiceDetailModal(invoice) {
+    // 如果已经存在弹窗，先移除
+    const existingModal = document.getElementById('invoice-detail-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // 确保数据存在，使用安全访问
+    const invoiceId = invoice.invoiceId || 'N/A';
+    const invoiceNumber = invoice.invoiceNumber || invoiceId;
+    const orderId = invoice.orderId || 'N/A';
+    const memberName = invoice.memberName || 'N/A';
+    const memberId = invoice.memberId || 'N/A';
+    const storeName = invoice.storeName || 'N/A';
+
+    // 获取员工信息
+    const createdByEmployee = employeeData[invoice.createdBy] || { name: invoice.createdBy || 'Unknown', role: 'Unknown' };
+
+    // 计算余额
+    const invoiceAmount = Number(invoice.invoiceAmount) || 0;
+    const paidAmount = Number(invoice.paidAmount) || 0;
+    const balanceAmount = Number(invoice.balanceAmount) || (invoiceAmount - paidAmount);
+
+    // 确保日期数据存在
+    const issuedAt = invoice.issuedAt ? formatDateTime(invoice.issuedAt) : 'N/A';
+    const dueDate = invoice.dueDate ? formatDateTime(invoice.dueDate) : 'N/A';
+    const lastPaidAt = invoice.lastPaidAt ? formatDateTime(invoice.lastPaidAt) : 'Not paid yet';
+    const createdAt = invoice.createdAt ? formatDateTime(invoice.createdAt) : 'N/A';
+    const updatedAt = invoice.updatedAt ? formatDateTime(invoice.updatedAt) : 'N/A';
+    const notes = invoice.notes || '';
+
+    // 创建弹窗HTML - 修复标题中的undefined
+    const modalHTML = `
+        <div id="invoice-detail-modal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                <div class="flex justify-between items-center mb-6">
+                                    <h3 class="text-xl font-serif font-bold text-[#8B5A2B]" id="modal-title">
+                                        Invoice Details
+                                    </h3>
+                                    <button type="button" class="invoice-modal-close text-gray-400 hover:text-gray-500">
+                                        <i class="fa fa-times text-xl"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- 基本信息 -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-500">Invoice Number</p>
+                                        <p class="font-medium">${invoiceNumber}</p>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-500">Order ID</p>
+                                        <p class="font-medium">${orderId}</p>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-500">Customer</p>
+                                        <p class="font-medium">${memberName} (${memberId})</p>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-500">Store</p>
+                                        <p class="font-medium">${storeName}</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- 金额信息卡片 -->
+                                <div class="bg-[#F5E6D3] p-6 rounded-lg mb-6">
+                                    <h4 class="font-semibold text-lg mb-4 text-[#8B5A2B]">Invoice Amount Details</h4>
+                                    <div class="space-y-3">
+                                        <div class="flex justify-between items-center border-b pb-2">
+                                            <span class="text-gray-700">Invoice Amount</span>
+                                            <span class="font-medium">${formatCurrency(invoiceAmount)}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center border-b pb-2">
+                                            <span class="text-gray-700">Paid Amount</span>
+                                            <span class="font-medium ${paidAmount >= invoiceAmount ? 'text-green-600' : 'text-orange-600'}">
+                                                ${formatCurrency(paidAmount)}
+                                            </span>
+                                        </div>
+                                        <div class="flex justify-between items-center border-b pb-2 text-lg font-semibold">
+                                            <span class="text-[#8B5A2B]">Balance Amount</span>
+                                            <span class="text-[#8B5A2B]">${formatCurrency(balanceAmount)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 日期和时间信息 -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-500">Issue Date</p>
+                                        <p class="font-medium">${issuedAt}</p>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-500">Due Date</p>
+                                        <p class="font-medium">${dueDate}</p>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-500">Last Paid At</p>
+                                        <p class="font-medium">${lastPaidAt}</p>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-500">Status</p>
+                                        <p class="font-medium">
+                                            <span class="px-2 py-1 text-xs ${invoice.status === 'UNPAID' ? 'invoice-unpaid' : invoice.status === 'PARTIAL' ? 'invoice-partial' : invoice.status === 'PAID' ? 'invoice-paid' : invoice.status === 'OVERDUE' ? 'invoice-overdue' : 'invoice-void'} rounded-full">
+                                                ${invoice.status || 'UNKNOWN'}
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <!-- 审计信息 -->
+                                <div class="mb-6">
+                                    <h4 class="font-semibold text-lg mb-3 text-[#8B5A2B]">Audit Information</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div class="bg-gray-50 p-4 rounded-lg">
+                                            <p class="text-sm text-gray-500">Created By</p>
+                                            <p class="font-medium">${createdByEmployee.name} (${createdByEmployee.role})</p>
+                                            <p class="text-xs text-gray-500">${invoice.createdBy || 'N/A'}</p>
+                                        </div>
+                                        <div class="bg-gray-50 p-4 rounded-lg">
+                                            <p class="text-sm text-gray-500">Created At</p>
+                                            <p class="font-medium">${createdAt}</p>
+                                        </div>
+                                        <div class="bg-gray-50 p-4 rounded-lg">
+                                            <p class="text-sm text-gray-500">Updated At</p>
+                                            <p class="font-medium">${updatedAt}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 发票项目 -->
+                                ${invoice.items && invoice.items.length > 0 ? `
+                                <div class="mb-6">
+                                    <h4 class="font-semibold text-lg mb-3 text-[#8B5A2B]">Invoice Items</h4>
+                                    <div class="border rounded-lg overflow-hidden">
+                                        <table class="min-w-full divide-y divide-gray-200">
+                                            <thead class="bg-gray-100">
+                                                <tr>
+                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price</th>
+                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="bg-white divide-y divide-gray-200">
+                                                ${invoice.items.map(item => {
+        const description = item.description || 'N/A';
+        const quantity = item.quantity || 0;
+        const unitPrice = Number(item.unitPrice) || 0;
+        const subtotal = Number(item.subtotal) || 0;
+        return `
+                                                        <tr>
+                                                            <td class="px-4 py-3 text-sm">${description}</td>
+                                                            <td class="px-4 py-3 text-sm">${quantity}</td>
+                                                            <td class="px-4 py-3 text-sm">${formatCurrency(unitPrice)}</td>
+                                                            <td class="px-4 py-3 text-sm font-medium">${formatCurrency(subtotal)}</td>
+                                                        </tr>
+                                                    `;
+    }).join('')}
+                                                <tr class="bg-gray-50">
+                                                    <td colspan="3" class="px-4 py-3 text-right font-medium">Subtotal</td>
+                                                    <td class="px-4 py-3 font-medium">${formatCurrency(Number(invoice.subtotal) || 0)}</td>
+                                                </tr>
+                                                <tr class="bg-gray-50">
+                                                    <td colspan="3" class="px-4 py-3 text-right font-medium">Tax (${Number(invoice.taxRate) || 0}%)</td>
+                                                    <td class="px-4 py-3 font-medium">${formatCurrency(Number(invoice.taxAmount) || 0)}</td>
+                                                </tr>
+                                                <tr class="bg-gray-100">
+                                                    <td colspan="3" class="px-4 py-3 text-right font-bold text-lg">Total</td>
+                                                    <td class="px-4 py-3 font-bold text-lg text-[#8B5A2B]">${formatCurrency(invoiceAmount)}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                ` : '<p class="text-gray-500 mb-6">No items found for this invoice.</p>'}
+                                
+                                <!-- 备注 -->
+                                ${notes ? `
+                                <div class="mb-6">
+                                    <h4 class="font-semibold text-lg mb-2 text-[#8B5A2B]">Notes</h4>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-gray-700">${notes}</p>
+                                    </div>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="button" class="invoice-modal-close btn-primary w-full sm:w-auto sm:ml-3">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // 将弹窗添加到页面
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // 添加关闭事件
+    document.querySelectorAll('.invoice-modal-close').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const modal = document.getElementById('invoice-detail-modal');
+            if (modal) {
+                modal.remove();
+            }
+        });
+    });
+
+    // 点击背景关闭
+    const modal = document.getElementById('invoice-detail-modal');
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+
+    // 添加ESC键关闭功能
+    const handleEscKey = (e) => {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('invoice-detail-modal');
+            if (modal) {
+                modal.remove();
+                document.removeEventListener('keydown', handleEscKey);
+            }
+        }
+    };
+    document.addEventListener('keydown', handleEscKey);
+}
+
+// 作废发票函数
+async function voidInvoice(invoiceId) {
+    try {
+        // 这里应该调用API作废发票
+        // 暂时用模拟函数
+        const response = await voidInvoiceApi(invoiceId);
+        if (response.success) {
+            alert('Invoice has been voided successfully.');
+            await loadInvoiceList(); // 重新加载发票列表
+        } else {
+            alert('Failed to void invoice: ' + response.message);
+        }
+    } catch (error) {
+        console.error('Failed to void invoice:', error);
+        alert('Failed to void invoice.');
+    }
+}
+
+// 模拟作废发票API函数
+async function voidInvoiceApi(invoiceId) {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            // 在实际应用中，这里应该调用后端API
+            resolve({ success: true, message: 'Invoice voided successfully' });
+        }, 100);
+    });
+}
+
+// 打印/导出PDF函数
+async function printInvoice(invoiceId) {
+    try {
+        const invoice = await fetchInvoiceDetail(invoiceId);
+        if (!invoice) {
+            alert('Invoice not found.');
+            return;
+        }
+
+        // 创建一个打印友好的窗口
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Invoice ${invoice.invoiceNumber || invoice.invoiceId}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; }
+                    .header { text-align: center; margin-bottom: 30px; }
+                    .invoice-title { font-size: 24px; font-weight: bold; color: #8B5A2B; }
+                    .company-name { font-size: 18px; margin-bottom: 10px; }
+                    .details { margin-bottom: 20px; }
+                    .detail-row { display: flex; margin-bottom: 5px; }
+                    .detail-label { width: 150px; font-weight: bold; }
+                    .table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    .table th { background-color: #f5e6d3; }
+                    .total-row { font-weight: bold; }
+                    .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+                    @media print {
+                        body { margin: 0; }
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div class="company-name">Diamond Page Store</div>
+                    <div class="invoice-title">INVOICE: ${invoice.invoiceNumber || invoice.invoiceId}</div>
+                </div>
+                
+                <div class="details">
+                    <div class="detail-row">
+                        <span class="detail-label">Customer:</span>
+                        <span>${invoice.memberName} (${invoice.memberId})</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Order ID:</span>
+                        <span>${invoice.orderId}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Store:</span>
+                        <span>${invoice.storeName}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Issue Date:</span>
+                        <span>${formatDateTime(invoice.issuedAt)}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Due Date:</span>
+                        <span>${formatDateTime(invoice.dueDate)}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Status:</span>
+                        <span>${invoice.status}</span>
+                    </div>
+                </div>
+                
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${(invoice.items || []).map(item => `
+                            <tr>
+                                <td>${item.description || 'N/A'}</td>
+                                <td>${item.quantity || 0}</td>
+                                <td>${formatCurrency(item.unitPrice || 0)}</td>
+                                <td>${formatCurrency(item.subtotal || 0)}</td>
+                            </tr>
+                        `).join('')}
+                        <tr class="total-row">
+                            <td colspan="3" style="text-align: right;">Subtotal:</td>
+                            <td>${formatCurrency(invoice.subtotal || 0)}</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td colspan="3" style="text-align: right;">Tax (${invoice.taxRate || 0}%):</td>
+                            <td>${formatCurrency(invoice.taxAmount || 0)}</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td colspan="3" style="text-align: right;">Total Amount:</td>
+                            <td>${formatCurrency(invoice.invoiceAmount || 0)}</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td colspan="3" style="text-align: right;">Paid Amount:</td>
+                            <td>${formatCurrency(invoice.paidAmount || 0)}</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td colspan="3" style="text-align: right;">Balance Due:</td>
+                            <td>${formatCurrency(invoice.balanceAmount || (invoice.invoiceAmount - invoice.paidAmount))}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="footer">
+                    <p>Generated on ${new Date().toLocaleDateString()}</p>
+                    <p>Diamond Page Store Finance System</p>
+                </div>
+                
+                <div class="no-print" style="margin-top: 20px; text-align: center;">
+                    <button onclick="window.print()" style="padding: 10px 20px; background: #8B5A2B; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Print / Save as PDF
+                    </button>
+                    <button onclick="window.close()" style="padding: 10px 20px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">
+                        Close
+                    </button>
+                </div>
+                
+                <script>
+                    // 自动触发打印对话框
+                    setTimeout(() => {
+                        window.print();
+                    }, 500);
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    } catch (error) {
+        console.error('Failed to print invoice:', error);
+        alert('Failed to generate print preview.');
     }
 }
 
