@@ -222,6 +222,21 @@ function setupInternalEventListeners() {
 
     const resetBtn = document.getElementById('reset-inventory');
     if (resetBtn) resetBtn.addEventListener('click', resetFilters);
+
+    // 在 setupInternalEventListeners 函数中插入
+    const newRequestBtn = document.getElementById('new-request-btn');
+    if (newRequestBtn) {
+        newRequestBtn.addEventListener('click', () => {
+            const modal = document.getElementById('stock-request-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        });
+    }
+
+    const submitRequestBtn = document.getElementById('submit-request-btn');
+    if (submitRequestBtn) {
+        submitRequestBtn.addEventListener('click', submitStockRequest);
+    }
 }
 
 /**
@@ -672,3 +687,93 @@ window.updateOrderStatus = function () {
         closeOrderModal();
     }
 };
+
+/**
+ * 库存请求功能函数块
+ */
+
+// 关闭请求模态框
+window.closeRequestModal = function () {
+    const modal = document.getElementById('stock-request-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    // 重置表单
+    document.getElementById('stock-request-form').reset();
+    document.getElementById('request-items-body').innerHTML = `
+        <tr>
+            <td class="p-2"><input type="text" class="form-input text-sm item-title" placeholder="Enter book title or ISBN" required></td>
+            <td class="p-2"><input type="number" class="form-input text-sm text-center item-qty" min="1" value="10" required></td>
+            <td class="p-2 text-center"><button type="button" class="text-red-500 hover:text-red-700" onclick="this.closest('tr').remove()"><i class="fa fa-trash"></i></button></td>
+        </tr>`;
+};
+
+// 动态添加一行请求项
+// 1. 修正：动态添加行时包含所有 4 个字段
+window.addRequestRow = function () {
+    const tbody = document.getElementById('request-items-body');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td class="p-1"><input type="text" class="form-input text-xs item-title" placeholder="Title" required></td>
+        <td class="p-1"><input type="text" class="form-input text-xs item-isbn" placeholder="ISBN"></td>
+        <td class="p-1"><input type="text" class="form-input text-xs item-sku" placeholder="SKU"></td>
+        <td class="p-1"><input type="number" class="form-input text-xs text-center item-qty" min="1" value="10" required></td>
+        <td class="p-1 text-center">
+            <button type="button" class="text-red-500 hover:text-red-700" onclick="this.closest('tr').remove()"><i class="fa fa-trash"></i></button>
+        </td>
+    `;
+    tbody.appendChild(tr);
+};
+
+// 2. 修正：提交时收集 Request ID, Date, Title, ISBN, SKU, Qty
+async function submitStockRequest() {
+    const rows = document.querySelectorAll('#request-items-body tr');
+    const items = [];
+
+    rows.forEach(row => {
+        const title = row.querySelector('.item-title').value;
+        const isbn = row.querySelector('.item-isbn').value;
+        const sku = row.querySelector('.item-sku').value;
+        const qty = row.querySelector('.item-qty').value;
+
+        if (title && qty) {
+            items.push({
+                title,
+                isbn: isbn || "N/A",
+                sku: sku || "N/A",
+                quantity: parseInt(qty)
+            });
+        }
+    });
+
+    if (items.length === 0) {
+        showNotification("Please add at least one book to the request.");
+        return;
+    }
+
+    // 封装符合你需求的完整报文
+    const requestData = {
+        requestId: 'REQ-' + Math.random().toString(36).substr(2, 6).toUpperCase(), // 生成 Request ID
+        dateRequested: new Date().toISOString().split('T')[0], // 申请时间
+        totalItemsCount: items.length,
+        bookDetails: items, // 包含 Title, ISBN, SKU, Qty
+        notes: document.getElementById('request-notes').value,
+        status: 'pending'
+    };
+
+    console.log("[总部接口预留] 正在发送以下数据:", requestData);
+    // TODO: 待替换为后端接口: await fetch('../api/staff/stock-requests', { method: 'POST', body: JSON.stringify(requestData) });
+
+    // 更新本地 mock 数据（为了在表格中即时显示）
+    stockRequests.unshift({
+        id: requestData.requestId,
+        dateRequested: requestData.dateRequested,
+        items: requestData.totalItemsCount,
+        status: 'pending',
+        expectedDelivery: 'TBD'
+    });
+
+    showNotification(`Request ${requestData.requestId} submitted to Headquarters.`);
+
+    renderStockRequests();
+    closeRequestModal();
+}
