@@ -59,7 +59,7 @@ const MENU_CONFIG = {
         { id: 'overview', icon: 'fa-tachometer', text: 'Dashboard', type: 'admin' },
         { id: 'books', icon: 'fa-book', text: 'Book Management', type: 'admin' },
         { id: 'staff', icon: 'fa-users', text: 'Staff Management', type: 'admin' },
-        { id: 'orders', icon: 'fa-list', text: 'Order Management', type: 'admin' }, 
+        { id: 'orders', icon: 'fa-list', text: 'Order Management', type: 'admin' },
         { id: 'finance-report', icon: 'fa-line-chart', text: 'Financial Reports', type: 'admin' }
     ],
 
@@ -82,7 +82,7 @@ function renderStoreSidebar(role, activePage) {
 
     const menuHtml = items.map(item => {
         if (item.type === 'separator') return '<div class="my-3 border-t border-brown-light/20"></div>';
-        
+
         // 初始高亮逻辑
         const activeClass = (item.id === activePage) ? 'sidebar-item-active' : '';
         const badgeHtml = item.badgeId ? `<span id="${item.badgeId}" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>` : '';
@@ -160,7 +160,7 @@ function renderAdminSidebar(role, activePage) {
     }).join('');
 
     container.innerHTML = `
-        <aside id="sidebar" class="w-64 bg-white border-r border-gray-200 flex-shrink-0 transition-all duration-300 ease-in-out overflow-y-auto h-full flex flex-col justify-between">
+        <aside id="sidebar" class="w-full h-full bg-white border-r border-gray-200 flex flex-col justify-between overflow-y-auto overflow-x-hidden">
             <nav class="p-4 space-y-1">
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-2">Main Menu</p>
                 ${menuHtml}
@@ -190,15 +190,18 @@ function renderAdminHeader(role) {
     container.innerHTML = `
         <header class="bg-white border-b border-gray-200 shadow-sm z-10 flex-shrink-0">
             <div class="flex items-center justify-between px-4 h-16">
+                <!-- 左侧区域：Toggle + Logo + Title -->
                 <div class="flex items-center gap-3">
-                    <button class="lg:hidden text-gray-600 hover:text-primary" onclick="document.getElementById('sidebar').classList.toggle('-translate-x-full')">
+                    <button id="sidebar-toggle" class=" text-gray-600 hover:text-primary p-2 rounded-md hover:bg-gray-100 transition-colors" onclick="toggleSidebar()">
                         <i class="fa fa-bars text-xl"></i>
                     </button>
                     <div class="flex items-center gap-3 cursor-pointer" onclick="location.reload()">
                         <img src="../assets/images/logo.png" alt="Bookstore Logo" class="w-10 h-10 object-contain">
-                        <h1 class="text-xl font-serif font-bold text-primary">Diamond System</h1>
+                        <h1 class="text-xl font-serif font-bold text-primary">Diamond Page Store</h1>
                     </div>
                 </div>
+
+                <!-- 右侧区域：通知 + 用户信息 -->
                 <div class="flex items-center gap-4">
                     <button class="text-gray-600 hover:text-primary relative">
                         <i class="fa fa-bell text-xl"></i>
@@ -231,5 +234,30 @@ window.initLayout = function (role = 'customer', defaultPage = 'home') {
         document.body.classList.add('bg-brown-cream');
         renderStoreHeader(role);
         renderStoreSidebar(role, defaultPage);
+    }
+};
+
+/**
+ * 切换侧边栏状态（全屏可用）
+ */
+// 在 layout.js 的末尾修改 toggleSidebar 函数
+window.toggleSidebar = function () {
+    const sidebarContainer = document.getElementById('layout-sidebar');
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebarContainer || !sidebar) return;
+
+    // 判断当前是否处于收缩状态 (通过检查 w-64 类名)
+    const isCollapsed = !sidebarContainer.classList.contains('w-64');
+
+    if (isCollapsed) {
+        // 【展开逻辑】
+        sidebarContainer.classList.remove('w-0');
+        sidebarContainer.classList.add('w-64');
+        sidebar.classList.remove('-translate-x-full', 'opacity-0');
+    } else {
+        // 【收缩逻辑】
+        sidebarContainer.classList.remove('w-64');
+        sidebarContainer.classList.add('w-0');
+        sidebar.classList.add('-translate-x-full', 'opacity-0');
     }
 };
