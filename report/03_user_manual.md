@@ -17,3 +17,7 @@
 * **User Management**: (截图 + 说明，展示账号维护功能)
 * **Performance Overview**: (截图 + 说明)
 * 其他功能以此类推
+
+## 4.4 For Finance (财务指南)
+
+* 
