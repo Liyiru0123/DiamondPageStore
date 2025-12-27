@@ -5,31 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Diamond Page Store - Manager Dashboard</title>
+
     <!-- External Resources -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
 
-    <!-- Tailwind Configuration -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#8B5A2B',      // Dark brown - Primary
-                        secondary: '#F5F5DC',    // Beige - Secondary
-                        accent: '#D2B48C',       // Tan - Accent
-                        neutral: '#F8F8FF',      // Off-white - Neutral
-                        dark: '#3E2723',         // Dark brown - Text
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                        serif: ['Merriweather', 'Georgia', 'serif'],
-                    },
-                },
-            }
-        }
-    </script>
+    <!-- 引入 layout.js 处理通用布局 -->
+    <script src="../scripts/layout.js"></script>
 
     <!-- Custom Styles -->
     <style type="text/tailwindcss">
@@ -39,12 +22,6 @@
       }
       .book-shadow {
         box-shadow: 0 4px 6px -1px rgba(139, 90, 43, 0.1), 0 2px 4px -1px rgba(139, 90, 43, 0.06);
-      }
-      .sidebar-link {
-        @apply flex items-center gap-3 px-4 py-3 text-gray-700 rounded-lg transition-all duration-300 hover:bg-accent/20 hover:text-primary;
-      }
-      .sidebar-link.active {
-        @apply bg-accent/30 text-primary font-medium;
       }
       .btn-primary {
         @apply bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-all duration-300 shadow-md hover:shadow-lg;
@@ -96,6 +73,47 @@
         color: #6B7280;
         opacity: 0.7;
       }
+      /* Tab styles for inventory management */
+.tab-button {
+    @apply transition-all duration-200;
+}
+
+.tab-button.active {
+    @apply border-primary text-primary font-medium;
+}
+
+/* Inventory content sections */
+.inventory-content {
+    @apply transition-all duration-300;
+}
+
+/* Stock status badges */
+.stock-low { 
+    background-color: #fef3c7; 
+    color: #92400e; 
+}
+.stock-medium { 
+    background-color: #dbeafe; 
+    color: #1e40af; 
+}
+.stock-high { 
+    background-color: #dcfce7; 
+    color: #166534; 
+}
+
+/* Urgency indicators */
+.urgency-high {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+.urgency-medium {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+.urgency-low {
+    background-color: #dcfce7;
+    color: #166534;
+}
 
       /* Status badges */
       .role-manager { background-color: #8B5A2B; color: white; }
@@ -109,92 +127,14 @@
 </head>
 
 <body class="bg-gray-50 font-sans text-dark min-h-screen flex flex-col">
-    <!-- Main System -->
+    <!-- Main System - 布局将由 layout.js 动态生成 -->
     <div id="main-system" class="flex flex-col h-screen">
-        <!-- Top Navigation Bar -->
-        <header class="bg-white border-b border-gray-200 shadow-sm z-10">
-            <div class="flex items-center justify-between px-4 h-16">
-                <!-- Left Logo and Title -->
-                <div class="flex items-center gap-3">
-                    <button id="sidebar-toggle" class="lg:hidden text-gray-600 hover:text-primary">
-                        <i class="fa fa-bars text-xl"></i>
-                    </button>
-                    <div class="flex items-center gap-3">
-                        <img src="../assets/images/logo.png" alt="Bookstore Logo" class="w-10 h-10 object-contain">
-                        <h1 class="text-xl font-serif font-bold text-primary">Diamond Page Store</h1>
-                    </div>
-                </div>
-
-                <!-- Right User Info -->
-                <div class="flex items-center gap-4">
-                    <button class="text-gray-600 hover:text-primary relative">
-                        <i class="fa fa-bell text-xl"></i>
-                        <span
-                            class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full">3</span>
-                    </button>
-
-                    <div class="flex items-center gap-2 cursor-pointer group">
-                        <img src="https://picsum.photos/id/64/40/40" alt="User Avatar"
-                            class="w-8 h-8 rounded-full object-cover border-2 border-transparent group-hover:border-primary transition-all">
-                        <div class="hidden md:block text-left">
-                            <p id="user-display-name" class="text-sm font-medium">Sarah Manager</p>
-                            <p id="user-display-role" class="text-xs text-gray-500">Store Manager</p>
-                        </div>
-                        <i
-                            class="fa fa-chevron-down text-xs text-gray-500 group-hover:text-primary transition-colors"></i>
-                    </div>
-                </div>
-            </div>
-        </header>
+        <!-- 头部将由 layout.js 动态生成 -->
+        <div id="layout-header"></div>
 
         <div class="flex flex-1 overflow-hidden">
-            <!-- Sidebar -->
-            <aside id="sidebar"
-                class="w-64 bg-white border-r border-gray-200 flex-shrink-0 hidden lg:block transition-all duration-300 ease-in-out overflow-y-auto">
-                <nav class="p-4 space-y-1">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-2">Main Menu</p>
-
-                    <!-- 店长系统菜单 -->
-                    <a href="#" class="sidebar-link active" data-page="overview">
-                        <i class="fa fa-tachometer w-5 text-center"></i>
-                        <span>Overview</span>
-                    </a>
-
-                    <a href="#" class="sidebar-link" data-page="inventory">
-                        <i class="fa fa-cubes w-5 text-center"></i>
-                        <span>Inventory Management</span>
-                    </a>
-
-                    <a href="#" class="sidebar-link" data-page="staff">
-                        <i class="fa fa-users w-5 text-center"></i>
-                        <span>Staff Management</span>
-                    </a>
-
-                    <a href="#" class="sidebar-link" data-page="pricing">
-                        <i class="fa fa-tags w-5 text-center"></i>
-                        <span>Sales Management</span>
-                    </a>
-
-                    <!-- 新增 Branch Finance 菜单项 -->
-                    <a href="#" class="sidebar-link" data-page="branch-finance">
-                        <i class="fa fa-money w-5 text-center"></i>
-                        <span>Branch Finance</span>
-                    </a>
-
-                    <a href="#" class="sidebar-link" data-page="notifications">
-                        <i class="fa fa-bullhorn w-5 text-center"></i>
-                        <span>Notifications</span>
-                    </a>
-
-                    <div class="mt-8 pt-4 border-t border-gray-200">
-                        <a href="#" class="sidebar-link text-red-600 hover:text-red-700 hover:bg-red-50"
-                            id="logout-btn">
-                            <i class="fa fa-sign-out w-5 text-center"></i>
-                            <span>Logout</span>
-                        </a>
-                    </div>
-                </nav>
-            </aside>
+            <!-- 侧边栏将由 layout.js 动态生成 -->
+            <div id="layout-sidebar"></div>
 
             <!-- Main Content Area -->
             <main class="flex-1 overflow-y-auto bg-gray-50 p-4 lg:p-6">
@@ -205,78 +145,94 @@
                         <div id="current-date" class="text-gray-600"></div>
                     </div>
 
-                    <!-- Key Metrics - 移除了Active Staff和Customer Satisfaction -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div class="bg-white p-5 rounded-lg shadow-sm">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-gray-500 mb-1">Total Revenue (Today)</p>
-                                    <p class="text-2xl font-bold">¥8,420</p>
-                                </div>
-                                <div class="bg-green-50 p-3 rounded-full">
-                                    <i class="fa fa-money text-green-600 text-xl"></i>
+                    <!-- Comparison Charts -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <!-- 订单数对比 -->
+                        <div class="card">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-semibold">Order Count Comparison</h3>
+                                <div class="text-sm text-gray-500">
+                                    <i class="fa fa-info-circle"></i> Monthly Data
                                 </div>
                             </div>
-                            <p class="text-sm text-green-600 mt-2">+12.5% from yesterday</p>
+                            <div class="chart-container h-64">
+                                <canvas id="order-comparison-chart"></canvas>
+                            </div>
+                            <div class="mt-3 text-sm text-gray-600">
+                                <p>Central Plaza leads with 156 orders, showing strong performance.</p>
+                            </div>
                         </div>
 
-                        <div class="bg-white p-5 rounded-lg shadow-sm">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-gray-500 mb-1">Low Stock Items</p>
-                                    <p class="text-2xl font-bold">7</p>
-                                </div>
-                                <div class="bg-yellow-50 p-3 rounded-full">
-                                    <i class="fa fa-exclamation-triangle text-yellow-600 text-xl"></i>
+                        <!-- 销售分析 - 支付方式对比 -->
+                        <div class="card">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-semibold">Sales Analysis by Payment Method</h3>
+                                <div class="text-sm text-gray-500">
+                                    <i class="fa fa-credit-card"></i> All Stores
                                 </div>
                             </div>
-                            <p class="text-sm text-yellow-600 mt-2">Need restocking</p>
+                            <div class="chart-container h-64 overflow-auto">
+                                <div id="payment-method-table" class="w-full">
+                                    <!-- 表格将通过JavaScript动态生成 -->
+                                </div>
+                            </div>
+                            <div class="mt-3 text-sm text-gray-600">
+                                <p>Third-party payments lead with 45% of total sales across all branches.</p>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <!-- Sales Trend Chart -->
-                        <div class="bg-white p-5 rounded-lg shadow-sm">
-                            <h3 class="text-lg font-semibold mb-4">Sales Trend</h3>
-                            <div class="chart-container h-64">
-                                <canvas id="sales-trend-chart"></canvas>
-                            </div>
-                            <div class="flex gap-2 mt-3">
-                                <button class="trend-period-btn px-3 py-1 text-sm rounded bg-blue-600 text-white"
-                                    data-period="weekly">Weekly</button>
-                                <button class="trend-period-btn px-3 py-1 text-sm rounded bg-gray-100 text-gray-700"
-                                    data-period="monthly">Monthly</button>
-                                <button class="trend-period-btn px-3 py-1 text-sm rounded bg-gray-100 text-gray-700"
-                                    data-period="quarterly">Quarterly</button>
+                    <!-- 热销图书分类对比 -->
+                    <div class="card mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold">Best-Selling Book Categories by Branch</h3>
+                            <div class="text-sm text-gray-500">
+                                <i class="fa fa-book"></i> Sales Performance
                             </div>
                         </div>
-
-                        <!-- Branch Performance -->
-                        <div class="bg-white p-5 rounded-lg shadow-sm">
-                            <h3 class="text-lg font-semibold mb-4">Branch Performance</h3>
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th
-                                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Branch</th>
-                                            <th
-                                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Today's Sales</th>
-                                            <th
-                                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Performance</th>
-                                            <th
-                                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="branch-performance" class="bg-white divide-y divide-gray-200">
-                                        <!-- Data will be populated by JavaScript -->
-                                    </tbody>
-                                </table>
+                        <div class="chart-container overflow-auto max-h-96">
+                            <div id="book-category-table" class="w-full">
+                                <!-- 表格将通过JavaScript动态生成 -->
                             </div>
+                        </div>
+                        <div class="mt-3 text-sm text-gray-600">
+                            <p>Fiction books generate the highest revenue at 35% of total sales across all branches.</p>
+                        </div>
+                    </div>
+
+                    <!-- Summary Statistics -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-primary/10 p-4 rounded-lg">
+                            <div class="flex items-center mb-2">
+                                <div class="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center mr-2">
+                                    <i class="fa fa-store text-primary text-sm"></i>
+                                </div>
+                                <h4 class="font-medium">Top Performing Branch</h4>
+                            </div>
+                            <p class="text-2xl font-bold">Central Plaza</p>
+                            <p class="text-sm text-gray-600 mt-1">156 orders | ¥8,420 revenue</p>
+                        </div>
+
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <div class="flex items-center mb-2">
+                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-2">
+                                    <i class="fa fa-credit-card text-blue-600 text-sm"></i>
+                                </div>
+                                <h4 class="font-medium">Most Popular Payment</h4>
+                            </div>
+                            <p class="text-2xl font-bold">Credit Card</p>
+                            <p class="text-sm text-gray-600 mt-1">42% of all transactions</p>
+                        </div>
+
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <div class="flex items-center mb-2">
+                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-2">
+                                    <i class="fa fa-book text-green-600 text-sm"></i>
+                                </div>
+                                <h4 class="font-medium">Top Category</h4>
+                            </div>
+                            <p class="text-2xl font-bold">Fiction</p>
+                            <p class="text-sm text-gray-600 mt-1">35% of total book sales</p>
                         </div>
                     </div>
                 </div>
@@ -287,97 +243,378 @@
                         <div>
                             <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Inventory
                                 Management</h2>
-                            <p class="text-gray-500">Manage book inventory across all branches</p>
+                            <p class="text-gray-500">Manage replenishment requests and inventory overview</p>
                         </div>
                         <div class="mt-4 md:mt-0 flex gap-3">
                             <div class="relative">
-                                <input type="text" placeholder="Search books..."
+                                <input type="text" placeholder="Search by SKU or title..."
                                     class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
                                 <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
                                     <i class="fa fa-search"></i>
                                 </span>
                             </div>
-                            <button class="btn-primary flex items-center gap-2">
-                                <i class="fa fa-plus"></i> Add Book
+                        </div>
+                    </div>
+
+                    <!-- Tabs for Inventory Management -->
+                    <div class="mb-6 border-b border-gray-200">
+                        <nav class="flex space-x-6">
+                            <button id="requests-tab"
+                                class="tab-button active py-3 px-1 border-b-2 border-primary text-primary font-medium">
+                                Replenishment Requests
                             </button>
-                        </div>
+                            <button id="overview-tab"
+                                class="tab-button py-3 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                                Stock Overview
+                            </button>
+                            <button id="pricing-tab"
+                                class="tab-button py-3 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                                Pricing Management
+                            </button>
+                        </nav>
                     </div>
 
-                    <!-- Branch Filter -->
-                    <div class="card mb-6">
-                        <h3 class="font-semibold text-lg mb-4">Filter by Branch</h3>
-                        <div class="flex gap-3 items-end">
-                            <div class="w-full md:w-64">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Select Branch</label>
-                                <select id="branch-filter-select" class="form-input">
-                                    <option value="all">All Branches</option>
-                                    <option value="central">Central Plaza</option>
-                                    <option value="riverside">Riverside</option>
-                                    <option value="westside">Westside</option>
-                                </select>
+                    <!-- Replenishment Requests Table (Default View) -->
+                    <div id="requests-content" class="inventory-content">
+                        <!-- 筛选器部分 -->
+                        <div id="requests-filter-section" class="card mb-6">
+                            <h3 class="font-semibold text-lg mb-4">Filter Replenishment Requests</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                                    <select id="request-branch-filter" class="form-input">
+                                        <option value="all">All Branches</option>
+                                        <option value="ST001">Central Plaza</option>
+                                        <option value="ST002">Riverside</option>
+                                        <option value="ST003">Westside</option>
+                                        <option value="ST004">Northgate</option>
+                                        <option value="ST005">Southpoint</option>
+                                        <option value="ST006">Eastview</option>
+                                        <option value="ST007">Downtown</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                    <select id="request-status-filter" class="form-input">
+                                        <option value="all">All Status</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="approved">Approved</option>
+                                        <option value="rejected">Rejected</option>
+                                        <option value="completed">Completed</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+                                    <input type="date" id="request-date-from" class="form-input">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">To</label>
+                                    <input type="date" id="request-date-to" class="form-input">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Urgency</label>
+                                    <select id="request-urgency-filter" class="form-input">
+                                        <option value="all">All</option>
+                                        <option value="low">Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                    </select>
+                                </div>
                             </div>
-                            <button id="apply-branch-filter" class="btn-primary h-10">Apply</button>
+                            <div class="flex gap-2 mt-4">
+                                <button id="apply-request-filters" class="btn-primary">Apply Filters</button>
+                                <button id="reset-request-filters" class="btn-secondary">Reset</button>
+                            </div>
+                        </div>
+
+                        <!-- 表格内容 -->
+                        <div class="card">
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead>
+                                        <tr>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                                                Request ID</th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Branch</th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Request Time</th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                SKU Count</th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Total Qty</th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Status</th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                                                Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="replenishment-table-body" class="bg-white divide-y divide-gray-200">
+                                        <!-- 数据将通过JavaScript动态生成 -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="flex justify-between items-center mt-5">
+                                <p class="text-sm text-gray-500">Showing 1 to 10 of 25 requests</p>
+                                <div class="flex gap-1">
+                                    <button
+                                        class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                        disabled>
+                                        <i class="fa fa-chevron-left text-xs"></i>
+                                    </button>
+                                    <button
+                                        class="w-8 h-8 flex items-center justify-center rounded border border-primary bg-primary text-white">1</button>
+                                    <button
+                                        class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">2</button>
+                                    <button
+                                        class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">3</button>
+                                    <button
+                                        class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50">
+                                        <i class="fa fa-chevron-right text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Inventory Table -->
-                    <div class="card">
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead>
-                                    <tr>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
-                                            Book Title</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            ISBN</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            SKU ID</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Branch</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Current Stock</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Last Restock</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
-                                            Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="inventory-table-body" class="bg-white divide-y divide-gray-200">
-                                    <!-- Data will be populated by JavaScript -->
-                                </tbody>
-                            </table>
+                    <!-- Stock Overview Table (Hidden by default) -->
+                    <div id="overview-content" class="inventory-content hidden">
+                        <div class="mb-6">
+                            <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
+                                <div class="card">
+                                    <h4 class="font-semibold mb-2">View Options</h4>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center">
+                                            <input type="radio" name="view-option" value="by-branch" checked class="mr-2">
+                                            <span>By Branch</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="view-option" value="by-sku" class="mr-2">
+                                            <span>By SKU</span>
+                                        </label>
+                                    </div>
+
+                                    <!-- Branch Filter for By Branch view -->
+                                    <div id="branch-filter-container" class="mt-4">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Filter by
+                                            Branch</label>
+                                        <select id="branch-stock-filter" class="form-input w-full">
+                                            <option value="all">All Branches</option>
+                                            <option value="ST001">Central Plaza</option>
+                                            <option value="ST002">Riverside</option>
+                                            <option value="ST003">Westside</option>
+                                            <option value="ST004">Northgate</option>
+                                            <option value="ST005">Southpoint</option>
+                                            <option value="ST006">Eastview</option>
+                                            <option value="ST007">Downtown</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Pagination -->
-                        <div class="flex justify-between items-center mt-5">
-                            <p class="text-sm text-gray-500">Showing 1 to 10 of 248 records</p>
-                            <div class="flex gap-1">
-                                <button
-                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                                    disabled>
-                                    <i class="fa fa-chevron-left text-xs"></i>
-                                </button>
-                                <button
-                                    class="w-8 h-8 flex items-center justify-center rounded border border-primary bg-primary text-white">1</button>
-                                <button
-                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">2</button>
-                                <button
-                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">3</button>
-                                <button
-                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">4</button>
-                                <button
-                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">5</button>
-                                <button
-                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50">
-                                    <i class="fa fa-chevron-right text-xs"></i>
-                                </button>
+                        <!-- Stock Overview By Branch -->
+                        <div id="stock-by-branch" class="card mb-6">
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+                                <h3 class="font-semibold text-lg">Stock Overview by Branch</h3>
+                                <div class="mt-2 md:mt-0 text-sm text-gray-500">
+                                    Showing <span id="branch-stock-count">15</span> items
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead>
+                                        <tr>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                                                SKU
+                                            </th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Book Title
+                                            </th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Branch
+                                            </th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Current Stock
+                                            </th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Last Inbound Date
+                                            </th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                                                Stock Status
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="stock-branch-table-body" class="bg-white divide-y divide-gray-200">
+                                        <!-- Data will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Pagination -->
+                            <div class="flex justify-between items-center mt-5">
+                                <p class="text-sm text-gray-500">Showing 1 to 10 of <span id="branch-total-count">15</span>
+                                    items</p>
+                                <div class="flex gap-1">
+                                    <button
+                                        class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                        disabled>
+                                        <i class="fa fa-chevron-left text-xs"></i>
+                                    </button>
+                                    <button
+                                        class="w-8 h-8 flex items-center justify-center rounded border border-primary bg-primary text-white">1</button>
+                                    <button
+                                        class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">2</button>
+                                    <button
+                                        class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50">
+                                        <i class="fa fa-chevron-right text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stock Overview By SKU (Hidden by default) -->
+                        <div id="stock-by-sku" class="card hidden">
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+                                <h3 class="font-semibold text-lg">Inventory Distribution by SKU</h3>
+                                <div class="mt-2 md:mt-0">
+                                    <div class="relative">
+                                        <input type="text" placeholder="Search by SKU or title..."
+                                            class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+                                            id="sku-search-input">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
+                                            <i class="fa fa-search"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead>
+                                        <tr>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                                                SKU
+                                            </th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Book Title
+                                            </th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Central Plaza
+                                            </th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Riverside
+                                            </th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Westside
+                                            </th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Northgate
+                                            </th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Southpoint
+                                            </th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Eastview
+                                            </th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                                                Downtown
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="stock-sku-table-body" class="bg-white divide-y divide-gray-200">
+                                        <!-- Data will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pricing Management Content -->
+                    <div id="pricing-content" class="inventory-content hidden">
+                        <div class="mb-6">
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                                <h3 class="font-semibold text-lg">Pricing Management</h3>
+                                <div class="flex flex-col sm:flex-row gap-3">
+                                    <!-- 书籍搜索框 -->
+                                    <div class="relative">
+                                        <input type="text" placeholder="Search by title or ISBN..."
+                                            class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+                                            id="pricing-search-input">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
+                                            <i class="fa fa-search"></i>
+                                        </span>
+                                    </div>
+                                    <!-- 添加书籍信息按钮 -->
+                                    <button class="btn-primary flex items-center gap-2" id="add-book-info-btn">
+                                        <i class="fa fa-plus"></i> Add Book Info
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Pricing Table -->
+                            <div class="card">
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead>
+                                            <tr>
+                                                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                                                    Book Title</th>
+                                                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    ISBN</th>
+                                                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Current Price</th>
+                                                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                                                    Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="pricing-table-body" class="bg-white divide-y divide-gray-200">
+                                            <!-- Data will be populated by JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Request Detail Modal -->
+                    <div id="request-detail-modal"
+                        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+                        <div class="bg-white rounded-lg w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+                            <div class="p-6">
+                                <h3 class="text-lg font-semibold mb-4">Request Detail</h3>
+                                <div id="request-detail-content">
+                                    <!-- Request details will be populated by JavaScript -->
+                                </div>
+                                <div class="flex justify-end gap-3 mt-6">
+                                    <button type="button" id="close-request-detail" class="btn-secondary">Close</button>
+                                    <button type="button" id="approve-request"
+                                        class="btn-primary bg-green-600 hover:bg-green-700">Approve</button>
+                                    <button type="button" id="reject-request"
+                                        class="btn-primary bg-red-600 hover:bg-red-700">Reject</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -470,7 +707,7 @@
                                             Position</th>
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Password</th>
+                                            Phone</th>
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
                                             Actions</th>
@@ -506,7 +743,7 @@
                     </div>
                 </div>
 
-                <!-- Sales Management Page - 移入了 Bestsellers 和 Need Promotion 部分 -->
+                <!-- Sales Management Page -->
                 <div id="pricing-page" class="page-content hidden">
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
                         <div>
@@ -610,157 +847,88 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Pricing Table -->
-                    <div class="card">
-                        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-                            <h3 class="font-semibold text-lg mb-4 md:mb-0">Book Pricing</h3>
-                            <div class="flex flex-col sm:flex-row gap-3">
-                                <!-- 书籍搜索框 -->
-                                <div class="relative">
-                                    <input type="text" placeholder="Search by title or ISBN..."
-                                        class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
-                                        id="book-search-input">
-                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
-                                        <i class="fa fa-search"></i>
-                                    </span>
-                                </div>
-                                <!-- 添加书籍信息按钮 -->
-                                <button class="btn-primary flex items-center gap-2" id="add-book-info-btn">
-                                    <i class="fa fa-plus"></i> Add Book Info
-                                </button>
-                            </div>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead>
-                                    <tr>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
-                                            Book Title</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            ISBN</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Current Price</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
-                                            Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="pricing-table-body" class="bg-white divide-y divide-gray-200">
-                                    <!-- Data will be populated by JavaScript -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
                 </div>
 
-                <!-- Branch Finance Details Page -->
-                <div id="branch-finance-page" class="page-content hidden">
+                <!-- User Management Page -->
+                <div id="user-management-page" class="page-content hidden">
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
                         <div>
-                            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Branch Finance
-                                Details</h2>
-                            <p class="text-gray-500">View income and expense records by branch</p>
+                            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">User Management
+                            </h2>
+                            <p class="text-gray-500">Manage user accounts, permissions and status</p>
                         </div>
                         <div class="mt-4 md:mt-0 flex gap-3">
                             <div class="relative">
-                                <input type="text" placeholder="Search branches..."
+                                <input type="text" placeholder="Search users..."
                                     class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
                                 <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
                                     <i class="fa fa-search"></i>
                                 </span>
                             </div>
                             <button class="btn-primary flex items-center gap-2">
-                                <i class="fa fa-download"></i> Export Report
+                                <i class="fa fa-plus"></i> Add User
                             </button>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                        <div class="card lg:col-span-1">
-                            <h3 class="font-semibold text-lg mb-4">Branches</h3>
-                            <div class="space-y-4 max-h-[600px] overflow-y-auto pr-2" id="branches-container"></div>
+                    <!-- User Management Table -->
+                    <div class="card">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                    <tr>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                                            User ID</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Account Role</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Account Status</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            User Type</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Email</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Join Date</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                                            Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="user-management-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- Data will be populated by JavaScript -->
+                                </tbody>
+                            </table>
                         </div>
 
-                        <div class="card lg:col-span-3">
-                            <div class="flex justify-between items-center mb-4">
-                                <div>
-                                    <h3 class="font-semibold text-lg" id="selected-branch-name">Central Plaza Branch
-                                    </h3>
-                                    <p class="text-gray-500" id="selected-branch-address">123 Central Plaza, Downtown •
-                                        (555) 123-4567</p>
-                                </div>
-                                <div class="flex gap-2">
-                                    <button
-                                        class="period-btn px-3 py-1 text-xs bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
-                                        data-period="week">Week</button>
-                                    <button class="period-btn px-3 py-1 text-xs bg-primary text-white rounded-full"
-                                        data-period="month">Month</button>
-                                    <button
-                                        class="period-btn px-3 py-1 text-xs bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
-                                        data-period="quarter">Quarter</button>
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                <div class="bg-primary/10 p-4 rounded-lg">
-                                    <p class="text-sm text-gray-500 mb-1">Total Revenue</p>
-                                    <h3 class="text-2xl font-bold" id="branch-revenue">¥24,580</h3>
-                                    <p class="text-xs text-green-600 mt-1 flex items-center">
-                                        <i class="fa fa-arrow-up mr-1"></i> <span id="branch-revenue-change">12% vs last
-                                            month</span>
-                                    </p>
-                                </div>
-
-                                <div class="bg-green-50 p-4 rounded-lg">
-                                    <p class="text-sm text-gray-500 mb-1">Net Profit</p>
-                                    <h3 class="text-2xl font-bold" id="branch-profit">¥12,240</h3>
-                                    <p class="text-xs text-green-600 mt-1 flex items-center">
-                                        <i class="fa fa-arrow-up mr-1"></i> <span id="branch-profit-change">18% vs last
-                                            month</span>
-                                    </p>
-                                </div>
-
-                                <div class="bg-white p-4 rounded-lg border border-gray-200">
-                                    <p class="text-sm font-medium text-gray-700 mb-2">Revenue Trend</p>
-                                    <div class="h-32">
-                                        <canvas id="branch-trend-chart"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <h4 class="font-medium mb-3">Recent Transactions</h4>
-                                <div class="overflow-x-auto">
-                                    <table class="min-w-full divide-y divide-gray-200">
-                                        <thead>
-                                            <tr>
-                                                <th
-                                                    class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
-                                                    Date</th>
-                                                <th
-                                                    class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Order ID</th>
-                                                <th
-                                                    class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Total Amount</th>
-                                                <th
-                                                    class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
-                                                    Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="bg-white divide-y divide-gray-200" id="branch-transactions">
-                                            <!-- Transaction rows will be populated by JavaScript -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            <div id="branch-order-details" class="mt-4 p-4 border-t border-gray-200 hidden">
-                                <!-- Order details will be populated by JavaScript -->
+                        <!-- Pagination -->
+                        <div class="flex justify-between items-center mt-5">
+                            <p class="text-sm text-gray-500">Showing 1 to 10 of 48 users</p>
+                            <div class="flex gap-1">
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                    disabled>
+                                    <i class="fa fa-chevron-left text-xs"></i>
+                                </button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-primary bg-primary text-white">1</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">2</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">3</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">4</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">5</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50">
+                                    <i class="fa fa-chevron-right text-xs"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -772,14 +940,11 @@
                         <div>
                             <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Notifications
                             </h2>
-                            <p class="text-gray-500">Send announcements, notifications and promotion</p>
+                            <p class="text-gray-500">Send announcements and notifications</p>
                         </div>
                         <div class="mt-4 md:mt-0 flex gap-3">
                             <button class="btn-primary flex items-center gap-2" id="compose-notification-btn">
                                 <i class="fa fa-plus"></i> Compose Message
-                            </button>
-                            <button class="btn-primary flex items-center gap-2" id="create-promotion-btn">
-                                <i class="fa fa-percent"></i> Create Promotion
                             </button>
                         </div>
                     </div>
@@ -811,75 +976,11 @@
                         </form>
                     </div>
 
-                    <!-- Create Promotion Form -->
-                    <div id="create-promotion-form" class="card mb-6 hidden">
-                        <h3 class="font-semibold text-lg mb-4">Create Promotion</h3>
-                        <form id="promotion-form">
-                            <div class="grid grid-cols-1 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Promotion Title</label>
-                                    <input type="text" class="form-input" placeholder="Enter promotion title"
-                                        id="promotion-title" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Discount</label>
-                                    <input type="text" class="form-input" placeholder="e.g. 25% OFF, Buy 2 Get 1 Free"
-                                        id="promotion-discount" required>
-                                </div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                                        <input type="date" class="form-input" id="promotion-start-date" required>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                                        <input type="date" class="form-input" id="promotion-end-date" required>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                                    <select class="form-input" id="promotion-status">
-                                        <option value="Active">Active</option>
-                                        <option value="Upcoming">Upcoming</option>
-                                        <option value="Expired">Expired</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                    <textarea class="form-input" rows="3" placeholder="Enter promotion description"
-                                        id="promotion-description" required></textarea>
-                                </div>
-                                <div class="bg-blue-50 p-3 rounded-lg">
-                                    <p class="text-sm text-blue-600 mb-1"><i class="fa fa-info-circle"></i> This
-                                        promotion will be automatically sent as a notification to the shopping system
-                                        homepage.</p>
-                                </div>
-                                <div class="flex gap-2">
-                                    <button type="submit" class="btn-primary">Create & Send Promotion</button>
-                                    <button type="button" class="btn-secondary" id="cancel-promotion">Cancel</button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-
                     <!-- Notifications List -->
-                    <div class="card mb-6">
+                    <div class="card">
                         <h3 class="font-semibold text-lg mb-4">Recent Notifications</h3>
                         <div class="space-y-4" id="notifications-list">
                             <!-- Notifications will be populated by JavaScript -->
-                        </div>
-                    </div>
-
-                    <!-- Active Promotions -->
-                    <div class="card">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="font-semibold text-lg">Active Promotions</h3>
-                            <button class="btn-primary flex items-center gap-2" id="add-promotion-btn">
-                                <i class="fa fa-plus"></i> Add Promotion
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="promotions-list">
-                            <!-- Promotions will be populated by JavaScript -->
                         </div>
                     </div>
                 </div>
@@ -952,68 +1053,6 @@
                     </div>
                 </div>
 
-                <!-- Edit Promotion Modal -->
-                <div id="edit-promotion-modal"
-                    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-                    <div class="bg-white rounded-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-                        <div class="p-6">
-                            <h3 class="text-lg font-semibold mb-4">Edit Promotion</h3>
-                            <form id="edit-promotion-form">
-                                <input type="hidden" id="edit-promotion-id">
-                                <div class="grid grid-cols-1 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Promotion
-                                            Title</label>
-                                        <input type="text" class="form-input" placeholder="Enter promotion title"
-                                            id="edit-promotion-title" required>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Discount</label>
-                                        <input type="text" class="form-input"
-                                            placeholder="e.g. 25% OFF, Buy 2 Get 1 Free" id="edit-promotion-discount"
-                                            required>
-                                    </div>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Start
-                                                Date</label>
-                                            <input type="date" class="form-input" id="edit-promotion-start-date"
-                                                required>
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                                            <input type="date" class="form-input" id="edit-promotion-end-date" required>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                                        <select class="form-input" id="edit-promotion-status">
-                                            <option value="Active">Active</option>
-                                            <option value="Upcoming">Upcoming</option>
-                                            <option value="Expired">Expired</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                        <textarea class="form-input" rows="3" placeholder="Enter promotion description"
-                                            id="edit-promotion-description" required></textarea>
-                                    </div>
-                                    <div class="bg-blue-50 p-3 rounded-lg">
-                                        <p class="text-sm text-blue-600 mb-1"><i class="fa fa-info-circle"></i> Changes
-                                            to this promotion will be automatically sent as a notification to the
-                                            shopping system homepage.</p>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <button type="submit" class="btn-primary">Update Promotion</button>
-                                        <button type="button" class="btn-secondary"
-                                            id="cancel-edit-promotion">Cancel</button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Edit Book Modal -->
                 <div id="edit-book-modal"
                     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
@@ -1068,12 +1107,22 @@
                         </div>
                     </div>
                 </div>
-
-                <script src="../scripts/manager-data.js"></script>
-                <script src="../scripts/manager.js"></script>
             </main>
         </div>
     </div>
+
+    <!-- Manager-specific scripts -->
+    <script src="../scripts/manager-data.js"></script>
+    <script src="../scripts/manager.js"></script>
+
+    <!-- 初始化布局 -->
+    <script>
+        // 等待DOM加载完成
+        document.addEventListener('DOMContentLoaded', function () {
+            // 初始化布局，角色为manager，默认页面为overview
+            window.initLayout('manager', 'overview');
+        });
+    </script>
 </body>
 
 </html>
