@@ -97,9 +97,12 @@ BEGIN
         SET point = point + v_points_to_add
         WHERE member_id = NEW.member_id;
 
-        INSERT INTO point_ledgers (order_id, create_date, note)
+        INSERT INTO point_ledgers (member_id, order_id, points_change, points_delta, change_date, reason)
         VALUES (
+            NEW.member_id,
             NEW.order_id,
+            v_points_to_add,
+            v_points_to_add,
             CURRENT_TIMESTAMP,
             CONCAT('Order #', NEW.order_id, ' payment - points added: ', v_points_to_add)
         );

@@ -31,7 +31,7 @@ function bindEvents() {
     }
   });
 
-  // 3. 顶部购物车快捷入口
+  // 3. 顶部购物车快捷�¥口
   const quickCart = document.getElementById('cart-quick-entry');
   if (quickCart) {
     quickCart.addEventListener('click', () => {
@@ -82,7 +82,7 @@ function bindEvents() {
       btn.classList.add('bg-brown', 'text-white');
 
       const status = btn.getAttribute('data-status');
-      renderOrdersUI(status); // 关键：传入状态进行筛选渲染
+      renderOrdersUI(status); // 关键：传�¥状态进行筛选渲染
     });
   });
 
@@ -249,7 +249,7 @@ function renderCategoryBooks(category) {
       book.category.toLowerCase().includes(category.toLowerCase())
     );
 
-  // 2. 排序逻辑 (TODO: 待替换为后端接口)
+  // 2. 排序逻辑 (TODO: 待替换为后端�¥口)
   // 此处目前为前端纯逻辑排序
   if (sortVal === 'fav-desc') {
     filteredBooks.sort((a, b) => (b.favCount || 0) - (a.favCount || 0));
@@ -382,7 +382,7 @@ function clearCart() {
   }
 }
 
-// 收藏逻辑 (修复点：数值同步与状态持久化)
+// 收藏逻辑 (修复点：数值同�¥与状态持久化)
 let favorites = [];
 function initFavorites() {
   const saved = localStorage.getItem('bookFavorites');
@@ -411,7 +411,7 @@ function toggleFavorite(bookId) {
   // 状态持久化
   localStorage.setItem('bookFavorites', JSON.stringify(favorites));
 
-  // 全局同步 UI
+  // 全局同�¥ UI
   updateFavoriteButtons();
 
   // 如果当前在收藏页，则刷新列表
@@ -717,12 +717,12 @@ function getMemberStatus(totalSpent) {
 
 // 3. 更新会员中心 UI
 function updateMemberPageUI() {
-  // TODO: 待替换为获取当前登录用户信息的后端接口
+  // TODO: 待替换为获取当前登录用户信息的后端�¥口
   const mockUser = JSON.parse(localStorage.getItem('current_user')) || { name: 'Guest' };
   const orders = JSON.parse(localStorage.getItem('bookOrders') || '[]');
 
   /**
-     * TODO: 待替换为后端接口返回对象
+     * TODO: 待替换为后端�¥口返回对象
      * const response = await fetch('/api/user/profile');
      * const userData = await response.json();
      */
@@ -798,7 +798,7 @@ function saveProfile() {
 
   localStorage.setItem('current_user', JSON.stringify(user));
   
-  // TODO: 待替换为后端接口 updateProfileAPI({userId: user.id, username: newUsername, email: newEmail, password: newPassword})
+  // TODO: 待替换为后端�¥口 updateProfileAPI({userId: user.id, username: newUsername, email: newEmail, password: newPassword})
   
   showAlert("Profile updated successfully!");
   document.getElementById('profile-modal').classList.add('hidden');
