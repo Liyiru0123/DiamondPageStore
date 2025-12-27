@@ -1,5 +1,5 @@
 -- view.sql
--- 基于 new_data_book_store.sql 结构生成的视图文件
+-- 基于 new_data_book_store.sql 结构生成的视图文�?
 -- 用于 Staff 页面 PHP 后端安全调用
 
 USE book_store;
@@ -16,7 +16,7 @@ SELECT
     ib.batch_code,
     s.sku_id,
     s.unit_price,
-    s.bingding,  -- 对应数据库中的实际字段名
+    s.binding,  -- 对应数据库中的实际字段名
     b.ISBN,
     b.name AS book_name, -- 对应 books 表的 name 字段
     b.publisher,
@@ -25,20 +25,20 @@ FROM inventory_batches ib
 JOIN skus s ON ib.sku_id = s.sku_id
 JOIN books b ON s.ISBN = b.ISBN;
 
--- 2. 员工低库存预警视图
--- 用于 Dashboard 的 Low Stock Alerts
+-- 2. 员工低库存预警视�?
+-- 用于 Dashboard �?Low Stock Alerts
 CREATE OR REPLACE VIEW vw_staff_low_stock AS
 SELECT 
     s.sku_id,
     b.ISBN,
     b.name AS book_name,
-    s.bingding,
+    s.binding,
     ib.store_id,
     COALESCE(SUM(ib.quantity), 0) AS total_stock
 FROM skus s
 JOIN books b ON s.ISBN = b.ISBN
 LEFT JOIN inventory_batches ib ON s.sku_id = ib.sku_id
-GROUP BY s.sku_id, b.ISBN, b.name, s.bingding, ib.store_id;
+GROUP BY s.sku_id, b.ISBN, b.name, s.binding, ib.store_id;
 
 -- 3. 员工订单列表视图
 -- 用于 Order Processing 页面
@@ -60,11 +60,11 @@ GROUP BY o.order_id, o.store_id, o.order_status, o.order_date, o.note, m.first_n
 
 -- =========================================================================
 -- CUSTOMER VIEWS
--- 以下视图用于 Customer 端功能
+-- 以下视图用于 Customer 端功�?
 -- =========================================================================
 
--- 4. 顾客书籍列表视图（带库存和收藏数）
--- 用于浏览、搜索、分类筛选书籍
+-- 4. 顾客书籍列表视图（带库存和收藏数�?
+-- 用于浏览、搜索、分类筛选书�?
 CREATE OR REPLACE VIEW vw_customer_books AS
 SELECT
     b.ISBN,
@@ -74,7 +74,7 @@ SELECT
     b.introduction AS description,
     s.sku_id,
     s.unit_price AS price,
-    s.bingding AS binding,
+    s.binding AS binding,
     COALESCE(SUM(ib.quantity), 0) AS stock,
     st.store_id,
     st.name AS store_name,
@@ -83,12 +83,12 @@ SELECT
      FROM book_authors ba
      JOIN authors a ON ba.author_id = a.author_id
      WHERE ba.ISBN = b.ISBN) AS author,
-    -- 获取书籍分类（连接字符串）
+    -- 获取书籍分类（连接字符串�?
     (SELECT GROUP_CONCAT(c.name SEPARATOR ', ')
      FROM book_categories bc
      JOIN catagories c ON bc.category_id = c.category_id
      WHERE bc.ISBN = b.ISBN) AS category,
-    -- 计算收藏数
+    -- 计算收藏�?
     (SELECT COUNT(*)
      FROM favorites f
      WHERE f.ISBN = b.ISBN) AS fav_count
@@ -97,7 +97,7 @@ JOIN skus s ON b.ISBN = s.ISBN
 LEFT JOIN inventory_batches ib ON s.sku_id = ib.sku_id
 LEFT JOIN stores st ON ib.store_id = st.store_id
 GROUP BY b.ISBN, b.name, b.language, b.publisher, b.introduction,
-         s.sku_id, s.unit_price, s.bingding, st.store_id, st.name;
+         s.sku_id, s.unit_price, s.binding, st.store_id, st.name;
 
 -- 5. 顾客书籍详情视图
 -- 用于查看书籍详细信息
@@ -110,16 +110,16 @@ SELECT
     b.introduction AS description,
     s.sku_id,
     s.unit_price AS price,
-    s.bingding AS binding,
+    s.binding AS binding,
     COALESCE(SUM(ib.quantity), 0) AS stock,
     st.store_id,
     st.name AS store_name,
-    -- 获取书籍作者详情
+    -- 获取书籍作者详�?
     (SELECT GROUP_CONCAT(CONCAT(a.first_name, ' ', a.last_name) SEPARATOR ', ')
      FROM book_authors ba
      JOIN authors a ON ba.author_id = a.author_id
      WHERE ba.ISBN = b.ISBN) AS author,
-    -- 获取作者国籍
+    -- 获取作者国�?
     (SELECT GROUP_CONCAT(DISTINCT a.country SEPARATOR ', ')
      FROM book_authors ba
      JOIN authors a ON ba.author_id = a.author_id
@@ -129,7 +129,7 @@ SELECT
      FROM book_categories bc
      JOIN catagories c ON bc.category_id = c.category_id
      WHERE bc.ISBN = b.ISBN) AS category,
-    -- 计算收藏数
+    -- 计算收藏�?
     (SELECT COUNT(*)
      FROM favorites f
      WHERE f.ISBN = b.ISBN) AS fav_count
@@ -138,10 +138,10 @@ JOIN skus s ON b.ISBN = s.ISBN
 LEFT JOIN inventory_batches ib ON s.sku_id = ib.sku_id
 LEFT JOIN stores st ON ib.store_id = st.store_id
 GROUP BY b.ISBN, b.name, b.language, b.publisher, b.introduction,
-         s.sku_id, s.unit_price, s.bingding, st.store_id, st.name;
+         s.sku_id, s.unit_price, s.binding, st.store_id, st.name;
 
 -- 6. 顾客收藏列表视图
--- 用于查看用户的收藏书籍列表
+-- 用于查看用户的收藏书籍列�?
 CREATE OR REPLACE VIEW vw_customer_favorites AS
 SELECT
     f.member_id,
@@ -153,7 +153,7 @@ SELECT
     b.introduction AS description,
     s.sku_id,
     s.unit_price AS price,
-    s.bingding AS binding,
+    s.binding AS binding,
     (SELECT GROUP_CONCAT(CONCAT(a.first_name, ' ', a.last_name) SEPARATOR ', ')
      FROM book_authors ba
      JOIN authors a ON ba.author_id = a.author_id
@@ -170,7 +170,7 @@ JOIN skus s ON b.ISBN = s.ISBN
 LEFT JOIN inventory_batches ib ON s.sku_id = ib.sku_id
 LEFT JOIN stores st ON ib.store_id = st.store_id
 GROUP BY f.member_id, f.ISBN, f.create_date, b.name, b.language, b.publisher,
-         b.introduction, s.sku_id, s.unit_price, s.bingding, st.name;
+         b.introduction, s.sku_id, s.unit_price, s.binding, st.name;
 
 -- 7. 顾客订单列表视图
 -- 用于查看用户的订单及订单详情
@@ -207,7 +207,7 @@ SELECT
     b.publisher,
     b.language,
     s.unit_price AS price,
-    s.bingding AS binding,
+    s.binding AS binding,
     (oi.quantity * s.unit_price) AS subtotal,
     (SELECT GROUP_CONCAT(CONCAT(a.first_name, ' ', a.last_name) SEPARATOR ', ')
      FROM book_authors ba
@@ -218,7 +218,7 @@ JOIN skus s ON oi.sku_id = s.sku_id
 JOIN books b ON s.ISBN = b.ISBN;
 
 -- 9. 顾客会员信息视图
--- 用于会员中心显示会员等级和积分
+-- 用于会员中心显示会员等级和积�?
 CREATE OR REPLACE VIEW vw_customer_member_info AS
 SELECT
     m.member_id,
@@ -246,7 +246,7 @@ JOIN member_tiers mt ON m.member_tier_id = mt.member_tier_id
 JOIN users u ON m.user_id = u.user_id;
 
 -- 10. 公告视图
--- 用于显示有效的公告
+-- 用于显示有效的公�?
 CREATE OR REPLACE VIEW vw_customer_announcements AS
 SELECT
     announcement_id,
@@ -260,11 +260,11 @@ ORDER BY publish_at DESC;
 
 -- =========================================================================
 -- POINT LEDGERS VIEWS (积分记录视图)
--- 用于会员积分历史查询和统计
+-- 用于会员积分历史查询和统�?
 -- =========================================================================
 
 -- 11. 会员积分历史视图
--- 用于查看会员的积分变动明细
+-- 用于查看会员的积分变动明�?
 CREATE OR REPLACE VIEW vw_customer_point_history AS
 SELECT
     pl.point_ledger_id,
@@ -284,8 +284,8 @@ FROM point_ledgers pl
 JOIN members m ON pl.member_id = m.member_id
 ORDER BY pl.change_date DESC;
 
--- 12. 会员积分汇总视图
--- 用于查看会员的积分统计数据
+-- 12. 会员积分汇总视�?
+-- 用于查看会员的积分统计数�?
 CREATE OR REPLACE VIEW vw_customer_point_summary AS
 SELECT
     m.member_id,
@@ -298,3 +298,4 @@ SELECT
 FROM members m
 LEFT JOIN point_ledgers pl ON m.member_id = pl.member_id
 GROUP BY m.member_id, m.first_name, m.last_name, m.point;
+

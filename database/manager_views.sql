@@ -80,7 +80,7 @@ SELECT
     b.publisher,
     b.language,
     s.sku_id,
-    s.bingding AS binding,
+    s.binding AS binding,
     s.unit_price,
     COALESCE(SUM(ib.quantity), 0) AS total_stock,
     COUNT(DISTINCT ib.store_id) AS stores_count,
@@ -104,7 +104,7 @@ SELECT
 FROM books b
 JOIN skus s ON b.ISBN = s.ISBN
 LEFT JOIN inventory_batches ib ON s.sku_id = ib.sku_id
-GROUP BY b.ISBN, b.name, b.publisher, b.language, s.sku_id, s.bingding, s.unit_price
+GROUP BY b.ISBN, b.name, b.publisher, b.language, s.sku_id, s.binding, s.unit_price
 ORDER BY total_stock DESC;
 
 CREATE OR REPLACE VIEW vw_manager_inventory_by_store AS
@@ -114,7 +114,7 @@ SELECT
     b.ISBN,
     b.name AS book_name,
     s.sku_id,
-    s.bingding AS binding,
+    s.binding AS binding,
     s.unit_price,
     COALESCE(SUM(ib.quantity), 0) AS total_quantity,
     AVG(ib.unit_cost) AS avg_cost,
@@ -130,7 +130,7 @@ FROM stores st
 LEFT JOIN inventory_batches ib ON st.store_id = ib.store_id
 LEFT JOIN skus s ON ib.sku_id = s.sku_id
 LEFT JOIN books b ON s.ISBN = b.ISBN
-GROUP BY st.store_id, st.name, b.ISBN, b.name, s.sku_id, s.bingding, s.unit_price
+GROUP BY st.store_id, st.name, b.ISBN, b.name, s.sku_id, s.binding, s.unit_price
 ORDER BY st.store_id, total_quantity DESC;
 
 CREATE OR REPLACE VIEW vw_manager_inventory_by_sku AS
@@ -138,7 +138,7 @@ SELECT
     s.sku_id,
     b.ISBN,
     b.name AS book_name,
-    s.bingding AS binding,
+    s.binding AS binding,
     s.unit_price,
     ib.store_id,
     st.name AS store_name,
@@ -151,7 +151,7 @@ FROM skus s
 JOIN books b ON s.ISBN = b.ISBN
 LEFT JOIN inventory_batches ib ON s.sku_id = ib.sku_id
 LEFT JOIN stores st ON ib.store_id = st.store_id
-GROUP BY s.sku_id, b.ISBN, b.name, s.bingding, s.unit_price, ib.store_id, st.name
+GROUP BY s.sku_id, b.ISBN, b.name, s.binding, s.unit_price, ib.store_id, st.name
 ORDER BY s.sku_id, store_stock DESC;
 
 CREATE OR REPLACE VIEW vw_manager_replenishment_requests AS
@@ -162,7 +162,7 @@ SELECT
     rr.sku_id,
     sk.ISBN,
     b.name AS book_name,
-    sk.bingding AS binding,
+    sk.binding AS binding,
     rr.requested_quantity,
     1 AS sku_count,
     rr.requested_quantity AS total_quantity,
@@ -187,7 +187,7 @@ JOIN books b ON sk.ISBN = b.ISBN
 LEFT JOIN employees e1 ON rr.requested_by = e1.employee_id
 LEFT JOIN employees e2 ON rr.approved_by = e2.employee_id
 LEFT JOIN inventory_batches ib ON rr.sku_id = ib.sku_id AND rr.store_id = ib.store_id
-GROUP BY rr.request_id, rr.store_id, st.name, rr.sku_id, sk.ISBN, b.name, sk.bingding,
+GROUP BY rr.request_id, rr.store_id, st.name, rr.sku_id, sk.ISBN, b.name, sk.binding,
          rr.requested_quantity, rr.urgency_level, rr.status, rr.request_date,
          rr.requested_by, e1.first_name, e1.last_name, rr.reason,
          rr.approved_by, e2.first_name, e2.last_name, rr.approval_date,
@@ -395,3 +395,4 @@ GROUP BY st.store_id, st.name, st.status, st.telephone
 ORDER BY revenue DESC;
 
 SELECT 'manager views created' AS message;
+
