@@ -47,10 +47,8 @@ const MENU_CONFIG = {
 
     // === 财务端菜单 (源自 finance.html) ===
     finance: [
-        { id: 'overview', icon: 'fa-tachometer', text: 'Overview', type: 'admin' },
-        { id: 'income-expense', icon: 'fa-money', text: 'Transaction Details', type: 'admin' },
-        { id: 'income-stats', icon: 'fa-pie-chart', text: 'Income Distribution', type: 'admin' },
-        { id: 'branch-finance', icon: 'fa-building', text: 'Branch Finance', type: 'admin' },
+        { id: 'income-stats', icon: 'fa-pie-chart', text: 'Financial Overview', type: 'admin' },
+        { id: 'order', icon: 'fa-shopping-cart', text: 'Order Management', type: 'admin' },
         { id: 'invoice', icon: 'fa-file-text', text: 'Invoice Management', type: 'admin' }
     ],
 
@@ -71,6 +69,65 @@ const MENU_CONFIG = {
         { id: 'stock-request', icon: 'fa-truck', text: 'Stock Requests', type: 'admin' }
     ],
 };
+
+window.switchPage = function(pageId) {
+    console.log('Switching to:', pageId);
+    sessionStorage.setItem('currentPage', pageId);
+    
+    // 1. 更新所有具有 data-page 属性的元素高亮
+    document.querySelectorAll('[data-page]').forEach(el => {
+        const isMatch = el.getAttribute('data-page') === pageId;
+        // 清除所有高亮类 (兼容前后台两种风格)
+        el.classList.remove('sidebar-item-active', 'bg-accent/30', 'text-primary', 'font-medium', 'bg-brown-dark', 'border-l-4', 'border-white');
+        
+        if (isMatch) {
+            if (el.closest('.bg-gradient-to-b')) {
+                el.classList.add('bg-brown-dark', 'border-l-4', 'border-white');
+            } else {
+                el.classList.add('bg-accent/30', 'text-primary', 'font-medium');
+            }
+        }
+    });
+
+    // 2. 切换页面显隐
+    document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+    const target = document.getElementById(`${pageId}-page`);
+    if (target) {
+        target.classList.remove('hidden');
+    }
+
+    // 3. 触发角色特定的回调函数 (如果同事写了的话)
+    if (typeof window.financeSwitchPage === 'function') window.financeSwitchPage(pageId);
+    if (typeof window.managerSwitchPage === 'function') window.managerSwitchPage(pageId);
+};
+
+window.toggleSidebar = function () {
+    const sidebarContainer = document.getElementById('layout-sidebar');
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebarContainer || !sidebar) return;
+
+    // 判断当前是否处于收缩状态 (通过检查 w-64 类名)
+    const isCollapsed = !sidebarContainer.classList.contains('w-64');
+
+    if (isCollapsed) {
+        // 【展开逻辑】
+        sidebarContainer.classList.remove('w-0');
+        sidebarContainer.classList.add('w-64');
+        sidebar.classList.remove('-translate-x-full', 'opacity-0');
+    } else {
+        // 【收缩逻辑】
+        sidebarContainer.classList.remove('w-64');
+        sidebarContainer.classList.add('w-0');
+        sidebar.classList.add('-translate-x-full', 'opacity-0');
+    }
+};
+
+document.addEventListener('click', function(e) {
+    if (e.target.closest('#logout-btn')) {
+        sessionStorage.removeItem('currentPage'); // 登出时清除页面记忆
+    }
+});
+
 
 /**
  * 3. 渲染逻辑：前台 (Customer)
@@ -148,7 +205,6 @@ function renderAdminSidebar(role, activePage) {
 
     const menuHtml = items.map(item => {
         const isActive = item.id === activePage;
-        // 修复点：在 div 标签中添加 onclick="switchPage('${item.id}')"
         return `
             <div class="${baseLinkStyle} ${isActive ? activeLinkStyle : ''}" 
                  data-page="${item.id}" 
@@ -222,6 +278,10 @@ function renderAdminHeader(role) {
 }
 
 window.initLayout = function (role = 'customer', defaultPage = 'home') {
+    // 1. 明确持久化逻辑：优先从 sessionStorage 获取之前所在的页面
+    const savedPage = sessionStorage.getItem('currentPage');
+    const activePage = savedPage || defaultPage;
+
     const backOfficeRoles = ['finance', 'manager', 'staff'];
     const isBackOffice = backOfficeRoles.includes(role);
 
@@ -229,35 +289,16 @@ window.initLayout = function (role = 'customer', defaultPage = 'home') {
         document.body.classList.remove('bg-brown-cream');
         document.body.classList.add('bg-gray-50', 'text-dark');
         renderAdminHeader(role);
-        renderAdminSidebar(role, defaultPage);
+        renderAdminSidebar(role, activePage); // 使用 activePage 确保刷新后高亮正确
     } else {
         document.body.classList.add('bg-brown-cream');
         renderStoreHeader(role);
-        renderStoreSidebar(role, defaultPage);
+        renderStoreSidebar(role, activePage);
     }
-};
 
-/**
- * 切换侧边栏状态（全屏可用）
- */
-// 在 layout.js 的末尾修改 toggleSidebar 函数
-window.toggleSidebar = function () {
-    const sidebarContainer = document.getElementById('layout-sidebar');
-    const sidebar = document.getElementById('sidebar');
-    if (!sidebarContainer || !sidebar) return;
-
-    // 判断当前是否处于收缩状态 (通过检查 w-64 类名)
-    const isCollapsed = !sidebarContainer.classList.contains('w-64');
-
-    if (isCollapsed) {
-        // 【展开逻辑】
-        sidebarContainer.classList.remove('w-0');
-        sidebarContainer.classList.add('w-64');
-        sidebar.classList.remove('-translate-x-full', 'opacity-0');
-    } else {
-        // 【收缩逻辑】
-        sidebarContainer.classList.remove('w-64');
-        sidebarContainer.classList.add('w-0');
-        sidebar.classList.add('-translate-x-full', 'opacity-0');
-    }
+    // 2. 初始化显示：确保页面内容也同步切换到 activePage
+    // 加一个小的延迟确保 DOM 渲染完成
+    setTimeout(() => {
+        window.switchPage(activePage);
+    }, 50);
 };
