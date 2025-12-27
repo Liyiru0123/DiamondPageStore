@@ -81,9 +81,9 @@ function getMemberInfo($conn) {
                 'tier' => [
                     'tierId' => $row['member_tier_id'],
                     'name' => $row['tier_name'],
-                    'discount' => (float)$row['discount_rate'],
-                    'discountPercent' => round((1 - (float)$row['discount_rate']) * 100, 0),
-                    'minTotalSpent' => (float)$row['min_lifetime_spend']
+                    'discount' => (float)$row['discount'],
+                    'discountPercent' => round((1 - (float)$row['discount']) * 100, 0),
+                    'minTotalSpent' => (float)$row['min_total_spent']
                 ],
                 'totalSpent' => (float)$row['total_spent']
             ]

@@ -47,7 +47,7 @@ async function renderDiscountBooks() {
     try {
         const books = await fetchBooks({ sortBy: 'popular' });
         allBooks = books; // 缓存数据
-        // 这里可以添加折扣书籍的渲染逻辑
+        // 这里可�\uFFE5添加折扣书籍的渲染逻辑
     } catch (error) {
         console.error('Failed to load discount books:', error);
     }
@@ -401,7 +401,7 @@ function renderOrderCard(order) {
                     <div class="flex justify-between items-end border-t border-gray-50 pt-4">
                         <div class="text-xs text-gray-400"><i class="fa fa-map-marker"></i> ${order.storeName}</div>
                         <div class="flex items-center gap-3">
-                            <span class="text-lg font-bold text-brown">¥${order.total.toFixed(2)}</span>
+                            <span class="text-lg font-bold text-brown">\uFFE5${order.total.toFixed(2)}</span>
                             ${order.status === 'created' ? `
                                 <button onclick="handleCancelOrderClick(${order.orderId})" class="text-gray-400 hover:text-red-500 text-sm font-medium transition-colors">Cancel</button>
                                 <button onclick="handlePayOrderClick(${order.orderId})" class="bg-brown text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-brown-dark transition-all">Pay Now</button>
@@ -494,12 +494,12 @@ async function openPaymentModal(orderIds) {
     summaryList.innerHTML = targetOrders.map(o => `
         <div class="flex justify-between text-sm">
             <span class="text-gray-600">${o.orderId}</span>
-            <span class="font-bold">Â¥${o.total.toFixed(2)}</span>
+            <span class="font-bold">\uFFE5${o.total.toFixed(2)}</span>
         </div>
     `).join('');
 
     const total = targetOrders.reduce((sum, o) => sum + o.total, 0);
-    document.getElementById('payment-modal-total').textContent = `Â¥${total.toFixed(2)}`;
+    document.getElementById('payment-modal-total').textContent = `\uFFE5${total.toFixed(2)}`;
     document.getElementById('payment-modal').classList.remove('hidden');
 }
 
@@ -512,7 +512,7 @@ function updateOrderFooterUI() {
 
     const total = selectedOrders.reduce((sum, o) => sum + o.total, 0);
     const totalEl = document.getElementById('combined-total-price');
-    if (totalEl) totalEl.textContent = `Â¥${total.toFixed(2)}`;
+    if (totalEl) totalEl.textContent = `\uFFE5${total.toFixed(2)}`;
 
     const mergeBtn = document.getElementById('merge-payment-btn');
     if (mergeBtn) mergeBtn.disabled = selectedIds.length === 0;
@@ -532,7 +532,7 @@ async function updateMemberPageUI() {
 
         // 填充会员信息
         document.getElementById('display-user-name').textContent = memberInfo.username || memberInfo.firstName;
-        document.getElementById('member-total-spent').textContent = `¥${memberInfo.totalSpent.toFixed(2)}`;
+        document.getElementById('member-total-spent').textContent = `\uFFE5${memberInfo.totalSpent.toFixed(2)}`;
         document.getElementById('member-points').textContent = memberInfo.points.toLocaleString();
         document.getElementById('member-level-badge').textContent = memberInfo.tier.name;
 
@@ -549,7 +549,7 @@ async function updateMemberPageUI() {
                     <div class="p-4 border-2 rounded-xl transition-all ${isCurrent ? 'border-brown bg-brown/5 shadow-md' : 'border-gray-100 opacity-60'}">
                         <i class="fa fa-trophy text-${isCurrent ? 'brown' : 'gray-400'} text-2xl mb-2"></i>
                         <h4 class="font-bold text-brown-dark">${tier.name}</h4>
-                        <p class="text-xs text-gray-500 mt-1">Spend ¥${tier.minTotalSpent}+</p>
+                        <p class="text-xs text-gray-500 mt-1">Spend \uFFE5${tier.minTotalSpent}+</p>
                         <div class="mt-3 pt-3 border-t border-gray-100">
                             <span class="text-sm font-medium text-brown">${tier.discountPercent}% OFF</span>
                         </div>
