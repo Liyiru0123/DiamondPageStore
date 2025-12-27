@@ -215,7 +215,7 @@ BEGIN
         INSERT INTO books (ISBN, name, publisher, language, introduction)
         VALUES (p_ISBN, p_name, p_publisher, p_language, p_introduction);
 
-        INSERT INTO skus (ISBN, bingding, unit_price)
+        INSERT INTO skus (ISBN, binding, unit_price)
         VALUES (p_ISBN, p_binding, p_unit_price);
 
         SET p_sku_id = LAST_INSERT_ID();
@@ -761,3 +761,4 @@ END$$
 DELIMITER ;
 
 SELECT 'manager procedures created' AS message;
+
