@@ -8,38 +8,38 @@ let staffPageState = {
 
 /**
  * ------------------------------------------------------------------
- * 1. 全局切换页面函数 (必须挂载在 window 上，因为 layout.js 生成的 HTML onclick 会调用它)
+ * 1. 全局切换页面函数.点击侧边栏执行切换
  * ------------------------------------------------------------------
  */
-window.switchPage = function (pageId) {
-    // 1. 隐藏所有页面内容
-    document.querySelectorAll('.page-content').forEach(el => {
-        el.classList.add('hidden');
-    });
+// window.switchPage = function (pageId) {
+//     // 1. 隐藏所有页面内容
+//     document.querySelectorAll('.page-content').forEach(el => {
+//         el.classList.add('hidden');
+//     });
 
-    // 2. 显示目标页面
-    const targetPage = document.getElementById(pageId + '-page');
-    if (targetPage) {
-        targetPage.classList.remove('hidden');
-    } else {
-        console.error(`Page ID "${pageId}-page" not found.`);
-    }
+//     // 2. 显示目标页面
+//     const targetPage = document.getElementById(pageId + '-page');
+//     if (targetPage) {
+//         targetPage.classList.remove('hidden');
+//     } else {
+//         console.error(`Page ID "${pageId}-page" not found.`);
+//     }
 
-    // 3. 更新侧边栏激活状态
-    // 基础样式 (必须与 layout.js 中的定义一致)
-    const baseClasses = "flex items-center gap-3 px-4 py-3 text-gray-700 rounded-lg transition-all duration-300 hover:bg-accent/20 hover:text-primary cursor-pointer mb-1";
-    const activeClasses = "bg-accent/30 text-primary font-medium";
+//     // 3. 更新侧边栏激活状态
+//     // 基础样式 (必须与 layout.js 中的定义一致)
+//     const baseClasses = "flex items-center gap-3 px-4 py-3 text-gray-700 rounded-lg transition-all duration-300 hover:bg-accent/20 hover:text-primary cursor-pointer mb-1";
+//     const activeClasses = "bg-accent/30 text-primary font-medium";
 
-    const allLinks = document.querySelectorAll('#sidebar div[data-page]');
-    allLinks.forEach(link => {
-        // 重置样式
-        link.className = baseClasses;
-        // 如果是当前页，追加激活样式
-        if (link.getAttribute('data-page') === pageId) {
-            link.className = `${baseClasses} ${activeClasses}`;
-        }
-    });
-};
+//     const allLinks = document.querySelectorAll('#sidebar div[data-page]');
+//     allLinks.forEach(link => {
+//         // 重置样式
+//         link.className = baseClasses;
+//         // 如果是当前页，追加激活样式
+//         if (link.getAttribute('data-page') === pageId) {
+//             link.className = `${baseClasses} ${activeClasses}`;
+//         }
+//     });
+// };
 
 const CURRENT_STORE_ID = 1; // 假设当前登录的是 1号店 (Downtown Store)
 let globalBooks = [];       // 用于前端搜索和过滤的本地缓存
@@ -106,52 +106,54 @@ const mockOrders = [
     }
 ];
 
+const stockRequests = [
+    { id: 501, dateRequested: "2023-06-10", items: 5, status: "pending", expectedDelivery: "2023-06-20" },
+    { id: 502, dateRequested: "2023-06-05", items: 3, status: "delivered", expectedDelivery: "2023-06-12" },
+    { id: 503, dateRequested: "2023-05-28", items: 7, status: "delivered", expectedDelivery: "2023-06-05" }
+];
+/**
+ * ------------------------------------------------------------------
+ * 3. 获取数据
+ * ------------------------------------------------------------------
+ */
 // A. 获取库存数据的函数
 async function fetchInventory() {
     try {
-        // TODO: 待替换为后端接口 - 需传递 CURRENT_STORE_ID
-        // const response = await fetch(`../api/staff/inventory.php?store_id=${CURRENT_STORE_ID}`);
-        // const result = await response.json();
-
-        // 模拟 API 延迟响应
-        const result = { success: true, data: mockInventory };
+        // 请求 PHP 接口
+        const response = await fetch('../api/staff/get_inventory.php');
+        const result = await response.json();
 
         if (result.success) {
-            globalBooks = result.data;
+            globalBooks = result.data; // 数据格式已经由 SQL 调整好，直接对应表格
             renderInventory(globalBooks);
-            renderLowStockItems(globalBooks);
-            // 这里只传库存数据，等 fetchOrders 执行后再更新仪表盘完整状态
-            updateDashboardStats(globalBooks, []);
+            renderLowStockItems(globalBooks); // SQL里算好了 quantity，这里逻辑依然有效
+            updateDashboardStats(globalBooks, []); 
+        } else {
+            console.error('API Error:', result.message);
         }
     } catch (error) {
-        console.error('Fetch error:', error);
+        console.error('Network Error:', error);
     }
 }
 
 // B. 获取订单数据的函数
 async function fetchOrders() {
     try {
-        // TODO: 待替换为后端接口
-        // const response = await fetch(`../api/staff/orders.php?store_id=${CURRENT_STORE_ID}`);
-        // const result = await response.json();
-
-        const result = { success: true, data: mockOrders }; // 使用刚才定义的 mockOrders
+        const response = await fetch('../api/staff/get_orders.php');
+        const result = await response.json();
 
         if (result.success) {
-            renderOrders(result.data);
-            renderRecentOrders(result.data);
-            updateDashboardStats(globalBooks, result.data);
+            const orders = result.data; 
+            
+            renderOrders(orders);
+            renderRecentOrders(orders);
+            // 再次更新 Dashboard，这次带上订单数据
+            updateDashboardStats(globalBooks, orders);
         }
     } catch (error) {
-        console.error('Fetch error:', error);
+        console.error('Fetch Orders Error:', error);
     }
 }
-
-const stockRequests = [
-    { id: 501, dateRequested: "2023-06-10", items: 5, status: "pending", expectedDelivery: "2023-06-20" },
-    { id: 502, dateRequested: "2023-06-05", items: 3, status: "delivered", expectedDelivery: "2023-06-12" },
-    { id: 503, dateRequested: "2023-05-28", items: 7, status: "delivered", expectedDelivery: "2023-06-05" }
-];
 
 /**
  * ------------------------------------------------------------------
@@ -241,7 +243,7 @@ function setupInternalEventListeners() {
 
 /**
  * ------------------------------------------------------------------
- * 5. 业务逻辑函数 (Helper Functions)
+ * 5. 业务逻辑函数
  * ------------------------------------------------------------------
  */
 
@@ -254,37 +256,11 @@ function closeBookModal() {
     }
 }
 
-// 保存书籍 (新增或编辑)
-function saveBook() {
-    const id = document.getElementById('book-id').value;
-    // 获取批次号字段
-    const batchNum = document.getElementById('book-batch').value;
+/**
+ * 5.1 Dashboard 相关渲染函数
+ */
 
-    const bookData = {
-        batch_id: id || Date.now(), // 模拟主键
-        batch_number: batchNum,     // 批次号
-        book_name: document.getElementById('book-title').value,
-        publisher: document.getElementById('book-author').value,
-        ISBN: document.getElementById('book-isbn').value,
-        category: document.getElementById('book-category').value,
-        unit_price: parseFloat(document.getElementById('book-price').value),
-        quantity: parseInt(document.getElementById('book-stock').value)
-    };
-
-    if (id) {
-        const index = globalBooks.findIndex(b => (b.batch_id || b.id) == id);
-        if (index !== -1) globalBooks[index] = bookData;
-    } else {
-        globalBooks.unshift(bookData);
-    }
-
-    // TODO: 待对接后端接口 (POST /api/inventory/save)
-    renderInventory(globalBooks);
-    closeBookModal();
-    showNotification(id ? "Record Updated" : "New Batch Added");
-}
-
-// 渲染 Dashboard: 近期订单 (仅本门店)
+// 渲染 Dashboard: 只取前 5 条数据，画在首页的简略表格里。
 function renderRecentOrders(data) {
     const recentOrdersList = document.getElementById('recent-orders-list');
     if (!recentOrdersList || !data) return;
@@ -314,7 +290,7 @@ function renderRecentOrders(data) {
     }
 }
 
-// 渲染 Dashboard: 低库存预警
+// 渲染 Dashboard: 低库存预警板块
 function renderLowStockItems(inventoryData) {
     const lowStockList = document.getElementById('low-stock-list');
     if (!lowStockList) return;
@@ -342,8 +318,7 @@ function renderLowStockItems(inventoryData) {
     }
 }
 
-
-// scripts/staff.js 的修正片段
+// 渲染 Inventory：接收书籍数组，生成 HTML 字符串。负责计算“库存状态颜色”（low/high）
 function renderInventory(data) {
     const inventoryList = document.getElementById('inventory-list');
     if (!inventoryList) return;
@@ -410,7 +385,7 @@ function renderInventory(data) {
     bindDynamicEvents();
 }
 
-
+// 计算首页三数据
 function updateDashboardStats(inventoryData = [], ordersData = []) {
     // 统计总库存件数
     const totalBooks = inventoryData.reduce((sum, item) => sum + parseInt(item.quantity || 0), 0);
@@ -428,43 +403,62 @@ function updateDashboardStats(inventoryData = [], ordersData = []) {
     if (ordersEl) ordersEl.textContent = totalOrders.toLocaleString();
 }
 
+/**
+ * 5.2 Orders 相关渲染函数
+ */
 
-// 渲染 Orders: 订单列表 (完整列表页)
+// 渲染 Orders: 订单列表
+// 渲染 Orders: 订单列表
 function renderOrders(data) {
     const ordersList = document.getElementById('orders-list');
     if (!ordersList) return;
 
-    const sourceData = data || mockOrders;
+    // 1. 数据源：优先使用传入的 data，否则为空数组 (不再使用 mockOrders)
+    const sourceData = data || []; 
     const pageSize = 10;
 
+    // 2. 分页逻辑
     const paginatedData = getPaginatedData(sourceData, staffPageState.orders, pageSize);
 
-    // 修改 staff.js 中的 renderOrders 函数片段
+    // 3. 渲染 HTML
     ordersList.innerHTML = paginatedData.map(order => {
-        // 确保内外数据统一：如果 book_list 存在，重新计算 items 和 total（可选，增加健壮性）
-        const itemCount = order.book_list ? order.book_list.reduce((sum, b) => sum + b.qty, 0) : order.items;
-        const totalAmount = order.book_list ? order.book_list.reduce((sum, b) => sum + (b.qty * b.price), 0) : order.total;
+        // 数据库返回的 total_amount 可能是字符串，转换成浮点数以防万一
+        const total = parseFloat(order.total_amount || 0);
+        
+        // 状态样式兼容：数据库是 created/paid，CSS 类名是 status-created 等
+        const statusClass = `status-${(order.order_status || 'created').toLowerCase()}`;
 
         return `
         <tr class="hover:bg-gray-50 transition-colors">
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#${order.order_id || order.id}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${order.customer || 'Guest'}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(order.order_date || order.date)}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${itemCount} items</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-semibold">¥${totalAmount.toFixed(2)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                #${order.order_id}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                ${order.customer_name || 'Guest'}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                ${formatDate(order.order_date)}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                ${order.items_count} items
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-semibold">
+                ¥${total.toFixed(2)}
+            </td>
             <td class="px-6 py-4 whitespace-nowrap">
-                <span class="status-${order.status.toLowerCase()} border px-2 py-1 rounded-full text-xs font-medium">
-                    ${order.status.toUpperCase()}
+                <span class="${statusClass} border px-2 py-1 rounded-full text-xs font-medium">
+                    ${(order.order_status || '').toUpperCase()}
                 </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <button onclick="viewOrderDetails(${order.order_id || order.id})" class="btn-secondary py-1 px-3 text-xs flex items-center gap-1">
+                <button onclick="viewOrderDetails(${order.order_id})" class="btn-secondary py-1 px-3 text-xs flex items-center gap-1">
                     <i class="fa fa-eye"></i> View Details
                 </button>
             </td>
         </tr>`;
     }).join('');
 
+    // 4. 更新分页控件
     renderPaginationControls(
         'orders-pagination-controls',
         sourceData.length,
@@ -472,12 +466,16 @@ function renderOrders(data) {
         (newPage) => {
             staffPageState.orders = newPage;
             renderOrders(sourceData);
-        }
+        },
+        pageSize
     );
 }
-
+/**
+ * 5.3 Stock Requests 相关渲染函数
+ */
 // 渲染 Stock Requests
-function renderStockRequests() {
+// 渲染 Stock Requests (进货申请)
+function renderStockRequests(data) {
     const pendingList = document.getElementById('pending-requests-list');
     const prevList = document.getElementById('previous-requests-list');
 
@@ -486,36 +484,64 @@ function renderStockRequests() {
     pendingList.innerHTML = '';
     prevList.innerHTML = '';
 
-    stockRequests.forEach(request => {
+    // 数据源：如果是从 API 获取的 data 则使用，否则暂时为空 (不再使用 stockRequests mock 数据)
+    const sourceData = data || []; 
+
+    sourceData.forEach(request => {
         const row = document.createElement('tr');
+        
+        // 数据库状态: pending, approved, rejected, completed
         const isPending = request.status === 'pending';
-        const dateField = isPending ? 'expectedDelivery' : 'deliveredDate';
-        const displayDate = request[dateField] || request.expectedDelivery;
+        
+        // 数据库里没有 delivery_date，如果是 completed 我们可以用 update_date (如果有的话)，否则暂无
+        // 这里暂时统一显示 purchase_date
+        const displayDate = formatDate(request.purchase_date);
 
         row.innerHTML = `
-            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">#${request.id}</td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatDate(request.dateRequested)}</td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${request.items}</td>
-            <td class="px-4 py-3 whitespace-nowrap">
-                <span class="status-${request.status}">${capitalize(request.status)}</span>
+            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                #${request.purchase_id}
             </td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatDate(displayDate)}</td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                ${displayDate}
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                <!-- 这里假设后端SQL使用了 COUNT(*) as total_items -->
+                ${request.total_items || request.items || 0} 
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <span class="status-${(request.status || 'pending').toLowerCase()}">
+                    ${capitalize(request.status)}
+                </span>
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                ${isPending ? 'Pending Approval' : displayDate}
+            </td>
             <td class="px-4 py-3 whitespace-nowrap text-sm">
                 <button class="text-primary hover:text-primary/80">
                     <i class="fa fa-eye"></i> View
                 </button>
-                ${isPending ? `
-                    <button class="text-green-600 hover:text-green-700 ml-2">
-                        <i class="fa fa-check"></i> Complete
+                ${request.status === 'approved' ? `
+                    <button class="text-green-600 hover:text-green-700 ml-2" onclick="completePurchase(${request.purchase_id})">
+                        <i class="fa fa-check"></i> Receive
                     </button>
                 ` : ''}
             </td>
         `;
 
-        if (isPending) pendingList.appendChild(row);
-        else prevList.appendChild(row);
+        // 根据状态分栏显示
+        if (isPending) {
+            pendingList.appendChild(row);
+        } else {
+            prevList.appendChild(row);
+        }
     });
+    
+    // 如果没有数据，显示提示
+    if (pendingList.children.length === 0) {
+        pendingList.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">No pending requests</td></tr>';
+    }
 }
+
 
 // 绑定动态生成的按钮事件 (Edit/Delete)
 function bindDynamicEvents() {
@@ -532,6 +558,40 @@ function bindDynamicEvents() {
             deleteBook(id);
         };
     });
+}
+/**
+ * ------------------------------------------------------------------
+ * 6. 数据库相关函数
+ * ------------------------------------------------------------------
+ */
+// 保存书籍 (新增或编辑) 表单提交
+function saveBook() {
+    const id = document.getElementById('book-id').value;
+    // 获取批次号字段
+    const batchNum = document.getElementById('book-batch').value;
+
+    const bookData = {
+        batch_id: id || Date.now(), // 模拟主键
+        batch_number: batchNum,     // 批次号
+        book_name: document.getElementById('book-title').value,
+        publisher: document.getElementById('book-author').value,
+        ISBN: document.getElementById('book-isbn').value,
+        category: document.getElementById('book-category').value,
+        unit_price: parseFloat(document.getElementById('book-price').value),
+        quantity: parseInt(document.getElementById('book-stock').value)
+    };
+
+    if (id) {
+        const index = globalBooks.findIndex(b => (b.batch_id || b.id) == id);
+        if (index !== -1) globalBooks[index] = bookData;
+    } else {
+        globalBooks.unshift(bookData);
+    }
+
+    // TODO: 待对接后端接口 (POST /api/inventory/save)
+    renderInventory(globalBooks);
+    closeBookModal();
+    showNotification(id ? "Record Updated" : "New Batch Added");
 }
 
 // 编辑书籍：填充表单
@@ -725,55 +785,58 @@ window.addRequestRow = function () {
 };
 
 // 2. 修正：提交时收集 Request ID, Date, Title, ISBN, SKU, Qty
+// scripts/staff.js
+
 async function submitStockRequest() {
     const rows = document.querySelectorAll('#request-items-body tr');
     const items = [];
 
     rows.forEach(row => {
-        const title = row.querySelector('.item-title').value;
-        const isbn = row.querySelector('.item-isbn').value;
-        const sku = row.querySelector('.item-sku').value;
-        const qty = row.querySelector('.item-qty').value;
+        // 假设我们在输入框加了 data-sku-id 属性，或者用户直接输入了 SKU ID
+        // 为了简化，这里假设输入框 class="item-sku" 填的就是 SKU ID (数字)
+        const skuInput = row.querySelector('.item-sku'); 
+        const qtyInput = row.querySelector('.item-qty');
+        
+        const skuId = skuInput.value;
+        const qty = qtyInput.value;
 
-        if (title && qty) {
+        if (skuId && qty) {
             items.push({
-                title,
-                isbn: isbn || "N/A",
-                sku: sku || "N/A",
+                sku_id: parseInt(skuId),
                 quantity: parseInt(qty)
             });
         }
     });
 
+    const notes = document.getElementById('request-notes').value;
+    
     if (items.length === 0) {
-        showNotification("Please add at least one book to the request.");
+        alert("Please add items.");
         return;
     }
 
-    // 封装符合你需求的完整报文
-    const requestData = {
-        requestId: 'REQ-' + Math.random().toString(36).substr(2, 6).toUpperCase(), // 生成 Request ID
-        dateRequested: new Date().toISOString().split('T')[0], // 申请时间
-        totalItemsCount: items.length,
-        bookDetails: items, // 包含 Title, ISBN, SKU, Qty
-        notes: document.getElementById('request-notes').value,
-        status: 'pending'
-    };
+    try {
+        const response = await fetch('../api/staff/create_stock_request.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: items, note: notes })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert("Stock Request Submitted! ID: " + result.id);
+            closeRequestModal();
+            // 可以在这里刷新一下申请列表 fetchStockRequests()
+        } else {
+            alert("Error: " + result.message);
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
 
-    console.log("[总部接口预留] 正在发送以下数据:", requestData);
-    // TODO: 待替换为后端接口: await fetch('../api/staff/stock-requests', { method: 'POST', body: JSON.stringify(requestData) });
-
-    // 更新本地 mock 数据（为了在表格中即时显示）
-    stockRequests.unshift({
-        id: requestData.requestId,
-        dateRequested: requestData.dateRequested,
-        items: requestData.totalItemsCount,
-        status: 'pending',
-        expectedDelivery: 'TBD'
-    });
-
-    showNotification(`Request ${requestData.requestId} submitted to Headquarters.`);
-
-    renderStockRequests();
-    closeRequestModal();
+function capitalize(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
 }
