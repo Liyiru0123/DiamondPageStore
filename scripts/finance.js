@@ -1,670 +1,673 @@
-// Add status styles
+// scripts/finance.js
+const CURRENCY_SYMBOL = '\uFFE5';
+
 function addStatusStyles() {
     const style = document.createElement('style');
     style.textContent = `
-        .status-created { background-color: #dbeafe; color: #1e40af; }
-        .status-paid { background-color: #dcfce7; color: #166534; }
-        .status-cancelled { background-color: #fee2e2; color: #b91c1c; }
-        .status-refunded { background-color: #fef3c7; color: #92400e; }
-        .invoice-draft { background-color: #f3f4f6; color: #374151; }
-        .invoice-sent { background-color: #dbeafe; color: #1e40af; }
-        .invoice-paid { background-color: #dcfce7; color: #166534; }
-        .invoice-overdue { background-color: #fef3c7; color: #92400e; }
-        .invoice-cancelled { background-color: #fee2e2; color: #b91c1c; }
-        
-        /* Modal styles */
-        .modal {
-            animation: fadeIn 0.3s ease-in-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        /* Notes toggle styles */
-        .notes-tab {
-            padding: 8px 16px;
-            border: 1px solid #e5e7eb;
-            background: #f9fafb;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .notes-tab.active {
-            background: #8B5A2B;
+        .invoice-unpaid { background-color: #fee2e2; color: #dc2626; }
+        .invoice-partial { background-color: #fef3c7; color: #d97706; }
+        .invoice-paid { background-color: #d1fae5; color: #059669; }
+        .invoice-overdue { background-color: #ffedd5; color: #ea580c; }
+        .invoice-void { background-color: #f3f4f6; color: #6b7280; }
+
+        .order-created { background-color: #dbeafe; color: #1e40af; }
+        .order-processing { background-color: #fef3c7; color: #d97706; }
+        .order-paid { background-color: #d1fae5; color: #059669; }
+        .order-completed { background-color: #f3e8ff; color: #7c3aed; }
+
+        .modal { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .total-revenue-card {
+            background: linear-gradient(135deg, #8B5A2B 0%, #D2B48C 100%);
             color: white;
-            border-color: #8B5A2B;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 10px 20px rgba(139, 90, 43, 0.2);
+            transition: all 0.3s ease;
         }
-        
-        .notes-content {
-            display: none;
-            min-height: 120px;
+
+        .total-revenue-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(139, 90, 43, 0.3);
         }
-        
-        .notes-content.active {
-            display: block;
+
+        .revenue-trend-up { color: #10B981; }
+        .revenue-trend-down { color: #EF4444; }
+
+        canvas { display: block; max-width: 100%; height: auto !important; }
+
+        .sidebar-link.active {
+            background-color: rgba(210, 180, 140, 0.3) !important;
+            color: #8B5A2B !important;
+            font-weight: 500 !important;
         }
-        
-        .invoice-details-modal {
-            width: 90%;
-            max-width: 1000px;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        
-        @media print {
-            .modal {
-                position: static !important;
-                background: white !important;
-            }
-            .modal > div {
-                box-shadow: none !important;
-                margin: 0 !important;
-            }
-            .btn-primary, .btn-secondary {
-                display: none !important;
-            }
-            .notes-tabs, .edit-notes-btn {
-                display: none !important;
-            }
-        }
+
+        @media print { .no-print { display: none !important; } }
     `;
     document.head.appendChild(style);
 }
 
-// Initialize date display
-function initDateDisplay() {
-    const now = new Date();
-    const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-    const dateElem = document.getElementById('current-date');
-    if (dateElem) dateElem.textContent = now.toLocaleDateString('en-US', options);
-}
+let paymentMethodPieChart = null;
+let revenueByDateChart = null;
+let purchaseCostByDateChart = null;
 
-// Global chart instances management
-let overviewIncomeTrendChart = null;
-let bookTypeChartInstance = null;
-let trendTimePeriod = 'weekly';
+window.financeSwitchPage = function(pageId) {
+    document.querySelectorAll('.page-content').forEach(page => page.classList.add('hidden'));
 
-// 计算待处理发票数量
-function updatePendingInvoicesCount() {
-    const pendingInvoices = Object.values(invoiceData).filter(invoice => 
-        invoice.status === 'draft' || invoice.status === 'sent'
-    ).length;
-    
-    const pendingInvoicesElem = document.getElementById('pending-invoices-count');
-    if (pendingInvoicesElem) {
-        pendingInvoicesElem.textContent = pendingInvoices;
-    }
-}
+    const targetPage = document.getElementById(`${pageId}-page`);
+    if (targetPage) {
+        targetPage.classList.remove('hidden');
+        sessionStorage.setItem('currentPage', pageId);
 
-// Initialize Overview charts
-function initOverviewCharts() {
-    // Income trend chart
-    const incomeTrendCtx = document.getElementById('overview-income-trend-chart');
-    if (incomeTrendCtx) {
-        if (overviewIncomeTrendChart) overviewIncomeTrendChart.destroy();
-        updateIncomeTrendChart(trendTimePeriod);
-    }
-
-    // 添加待处理发票数量更新
-    updatePendingInvoicesCount();
-
-    // Book type pie chart
-    const bookTypeCtx = document.getElementById('book-type-chart');
-    if (bookTypeCtx) {
-        if (bookTypeChartInstance) bookTypeChartInstance.destroy();
-        bookTypeChartInstance = new Chart(bookTypeCtx.getContext('2d'), {
-            type: 'pie',
-            data: {
-                labels: ['Fiction', 'Non-Fiction', 'Science', 'History', 'Biography'],
-                datasets: [{
-                    data: [35, 25, 15, 12, 13],
-                    backgroundColor: ['#774b30', '#9f5933', '#a9805b', '#cca278','#e1c7ac'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'right' },
-                    title: { display: true, text: 'Book Type Sales Distribution', font: { size: 14, weight: 'bold' } }
-                }
+        setTimeout(() => {
+            switch (pageId) {
+                case 'income-stats':
+                    initIncomeStatsCharts();
+                    break;
+                case 'order':
+                    initOrderPage();
+                    break;
+                case 'invoice':
+                    initInvoicePage();
+                    break;
             }
-        });
+        }, 50);
+    }
+};
+
+function formatCurrency(value) {
+    const amount = Number(value || 0);
+    return `${CURRENCY_SYMBOL}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatDateInput(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function formatDateTime(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+async function initIncomeStatsCharts() {
+    try {
+        const overview = await fetchFinanceOverview();
+        renderTotalRevenueCard(overview);
+
+        const paymentSummary = await fetchPaymentMethodSummary();
+        initPaymentMethodPieChart(paymentSummary);
+
+        await renderRevenueByDateChart();
+        await renderPurchaseCostByDateChart();
+    } catch (error) {
+        console.error('Failed to load finance overview:', error);
     }
 }
 
-// Update income trend chart
-function updateIncomeTrendChart(period) {
-    const ctx = document.getElementById('overview-income-trend-chart');
+function renderTotalRevenueCard(data) {
+    const container = document.getElementById('total-revenue-container');
+    if (!container) return;
+
+    const growth = data.growthPercent === null ? 0 : data.growthPercent;
+    const growthClass = growth >= 0 ? 'revenue-trend-up' : 'revenue-trend-down';
+    const growthIcon = growth >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
+
+    container.innerHTML = `
+        <div class="total-revenue-card">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div class="w-full">
+                    <p class="text-white/80 text-sm mb-1">Total Revenue (Current Month)</p>
+                    <h3 class="text-3xl font-bold mb-2">${formatCurrency(data.currentMonth)}</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="${growthClass} text-sm font-medium">
+                            <i class="fa ${growthIcon} mr-1"></i>${Math.abs(growth).toFixed(2)}%
+                        </span>
+                        <span class="text-white/70 text-sm">vs last month (${formatCurrency(data.lastMonth)})</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function initPaymentMethodPieChart(summaryRows) {
+    const paymentMethodCtx = document.getElementById('payment-method-pie-chart');
+    if (!paymentMethodCtx) return;
+
+    const ctx = paymentMethodCtx.getContext('2d');
     if (!ctx) return;
 
-    const dataMap = {
-        weekly: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], values: [12000, 15000, 13500, 14200, 16800, 18500, 17200] },
-        monthly: { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], values: [72000, 78000, 82000, 80000, 85000, 86420] },
-        quarterly: { labels: ['Q1', 'Q2', 'Q3', 'Q4'], values: [210000, 250000, 280000, 320000] }
-    };
-    const data = dataMap[period];
+    const labels = summaryRows.map(row => row.payment_method || 'Unknown');
+    const data = summaryRows.map(row => Number(row.amount || 0));
+    const colors = ['#774b30', '#a9805b', '#9f5933', '#d2b48c'];
 
-    overviewIncomeTrendChart = new Chart(ctx.getContext('2d'), {
-        type: 'line',
+    if (labels.length === 0) {
+        labels.push('No Data');
+        data.push(0);
+    }
+
+    if (paymentMethodPieChart) {
+        paymentMethodPieChart.destroy();
+    }
+
+    paymentMethodPieChart = new Chart(ctx, {
+        type: 'pie',
         data: {
-            labels: data.labels,
+            labels,
             datasets: [{
-                label: 'Income',
-                data: data.values,
-                borderColor: '#3B82F6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                tension: 0.3,
-                fill: true,
-                pointRadius: 4,
-                pointBackgroundColor: '#3B82F6'
+                data,
+                backgroundColor: colors.slice(0, labels.length),
+                borderWidth: 2,
+                borderColor: '#fff',
+                hoverOffset: 20,
+                hoverBorderWidth: 2
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { callback: value => '¥' + value.toLocaleString() }
-                }
-            }
-        }
-    });
-}
-
-// Initialize period switcher
-function initPeriodSwitcher() {
-    const btns = document.querySelectorAll('.trend-period-btn');
-    if (!btns.length) return;
-
-    btns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            btns.forEach(b => b.classList.replace('bg-blue-600', 'bg-gray-100').classList.replace('text-white', 'text-gray-700'));
-            btn.classList.replace('bg-gray-100', 'bg-blue-600').classList.replace('text-gray-700', 'text-white');
-            trendTimePeriod = btn.getAttribute('data-period');
-            updateIncomeTrendChart(trendTimePeriod);
-        });
-    });
-}
-
-// Render recent transactions
-function renderRecentTransactions() {
-    const container = document.getElementById('overview-recent-transactions');
-    if (!container) {
-        console.warn('Transaction container not found, retrying...');
-        setTimeout(renderRecentTransactions, 100);
-        return;
-    }
-
-    const validTransactions = Object.values(allOrderData)
-        .filter(t => t.createdDate)
-        .map(t => ({
-            ...t,
-            sortDate: new Date(t.createdDate.replace(' ', 'T'))
-        }))
-        .sort((a, b) => b.sortDate - a.sortDate)
-        .slice(0, 5);
-
-    container.innerHTML = '';
-    validTransactions.forEach(t => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 transition-colors cursor-pointer';
-        row.dataset.orderId = t.orderId;
-
-        let statusClass = 'bg-blue-100 text-blue-800';
-        if (t.status === 'paid') statusClass = 'bg-green-100 text-green-800';
-        else if (t.status === 'cancelled') statusClass = 'bg-red-100 text-red-800';
-        else if (t.status === 'refunded') statusClass = 'bg-yellow-100 text-yellow-800';
-
-        row.innerHTML = `
-            <td class="px-4 py-3 text-sm">${t.createdDate}</td>
-            <td class="px-4 py-3 text-sm font-medium">${t.orderId}</td>
-            <td class="px-4 py-3 text-sm">${t.totalAmount}</td>
-            <td class="px-4 py-3 text-sm">
-                <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${t.status.charAt(0).toUpperCase() + t.status.slice(1)}</span>
-            </td>
-        `;
-        container.appendChild(row);
-
-        row.addEventListener('click', () => {
-            switchPage('income-expense');
-            setTimeout(() => showOrderDetails(t.orderId), 300);
-        });
-    });
-}
-
-// Switch page function - 修复
-function switchPage(pageId) {
-    console.log('Switching to page:', pageId);
-    
-    // Hide all pages
-    document.querySelectorAll('.page-content').forEach(page => {
-        page.classList.add('hidden');
-    });
-
-    // Show target page
-    const targetPage = document.getElementById(`${pageId}-page`);
-    if (targetPage) {
-        targetPage.classList.remove('hidden');
-    } else {
-        console.error(`Page not found: ${pageId}-page`);
-        return;
-    }
-
-    // Update navigation active state
-    document.querySelectorAll('.sidebar-link').forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('data-page') === pageId) {
-            link.classList.add('active');
-        }
-    });
-
-    // Initialize page content based on pageId
-    setTimeout(() => {
-        switch (pageId) {
-            case 'overview':
-                console.log('Initializing Overview page...');
-                initDateDisplay();
-                initOverviewCharts();
-                initPeriodSwitcher();
-                renderRecentTransactions();
-                break;
-                
-            case 'income-expense':
-                console.log('Initializing Transaction Details page...');
-                // Initialize transaction details page if needed
-                break;
-                
-            case 'income-stats':
-                console.log('Initializing Income Distribution page...');
-                initIncomeStatsCharts();
-                break;
-                
-            case 'invoice':
-                console.log('Initializing Invoice Management page...');
-                initInvoicePage();
-                break;
-        }
-    }, 100);
-}
-
-// Income distribution charts - modified for book category analysis
-function initIncomeStatsCharts() {
-    // Book category revenue pie chart
-    const bookCategoryCtx = document.getElementById('book-category-pie-chart');
-    if (bookCategoryCtx) {
-        if (window.bookCategoryPieChart) window.bookCategoryPieChart.destroy();
-        window.bookCategoryPieChart = new Chart(bookCategoryCtx.getContext('2d'), {
-            type: 'pie',
-            data: {
-                labels: bookCategoryData.categoryDistribution.labels,
-                datasets: [{
-                    data: bookCategoryData.categoryDistribution.data,
-                    backgroundColor: bookCategoryData.categoryDistribution.colors,
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'right' },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => `${ctx.label}: ¥${ctx.raw.toLocaleString()} (${Math.round((ctx.raw / ctx.dataset.data.reduce((a, b) => a + b, 0)) * 100)}%)`
+            layout: { padding: { top: 15, bottom: 50, left: 15, right: 15 } },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 25,
+                        usePointStyle: true,
+                        pointStyle: 'rect',
+                        pointStyleWidth: 22,
+                        pointStyleHeight: 22,
+                        font: { size: 13, weight: '500' },
+                        color: '#374151'
+                    },
+                    align: 'center'
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    titleColor: '#374151',
+                    bodyColor: '#374151',
+                    borderColor: '#e5e7eb',
+                    borderWidth: 1,
+                    cornerRadius: 6,
+                    padding: 12,
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total === 0 ? 0 : Math.round((value / total) * 100);
+                            return `${label}: ${formatCurrency(value)} (${percentage}%)`;
                         }
                     }
                 }
             }
-        });
+        }
+    });
+}
+
+async function renderRevenueByDateChart(startDate, endDate) {
+    const container = document.getElementById('revenue-by-date-chart-container');
+    if (!container) return;
+
+    const now = new Date();
+    const defaultEnd = endDate || formatDateInput(now);
+    const defaultStart = startDate || formatDateInput(new Date(now.getTime() - 13 * 24 * 60 * 60 * 1000));
+
+    const rows = await fetchRevenueByDate(defaultStart, defaultEnd);
+    const labels = rows.map(row => row.order_day);
+    const values = rows.map(row => Number(row.revenue || 0));
+
+    container.innerHTML = `
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+            <h3 class="font-semibold text-lg">Revenue by Date</h3>
+            <div class="compact-date-selector mt-2 md:mt-0">
+                <input type="date" class="compact-date-input" id="revenue-start-date" value="${defaultStart}">
+                <span>to</span>
+                <input type="date" class="compact-date-input" id="revenue-end-date" value="${defaultEnd}">
+                <button class="btn-secondary text-sm px-3 py-1" id="revenue-date-filter">Apply</button>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="revenue-by-date-chart" class="chart-responsive"></canvas>
+        </div>
+    `;
+
+    const ctx = document.getElementById('revenue-by-date-chart').getContext('2d');
+    if (revenueByDateChart) {
+        revenueByDateChart.destroy();
     }
 
-    // Monthly revenue trend chart - single line chart
-    const bookRevenueCtx = document.getElementById('book-revenue-trend-chart');
-    if (bookRevenueCtx) {
-        if (window.bookRevenueTrendChart) window.bookRevenueTrendChart.destroy();
-        window.bookRevenueTrendChart = new Chart(bookRevenueCtx.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: bookCategoryData.monthlyTrend.labels,
-                datasets: [{
-                    label: 'Total Revenue',
-                    data: bookCategoryData.monthlyTrend.data,
-                    borderColor: '#8B5A2B',
-                    backgroundColor: 'rgba(139, 90, 43, 0.1)',
-                    tension: 0.3,
-                    fill: true,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#8B5A2B'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { 
-                    legend: { display: false } 
+    revenueByDateChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Revenue',
+                data: values,
+                backgroundColor: '#8B5A2B',
+                borderRadius: 6,
+                barPercentage: 0.6,
+                categoryPercentage: 0.7
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { drawBorder: false, color: 'rgba(0, 0, 0, 0.05)' },
+                    ticks: {
+                        callback: value => `${CURRENCY_SYMBOL}${value.toLocaleString()}`
+                    }
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { callback: value => '¥' + value.toLocaleString() }
+                x: { grid: { display: false } }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    titleColor: '#374151',
+                    bodyColor: '#374151',
+                    borderColor: '#e5e7eb',
+                    borderWidth: 1,
+                    cornerRadius: 6,
+                    padding: 12,
+                    callbacks: {
+                        label: context => `Revenue: ${formatCurrency(context.raw)}`
                     }
                 }
             }
-        });
-    }
+        }
+    });
 
-    // Render book category table
-    renderBookCategoryTable();
-}
-
-// Render book category table
-function renderBookCategoryTable() {
-    const container = document.getElementById('book-category-table-body');
-    if (!container) return;
-
-    container.innerHTML = '';
-    bookCategoryData.categoryDetails.forEach(category => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 transition-colors';
-
-        row.innerHTML = `
-            <td class="px-4 py-4 text-sm font-medium">${category.category}</td>
-            <td class="px-4 py-4 text-sm">¥${category.thisMonth.toLocaleString()}</td>
-            <td class="px-4 py-4 text-sm">¥${category.lastMonth.toLocaleString()}</td>
-            <td class="px-4 py-4 text-sm"><span class="text-green-600">+${category.growth}%</span></td>
-            <td class="px-4 py-4 text-sm">${category.percentage}%</td>
-            <td class="px-4 py-4 text-sm"><i class="fa fa-arrow-up text-green-500"></i></td>
-        `;
-        container.appendChild(row);
+    document.getElementById('revenue-date-filter').addEventListener('click', async () => {
+        const start = document.getElementById('revenue-start-date').value;
+        const end = document.getElementById('revenue-end-date').value;
+        await renderRevenueByDateChart(start, end);
     });
 }
 
-// Show order details
-function showOrderDetails(orderId) {
-    const order = orderData[orderId];
-    if (!order) return;
+async function renderPurchaseCostByDateChart(startDate, endDate) {
+    const container = document.getElementById('purchase-cost-by-date-chart-container');
+    if (!container) return;
 
-    const detailElems = {
-        orderId: document.getElementById('detail-order-id'),
-        memberId: document.getElementById('detail-member-id'),
-        status: document.getElementById('detail-status'),
-        createdDate: document.getElementById('detail-created-date'),
-        updatedDate: document.getElementById('detail-updated-date'),
-        totalAmount: document.getElementById('detail-total-amount')
+    const now = new Date();
+    const defaultEnd = endDate || formatDateInput(now);
+    const defaultStart = startDate || formatDateInput(new Date(now.getTime() - 13 * 24 * 60 * 60 * 1000));
+
+    const rows = await fetchPurchaseCostByDate(defaultStart, defaultEnd);
+    const labels = rows.map(row => row.cost_day);
+    const values = rows.map(row => Number(row.cost || 0));
+
+    container.innerHTML = `
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+            <h3 class="font-semibold text-lg">Purchase Cost by Date</h3>
+            <div class="compact-date-selector mt-2 md:mt-0">
+                <input type="date" class="compact-date-input" id="cost-start-date" value="${defaultStart}">
+                <span>to</span>
+                <input type="date" class="compact-date-input" id="cost-end-date" value="${defaultEnd}">
+                <button class="btn-secondary text-sm px-3 py-1" id="cost-date-filter">Apply</button>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="purchase-cost-by-date-chart" class="chart-responsive"></canvas>
+        </div>
+    `;
+
+    const ctx = document.getElementById('purchase-cost-by-date-chart').getContext('2d');
+    if (purchaseCostByDateChart) {
+        purchaseCostByDateChart.destroy();
+    }
+
+    purchaseCostByDateChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Purchase Cost',
+                data: values,
+                backgroundColor: 'rgba(79, 121, 66, 0.1)',
+                borderColor: '#4F7942',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true,
+                pointBackgroundColor: '#4F7942',
+                pointRadius: 3,
+                pointHoverRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { drawBorder: false, color: 'rgba(0, 0, 0, 0.05)' },
+                    ticks: {
+                        callback: value => `${CURRENCY_SYMBOL}${value.toLocaleString()}`
+                    }
+                },
+                x: { grid: { display: false } }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    titleColor: '#374151',
+                    bodyColor: '#374151',
+                    borderColor: '#e5e7eb',
+                    borderWidth: 1,
+                    cornerRadius: 6,
+                    padding: 12,
+                    callbacks: {
+                        label: context => `Cost: ${formatCurrency(context.raw)}`
+                    }
+                }
+            }
+        }
+    });
+
+    document.getElementById('cost-date-filter').addEventListener('click', async () => {
+        const start = document.getElementById('cost-start-date').value;
+        const end = document.getElementById('cost-end-date').value;
+        await renderPurchaseCostByDateChart(start, end);
+    });
+}
+
+function initOrderPage() {
+    initOrderFilters();
+    loadOrderList();
+}
+
+function initOrderFilters() {
+    document.getElementById('order-search-btn').addEventListener('click', filterOrders);
+    document.getElementById('order-reset-btn').addEventListener('click', resetOrderFilters);
+    document.getElementById('refresh-orders-btn').addEventListener('click', () => loadOrderList());
+    document.getElementById('order-search').addEventListener('keypress', e => {
+        if (e.key === 'Enter') filterOrders();
+    });
+}
+
+async function filterOrders() {
+    const filters = {
+        search: document.getElementById('order-search').value.trim(),
+        status: document.getElementById('order-status-filter').value,
+        storeId: document.getElementById('order-store-filter').value,
+        startDate: document.getElementById('order-date-from').value,
+        endDate: document.getElementById('order-date-to').value
     };
 
-    Object.keys(detailElems).forEach(key => {
-        if (detailElems[key]) detailElems[key].textContent = order[key];
-    });
+    await loadOrderList(filters);
+}
 
-    const itemsContainer = document.getElementById('order-items-list');
-    if (itemsContainer) {
-        itemsContainer.innerHTML = '';
-        order.items.forEach(item => {
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50 transition-colors';
-            row.innerHTML = `
-                <td class="px-4 py-2 text-sm">${item.name}</td>
-                <td class="px-4 py-2 text-sm text-gray-500">${item.isbn}</td>
-                <td class="px-4 py-2 text-sm">${item.quantity}</td>
-                <td class="px-4 py-2 text-sm">${item.unitPrice}</td>
-                <td class="px-4 py-2 text-sm">${item.subtotal}</td>
-            `;
-            itemsContainer.appendChild(row);
-        });
+async function resetOrderFilters() {
+    document.getElementById('order-search').value = '';
+    document.getElementById('order-status-filter').value = '';
+    document.getElementById('order-store-filter').value = '';
+    document.getElementById('order-date-from').value = '';
+    document.getElementById('order-date-to').value = '';
+
+    await loadOrderList();
+}
+
+async function loadOrderList(filters = {}) {
+    try {
+        const orders = await fetchOrderList(filters);
+        renderOrderList(orders);
+    } catch (error) {
+        console.error('Failed to load orders:', error);
+    }
+}
+
+function renderOrderList(orders) {
+    const container = document.getElementById('order-table-body');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (!orders || orders.length === 0) {
+        container.innerHTML = `
+            <tr>
+                <td colspan="9" class="px-4 py-8 text-center text-gray-500">
+                    No orders found matching your criteria.
+                </td>
+            </tr>
+        `;
+        updateOrderPaginationInfo(0);
+        return;
     }
 
-    document.getElementById('order-details').classList.remove('hidden');
+    orders.forEach(order => {
+        let statusClass = 'bg-gray-100 text-gray-800';
+        let statusText = order.orderStatus;
+        switch (order.orderStatus) {
+            case 'created':
+                statusClass = 'order-created';
+                statusText = 'Created';
+                break;
+            case 'processing':
+                statusClass = 'order-processing';
+                statusText = 'Processing';
+                break;
+            case 'paid':
+                statusClass = 'order-paid';
+                statusText = 'Paid';
+                break;
+            case 'completed':
+                statusClass = 'order-completed';
+                statusText = 'Completed';
+                break;
+        }
+
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50 transition-colors';
+        row.dataset.orderId = order.orderId;
+
+        row.innerHTML = `
+            <td class="px-4 py-4 text-sm font-medium">${order.orderId}</td>
+            <td class="px-4 py-4 text-sm">${order.storeName}</td>
+            <td class="px-4 py-4 text-sm">
+                <div class="flex flex-col">
+                    <span class="font-medium">${order.memberId}</span>
+                    <span class="text-xs text-gray-500">${order.memberName}</span>
+                </div>
+            </td>
+            <td class="px-4 py-4 text-sm">
+                <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${statusText}</span>
+            </td>
+            <td class="px-4 py-4 text-sm">${formatDateTime(order.orderDate)}</td>
+            <td class="px-4 py-4 text-sm">${formatCurrency(order.payableAmount)}</td>
+            <td class="px-4 py-4 text-sm">${order.itemCount} items</td>
+            <td class="px-4 py-4 text-sm truncate max-w-xs" title="${order.note || 'No note'}">
+                ${order.note ? (order.note.length > 30 ? order.note.substring(0, 30) + '...' : order.note) : 'None'}
+            </td>
+            <td class="px-4 py-4 text-sm">
+                <div class="flex gap-2">
+                    <button class="text-[#8B5A2B] hover:text-[#8B5A2B]/80 view-order" data-order="${order.orderId}" title="View Details">
+                        <i class="fa fa-eye"></i>
+                    </button>
+                    <button class="text-green-600 hover:text-green-800 create-invoice" data-order="${order.orderId}" title="Create Invoice">
+                        <i class="fa fa-file-text"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        container.appendChild(row);
+    });
+
+    updateOrderPaginationInfo(orders.length);
+    addOrderEventListeners();
 }
 
-// Update order status
-function updateOrderStatus(orderId, newStatus) {
-    if (!orderData[orderId]) return;
-    orderData[orderId].status = newStatus;
-    orderData[orderId].updatedDate = new Date().toLocaleString('en-US', {
-        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-    }).replace(',', '');
-
-    const currentOrderId = document.getElementById('detail-order-id')?.textContent;
-    if (currentOrderId === orderId) showOrderDetails(orderId);
+function updateOrderPaginationInfo(totalOrders) {
+    const paginationInfo = document.getElementById('order-pagination-info');
+    if (paginationInfo) {
+        paginationInfo.textContent = `Showing ${totalOrders} orders`;
+    }
 }
 
-// Invoice management functionality
+function addOrderEventListeners() {
+    document.querySelectorAll('.view-order').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const orderId = btn.getAttribute('data-order');
+            await viewOrderDetails(orderId);
+        });
+    });
+
+    document.querySelectorAll('.create-invoice').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const orderId = btn.getAttribute('data-order');
+            await createInvoice(orderId);
+        });
+    });
+}
+
+async function viewOrderDetails(orderId) {
+    try {
+        const data = await fetchOrderDetail(orderId);
+        console.log('Order detail:', data);
+        alert(`Order ${orderId} detail loaded. Check console for full data.`);
+    } catch (error) {
+        console.error('Failed to load order detail:', error);
+        alert('Failed to load order detail.');
+    }
+}
+
+async function createInvoice(orderId) {
+    try {
+        const res = await createInvoiceForOrder(Number(orderId));
+        alert(res.message || 'Invoice created');
+        await loadInvoiceList();
+    } catch (error) {
+        console.error('Failed to create invoice:', error);
+        alert('Failed to create invoice.');
+    }
+}
+
 function initInvoicePage() {
-    console.log('Initializing Invoice page...');
-    renderInvoiceList();
     initInvoiceFilters();
+    loadInvoiceList();
 }
 
-// Render invoice list
-function renderInvoiceList(invoices = Object.values(invoiceData)) {
-    const container = document.getElementById('invoice-table-body');
-    if (!container) return;
-
-    container.innerHTML = '';
-    invoices.forEach(invoice => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 transition-colors';
-        row.dataset.invoiceNo = invoice.invoiceNo;
-
-        let statusClass = '';
-        let statusText = '';
-        switch (invoice.status) {
-            case 'draft': 
-                statusClass = 'invoice-draft'; 
-                statusText = 'Draft';
-                break;
-            case 'sent': 
-                statusClass = 'invoice-sent'; 
-                statusText = 'Sent';
-                break;
-            case 'paid': 
-                statusClass = 'invoice-paid'; 
-                statusText = 'Paid';
-                break;
-            case 'overdue': 
-                statusClass = 'invoice-overdue'; 
-                statusText = 'Overdue';
-                break;
-            case 'cancelled': 
-                statusClass = 'invoice-cancelled'; 
-                statusText = 'Cancelled';
-                break;
-        }
-
-        row.innerHTML = `
-            <td class="px-4 py-4 text-sm font-medium">${invoice.invoiceNo}</td>
-            <td class="px-4 py-4 text-sm">${invoice.orderId}</td>
-            <td class="px-4 py-4 text-sm">
-                <div class="flex flex-col">
-                    <span class="font-medium">${invoice.staffId}</span>
-                    <span class="text-xs text-gray-500">${staffData[invoice.staffId]?.name || 'Unknown'}</span>
-                </div>
-            </td>
-            <td class="px-4 py-4 text-sm">
-                <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${statusText}</span>
-            </td>
-            <td class="px-4 py-4 text-sm">${invoice.issueDate}</td>
-            <td class="px-4 py-4 text-sm">${invoice.dueDate}</td>
-            <td class="px-4 py-4 text-sm font-medium">¥${invoice.amount.toLocaleString()}</td>
-            <td class="px-4 py-4 text-sm">¥${invoice.taxAmount.toLocaleString()}</td>
-            <td class="px-4 py-4 text-sm">${invoice.updateDate}</td>
-            <td class="px-4 py-4 text-sm">
-                <div class="flex gap-2">
-                    <button class="text-primary hover:text-primary/80 view-invoice" data-invoice="${invoice.invoiceNo}" title="View Details">
-                        <i class="fa fa-eye"></i>
-                    </button>
-                    <button class="text-blue-600 hover:text-blue-800 edit-invoice" data-invoice="${invoice.invoiceNo}" title="Edit Invoice">
-                        <i class="fa fa-edit"></i>
-                    </button>
-                    <button class="text-red-600 hover:text-red-800 delete-invoice" data-invoice="${invoice.invoiceNo}" title="Delete Invoice">
-                        <i class="fa fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        `;
-        container.appendChild(row);
-    });
-
-    // Update pagination info
-    updateInvoicePaginationInfo(invoices.length);
-}
-
-// Update invoice pagination info
-function updateInvoicePaginationInfo(total) {
-    const infoElem = document.getElementById('invoice-pagination-info');
-    if (infoElem) {
-        infoElem.textContent = `Showing 1 to ${total} of ${total} invoices`;
-    }
-}
-
-// Initialize invoice filters
 function initInvoiceFilters() {
-    const searchInput = document.getElementById('invoice-search');
-    const statusSelect = document.getElementById('invoice-status-filter');
-    const staffSelect = document.getElementById('invoice-staff-filter');
-    const orderInput = document.getElementById('invoice-order-filter');
-    const searchBtn = document.getElementById('invoice-search-btn');
-    const resetBtn = document.getElementById('invoice-reset-btn');
-
-    if (searchBtn) {
-        searchBtn.addEventListener('click', filterInvoices);
-    }
-
-    if (resetBtn) {
-        resetBtn.addEventListener('click', resetInvoiceFilters);
-    }
-
-    if (searchInput) {
-        searchInput.addEventListener('input', filterInvoices);
-    }
-
-    if (statusSelect) {
-        statusSelect.addEventListener('change', filterInvoices);
-    }
-
-    if (staffSelect) {
-        staffSelect.addEventListener('change', filterInvoices);
-    }
-
-    if (orderInput) {
-        orderInput.addEventListener('input', filterInvoices);
-    }
-}
-
-// Filter invoices
-function filterInvoices() {
-    const searchInput = document.getElementById('invoice-search');
-    const statusSelect = document.getElementById('invoice-status-filter');
-    const staffSelect = document.getElementById('invoice-staff-filter');
-    const orderInput = document.getElementById('invoice-order-filter');
-    const startDateInput = document.getElementById('invoice-start-date');
-    const endDateInput = document.getElementById('invoice-end-date');
-    
-    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-    const statusFilter = statusSelect ? statusSelect.value : '';
-    const staffFilter = staffSelect ? staffSelect.value : '';
-    const orderFilter = orderInput ? orderInput.value.toUpperCase() : '';
-    const startDate = startDateInput ? startDateInput.value : '';
-    const endDate = endDateInput ? endDateInput.value : '';
-
-    const filteredInvoices = Object.values(invoiceData).filter(invoice => {
-        const matchesSearch = invoice.invoiceNo.toLowerCase().includes(searchTerm) || 
-                             (invoice.customer && invoice.customer.toLowerCase().includes(searchTerm)) ||
-                             invoice.orderId.includes(searchTerm);
-        const matchesStatus = !statusFilter || invoice.status === statusFilter;
-        const matchesStaff = !staffFilter || invoice.staffId === staffFilter;
-        const matchesOrder = !orderFilter || invoice.orderId.includes(orderFilter);
-        
-        // Date filtering
-        let matchesDate = true;
-        if (startDate || endDate) {
-            const invoiceDate = new Date(invoice.issueDate);
-            if (startDate) {
-                const filterStartDate = new Date(startDate);
-                if (invoiceDate < filterStartDate) matchesDate = false;
-            }
-            if (endDate && matchesDate) {
-                const filterEndDate = new Date(endDate);
-                if (invoiceDate > filterEndDate) matchesDate = false;
-            }
-        }
-        
-        return matchesSearch && matchesStatus && matchesStaff && matchesOrder && matchesDate;
+    document.getElementById('invoice-search-btn').addEventListener('click', filterInvoices);
+    document.getElementById('invoice-reset-btn').addEventListener('click', resetInvoiceFilters);
+    document.getElementById('invoice-search').addEventListener('keypress', e => {
+        if (e.key === 'Enter') filterInvoices();
     });
-
-    renderFilteredInvoices(filteredInvoices);
+    const createBtn = document.getElementById('create-invoice-btn');
+    if (createBtn) {
+        createBtn.addEventListener('click', () => alert('Create Invoice is handled from Order list.'));
+    }
 }
 
-// Render filtered invoices
-function renderFilteredInvoices(invoices) {
+async function filterInvoices() {
+    const filters = {
+        search: document.getElementById('invoice-search').value.trim(),
+        status: document.getElementById('invoice-status-filter').value,
+        orderId: document.getElementById('invoice-order-filter').value.trim(),
+        startDate: document.getElementById('invoice-start-date').value,
+        endDate: document.getElementById('invoice-end-date').value
+    };
+
+    await loadInvoiceList(filters);
+}
+
+async function resetInvoiceFilters() {
+    document.getElementById('invoice-search').value = '';
+    document.getElementById('invoice-status-filter').value = '';
+    document.getElementById('invoice-order-filter').value = '';
+    document.getElementById('invoice-start-date').value = '';
+    document.getElementById('invoice-end-date').value = '';
+
+    await loadInvoiceList();
+}
+
+async function loadInvoiceList(filters = {}) {
+    try {
+        const invoices = await fetchInvoiceList(filters);
+        renderInvoiceList(invoices);
+    } catch (error) {
+        console.error('Failed to load invoices:', error);
+    }
+}
+
+function renderInvoiceList(invoices) {
     const container = document.getElementById('invoice-table-body');
     if (!container) return;
 
     container.innerHTML = '';
-    invoices.forEach(invoice => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 transition-colors';
-        row.dataset.invoiceNo = invoice.invoiceNo;
 
-        let statusClass = '';
-        let statusText = '';
+    if (!invoices || invoices.length === 0) {
+        container.innerHTML = `
+            <tr>
+                <td colspan="11" class="px-4 py-8 text-center text-gray-500">
+                    No invoices found matching your criteria.
+                </td>
+            </tr>
+        `;
+        updateInvoicePaginationInfo(0);
+        return;
+    }
+
+    invoices.forEach(invoice => {
+        let statusClass = 'invoice-unpaid';
+        let statusText = invoice.status;
         switch (invoice.status) {
-            case 'draft': 
-                statusClass = 'invoice-draft'; 
-                statusText = 'Draft';
+            case 'PAID':
+                statusClass = 'invoice-paid';
                 break;
-            case 'sent': 
-                statusClass = 'invoice-sent'; 
-                statusText = 'Sent';
+            case 'PARTIAL':
+                statusClass = 'invoice-partial';
                 break;
-            case 'paid': 
-                statusClass = 'invoice-paid'; 
-                statusText = 'Paid';
+            case 'OVERDUE':
+                statusClass = 'invoice-overdue';
                 break;
-            case 'overdue': 
-                statusClass = 'invoice-overdue'; 
-                statusText = 'Overdue';
-                break;
-            case 'cancelled': 
-                statusClass = 'invoice-cancelled'; 
-                statusText = 'Cancelled';
+            case 'VOID':
+                statusClass = 'invoice-void';
                 break;
         }
 
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50 transition-colors';
+        row.dataset.invoiceId = invoice.invoiceId;
+
         row.innerHTML = `
-            <td class="px-4 py-4 text-sm font-medium">${invoice.invoiceNo}</td>
+            <td class="px-4 py-4 text-sm font-medium">${invoice.invoiceNumber || invoice.invoiceId}</td>
             <td class="px-4 py-4 text-sm">${invoice.orderId}</td>
+            <td class="px-4 py-4 text-sm">${invoice.storeName}</td>
             <td class="px-4 py-4 text-sm">
                 <div class="flex flex-col">
-                    <span class="font-medium">${invoice.staffId}</span>
-                    <span class="text-xs text-gray-500">${staffData[invoice.staffId]?.name || 'Unknown'}</span>
+                    <span class="font-medium">${invoice.memberId}</span>
+                    <span class="text-xs text-gray-500">${invoice.memberName}</span>
                 </div>
             </td>
             <td class="px-4 py-4 text-sm">
                 <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${statusText}</span>
             </td>
-            <td class="px-4 py-4 text-sm">${invoice.issueDate}</td>
-            <td class="px-4 py-4 text-sm">${invoice.dueDate}</td>
-            <td class="px-4 py-4 text-sm font-medium">¥${invoice.amount.toLocaleString()}</td>
-            <td class="px-4 py-4 text-sm">¥${invoice.taxAmount.toLocaleString()}</td>
-            <td class="px-4 py-4 text-sm">${invoice.updateDate}</td>
+            <td class="px-4 py-4 text-sm">${formatDateTime(invoice.issueDate)}</td>
+            <td class="px-4 py-4 text-sm">${formatDateTime(invoice.dueDate)}</td>
+            <td class="px-4 py-4 text-sm">${formatCurrency(invoice.invoiceAmount)}</td>
+            <td class="px-4 py-4 text-sm">${formatCurrency(invoice.paidAmount)}</td>
+            <td class="px-4 py-4 text-sm">${formatCurrency(invoice.balanceAmount)}</td>
             <td class="px-4 py-4 text-sm">
                 <div class="flex gap-2">
-                    <button class="text-primary hover:text-primary/80 view-invoice" data-invoice="${invoice.invoiceNo}" title="View Details">
+                    <button class="text-[#8B5A2B] hover:text-[#8B5A2B]/80 view-invoice" data-invoice="${invoice.invoiceId}" title="View Details">
                         <i class="fa fa-eye"></i>
                     </button>
-                    <button class="text-blue-600 hover:text-blue-800 edit-invoice" data-invoice="${invoice.invoiceNo}" title="Edit Invoice">
-                        <i class="fa fa-edit"></i>
-                    </button>
-                    <button class="text-red-600 hover:text-red-800 delete-invoice" data-invoice="${invoice.invoiceNo}" title="Delete Invoice">
-                        <i class="fa fa-trash"></i>
+                    <button class="text-green-600 hover:text-green-800 receive-payment" data-invoice="${invoice.invoiceId}" data-balance="${invoice.balanceAmount}" title="Receive Payment">
+                        <i class="fa fa-credit-card"></i>
                     </button>
                 </div>
             </td>
@@ -673,418 +676,75 @@ function renderFilteredInvoices(invoices) {
     });
 
     updateInvoicePaginationInfo(invoices.length);
+    addInvoiceEventListeners();
 }
 
-// Reset invoice filters
-function resetInvoiceFilters() {
-    const searchInput = document.getElementById('invoice-search');
-    const statusSelect = document.getElementById('invoice-status-filter');
-    const staffSelect = document.getElementById('invoice-staff-filter');
-    const orderInput = document.getElementById('invoice-order-filter');
-    const startDateInput = document.getElementById('invoice-start-date');
-    const endDateInput = document.getElementById('invoice-end-date');
-    
-    if (searchInput) searchInput.value = '';
-    if (statusSelect) statusSelect.value = '';
-    if (staffSelect) staffSelect.value = '';
-    if (orderInput) orderInput.value = '';
-    if (startDateInput) startDateInput.value = '';
-    if (endDateInput) endDateInput.value = '';
-    
-    renderInvoiceList();
+function updateInvoicePaginationInfo(totalInvoices) {
+    const paginationInfo = document.getElementById('invoice-pagination-info');
+    if (paginationInfo) {
+        paginationInfo.textContent = `Showing ${totalInvoices} invoices`;
+    }
 }
 
-// Show invoice details
-function showInvoiceDetails(invoiceNo) {
-    const invoice = invoiceData[invoiceNo];
-    if (!invoice) return;
-
-    const staff = staffData[invoice.staffId];
-    const order = allOrderData[invoice.orderId];
-
-    const detailsHtml = `
-        <div class="bg-white rounded-lg shadow-lg invoice-details-modal">
-            <div class="p-6">
-                <div class="flex justify-between items-start mb-6">
-                    <div>
-                        <h3 class="text-2xl font-bold text-gray-800">Invoice Details</h3>
-                        <p class="text-gray-600">Invoice No: ${invoice.invoiceNo}</p>
-                    </div>
-                    <span class="px-3 py-1 text-sm ${getStatusClass(invoice.status)} rounded-full">
-                        ${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-                    </span>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div class="space-y-4">
-                        <div>
-                            <h4 class="font-semibold text-gray-700 mb-2">Invoice Information</h4>
-                            <div class="space-y-2 text-sm">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-500">Order ID:</span>
-                                    <span class="font-medium">${invoice.orderId}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-500">Staff ID:</span>
-                                    <span class="font-medium">${invoice.staffId} (${staff?.name || 'Unknown'})</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-500">Issue Date:</span>
-                                    <span class="font-medium">${invoice.issueDate}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-500">Due Date:</span>
-                                    <span class="font-medium">${invoice.dueDate}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-500">Last Updated:</span>
-                                    <span class="font-medium">${invoice.updateDate}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="space-y-4">
-                        <div>
-                            <h4 class="font-semibold text-gray-700 mb-2">Financial Details</h4>
-                            <div class="space-y-2 text-sm">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-500">Subtotal:</span>
-                                    <span class="font-medium">¥${(invoice.amount - invoice.taxAmount).toLocaleString()}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-500">Tax (${invoice.taxRate}%):</span>
-                                    <span class="font-medium">¥${invoice.taxAmount.toLocaleString()}</span>
-                                </div>
-                                <div class="flex justify-between border-t pt-2">
-                                    <span class="text-gray-500 font-semibold">Total Amount:</span>
-                                    <span class="font-bold text-lg">¥${invoice.amount.toLocaleString()}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                ${order ? `
-                <div class="mb-6">
-                    <h4 class="font-semibold text-gray-700 mb-3">Order Information</h4>
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <div class="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <span class="text-gray-500">Order Status:</span>
-                                <span class="ml-2 px-2 py-1 text-xs ${getOrderStatusClass(order.status)} rounded-full">
-                                    ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                                </span>
-                            </div>
-                            <div>
-                                <span class="text-gray-500">Order Date:</span>
-                                <span class="ml-2 font-medium">${order.createdDate}</span>
-                            </div>
-                            <div>
-                                <span class="text-gray-500">Payment Method:</span>
-                                <span class="ml-2 font-medium">${order.paymentMethod}</span>
-                            </div>
-                            <div>
-                                <span class="text-gray-500">Customer:</span>
-                                <span class="ml-2 font-medium">${invoice.customer}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                ` : ''}
-
-                <div class="mb-6">
-                    <h4 class="font-semibold text-gray-700 mb-3">Invoice Items</h4>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead>
-                                <tr>
-                                    <th class="px-4 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                                    <th class="px-4 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
-                                    <th class="px-4 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">Unit Price</th>
-                                    <th class="px-4 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">Subtotal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${invoice.items.map(item => `
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-4 py-2 text-sm">${item.description}</td>
-                                        <td class="px-4 py-2 text-sm">${item.quantity}</td>
-                                        <td class="px-4 py-2 text-sm">¥${item.unitPrice.toLocaleString()}</td>
-                                        <td class="px-4 py-2 text-sm font-medium">¥${item.subtotal.toLocaleString()}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="mb-6">
-                    <h4 class="font-semibold text-gray-700 mb-3">Notes</h4>
-                    <div class="notes-tabs flex border-b mb-4">
-                        <button class="notes-tab active" data-tab="internal">Internal Notes</button>
-                        <button class="notes-tab" data-tab="customer">Customer Notes</button>
-                    </div>
-                    <div class="notes-content active" id="internal-notes">
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <p class="text-gray-700">${invoice.internalNotes}</p>
-                            <div class="mt-2 text-xs text-gray-500">
-                                Last edited by: ${staffData[invoice.lastEditedBy]?.name || invoice.lastEditedBy} on ${invoice.lastEditDate}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="notes-content" id="customer-notes">
-                        <div class="bg-blue-50 p-4 rounded-lg">
-                            <p class="text-gray-700">${invoice.customerNotes}</p>
-                            <div class="mt-2 text-xs text-gray-500">
-                                This note will be sent to the customer
-                            </div>
-                        </div>
-                    </div>
-                    <button class="edit-notes-btn mt-3 btn-secondary" data-invoice="${invoice.invoiceNo}">
-                        <i class="fa fa-edit mr-2"></i>Edit Notes
-                    </button>
-                </div>
-
-                <div class="flex justify-end gap-3 mt-6 pt-4 border-t">
-                    <button class="btn-secondary close-invoice-modal">Close</button>
-                    <button class="btn-primary print-invoice" data-invoice="${invoice.invoiceNo}">
-                        <i class="fa fa-print mr-2"></i>Print Invoice
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // Create modal
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
-    modal.innerHTML = detailsHtml;
-    document.body.appendChild(modal);
-
-    // Close on background click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.remove();
-        }
-    });
-
-    // Close button
-    modal.querySelector('.close-invoice-modal')?.addEventListener('click', () => {
-        modal.remove();
-    });
-
-    // Notes toggle functionality
-    modal.querySelectorAll('.notes-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            // Remove all active states
-            modal.querySelectorAll('.notes-tab').forEach(t => t.classList.remove('active'));
-            modal.querySelectorAll('.notes-content').forEach(c => c.classList.remove('active'));
-            
-            // Activate current tab
-            tab.classList.add('active');
-            const tabId = tab.getAttribute('data-tab');
-            modal.querySelector(`#${tabId}-notes`).classList.add('active');
+function addInvoiceEventListeners() {
+    document.querySelectorAll('.view-invoice').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const invoiceId = btn.getAttribute('data-invoice');
+            await viewInvoiceDetails(invoiceId);
         });
     });
 
-    // Edit notes functionality
-    modal.querySelector('.edit-notes-btn')?.addEventListener('click', () => {
-        editInvoiceNotes(invoiceNo, modal);
-    });
-
-    // Print functionality
-    modal.querySelector('.print-invoice')?.addEventListener('click', () => {
-        window.print();
-    });
-}
-
-// Edit invoice notes
-function editInvoiceNotes(invoiceNo, modal) {
-    const invoice = invoiceData[invoiceNo];
-    if (!invoice) return;
-
-    const editFormHtml = `
-        <div class="bg-white p-6 rounded-lg shadow-lg max-w-2xl mx-auto">
-            <h3 class="text-xl font-bold text-gray-800 mb-4">Edit Invoice Notes</h3>
-            
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Internal Notes (Accounting View)</label>
-                    <textarea id="edit-internal-notes" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" rows="4">${invoice.internalNotes}</textarea>
-                    <p class="text-xs text-gray-500 mt-1">Internal notes for accounting team reference</p>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Customer Notes (Client View)</label>
-                    <textarea id="edit-customer-notes" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" rows="4">${invoice.customerNotes}</textarea>
-                    <p class="text-xs text-gray-500 mt-1">This note will be visible to the customer</p>
-                </div>
-            </div>
-            
-            <div class="flex justify-end gap-3 mt-6 pt-4 border-t">
-                <button class="btn-secondary cancel-edit-notes">Cancel</button>
-                <button class="btn-primary save-notes" data-invoice="${invoiceNo}">
-                    <i class="fa fa-save mr-2"></i>Save Changes
-                </button>
-            </div>
-        </div>
-    `;
-
-    // Create edit modal
-    const editModal = document.createElement('div');
-    editModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
-    editModal.innerHTML = editFormHtml;
-    document.body.appendChild(editModal);
-
-    // Save notes
-    editModal.querySelector('.save-notes').addEventListener('click', () => {
-        const internalNotes = document.getElementById('edit-internal-notes').value;
-        const customerNotes = document.getElementById('edit-customer-notes').value;
-        
-        // Update invoice data
-        invoiceData[invoiceNo].internalNotes = internalNotes;
-        invoiceData[invoiceNo].customerNotes = customerNotes;
-        invoiceData[invoiceNo].lastEditedBy = "STAFF-001"; // Current user ID
-        invoiceData[invoiceNo].lastEditDate = new Date().toLocaleString('en-US', {
-            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-        }).replace(',', '');
-        
-        // Close edit modal
-        editModal.remove();
-        
-        // Close details modal and reopen to refresh content
-        modal.remove();
-        showInvoiceDetails(invoiceNo);
-        
-        // Update invoice list
-        renderInvoiceList();
-    });
-
-    // Cancel button
-    editModal.querySelector('.cancel-edit-notes')?.addEventListener('click', () => {
-        editModal.remove();
-    });
-
-    // Close on background click
-    editModal.addEventListener('click', (e) => {
-        if (e.target === editModal) {
-            editModal.remove();
-        }
-    });
-}
-
-// Get status class
-function getStatusClass(status) {
-    switch (status) {
-        case 'draft': return 'invoice-draft';
-        case 'sent': return 'invoice-sent';
-        case 'paid': return 'invoice-paid';
-        case 'overdue': return 'invoice-overdue';
-        case 'cancelled': return 'invoice-cancelled';
-        default: return 'bg-gray-100 text-gray-800';
-    }
-}
-
-// Get order status class
-function getOrderStatusClass(status) {
-    switch (status) {
-        case 'created': return 'bg-blue-100 text-blue-800';
-        case 'paid': return 'bg-green-100 text-green-800';
-        case 'cancelled': return 'bg-red-100 text-red-800';
-        case 'refunded': return 'bg-yellow-100 text-yellow-800';
-        default: return 'bg-gray-100 text-gray-800';
-    }
-}
-
-// Edit invoice
-function editInvoice(invoiceNo) {
-    const invoice = invoiceData[invoiceNo];
-    if (!invoice) return;
-
-    // Here you can add invoice edit form
-    alert(`Edit Invoice: ${invoice.invoiceNo}\n\nThis would open an edit form with fields for:\n- Order ID: ${invoice.orderId}\n- Staff ID: ${invoice.staffId}\n- Status: ${invoice.status}\n- Issue Date: ${invoice.issueDate}\n- Due Date: ${invoice.dueDate}\n- Amount: ¥${invoice.amount}\n- Tax Amount: ¥${invoice.taxAmount}`);
-}
-
-// Delete invoice
-function deleteInvoice(invoiceNo) {
-    if (confirm(`Are you sure you want to delete invoice ${invoiceNo}?`)) {
-        // Here you can add invoice deletion logic
-        delete invoiceData[invoiceNo];
-        alert(`Invoice ${invoiceNo} deleted successfully!`);
-        renderInvoiceList();
-    }
-}
-
-// Initialize event listeners
-function initEventListeners() {
-    // Sidebar toggle
-    document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
-        const sidebar = document.getElementById('sidebar');
-        if (sidebar) sidebar.classList.toggle('hidden');
-    });
-
-    // Navigation toggle
-    document.querySelectorAll('.sidebar-link[data-page]').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            switchPage(link.dataset.page);
+    document.querySelectorAll('.receive-payment').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const invoiceId = btn.getAttribute('data-invoice');
+            const balance = Number(btn.getAttribute('data-balance') || 0);
+            await receivePayment(invoiceId, balance);
         });
     });
+}
 
-    // Logout button
-    document.getElementById('logout-btn')?.addEventListener('click', () => {
-        if (confirm('Are you sure you want to log out?')) {
-            window.location.href = 'login.html';
-        }
-    });
-
-    // Regular order click
-    const transactionTable = document.querySelector('#income-expense-page table');
-    if (transactionTable) {
-        transactionTable.addEventListener('click', (e) => {
-            const row = e.target.closest('tr[data-order-id]');
-            if (row) showOrderDetails(row.dataset.orderId);
-        });
-    }
-
-    // Invoice operations
-    document.addEventListener('click', (e) => {
-        if (e.target.closest('.view-invoice')) {
-            const invoiceNo = e.target.closest('.view-invoice').dataset.invoice;
-            showInvoiceDetails(invoiceNo);
-        } else if (e.target.closest('.edit-invoice')) {
-            const invoiceNo = e.target.closest('.edit-invoice').dataset.invoice;
-            editInvoice(invoiceNo);
-        } else if (e.target.closest('.delete-invoice')) {
-            const invoiceNo = e.target.closest('.delete-invoice').dataset.invoice;
-            deleteInvoice(invoiceNo);
-        }
-    });
-
-    // Create invoice button
-    const createInvoiceBtn = document.querySelector('#invoice-page .btn-primary');
-    if (createInvoiceBtn && !createInvoiceBtn.id) {
-        createInvoiceBtn.addEventListener('click', () => {
-            alert('Create new invoice functionality would go here');
-        });
+async function viewInvoiceDetails(invoiceId) {
+    try {
+        const data = await fetchInvoiceDetail(invoiceId);
+        console.log('Invoice detail:', data);
+        alert(`Invoice ${invoiceId} detail loaded. Check console for full data.`);
+    } catch (error) {
+        console.error('Failed to load invoice detail:', error);
+        alert('Failed to load invoice detail.');
     }
 }
 
-// Page load initialization
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('Finance page loaded');
+async function receivePayment(invoiceId, balance) {
+    if (!balance || balance <= 0) {
+        alert('No outstanding balance.');
+        return;
+    }
+
+    try {
+        await recordInvoicePayment(Number(invoiceId), balance, 'Cash');
+        alert('Payment recorded.');
+        await loadInvoiceList();
+        await initIncomeStatsCharts();
+    } catch (error) {
+        console.error('Failed to record payment:', error);
+        alert('Failed to record payment.');
+    }
+}
+
+function initFinancePage() {
     addStatusStyles();
-    initDateDisplay();
-    initOverviewCharts();
-    initPeriodSwitcher();
-    renderRecentTransactions();
-    initEventListeners();
-    
-    // Ensure overview page is visible by default
-    document.querySelectorAll('.page-content').forEach(page => {
-        if (page.id !== 'overview-page') {
-            page.classList.add('hidden');
-        }
+
+    document.querySelectorAll('.sidebar-link[data-page]').forEach(link => {
+        link.addEventListener('click', e => {
+            e.preventDefault();
+            financeSwitchPage(link.getAttribute('data-page'));
+        });
     });
+
+    const lastPage = sessionStorage.getItem('currentPage') || 'income-stats';
+    financeSwitchPage(lastPage);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initFinancePage();
 });
