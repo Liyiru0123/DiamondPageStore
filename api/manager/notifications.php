@@ -121,7 +121,7 @@ function getNotificationDetail($conn) {
 }
 
 /**
- * 创建通知（调用存储过程）
+ * 创建通知（直接插入数据库）
  */
 function createNotification($conn) {
     $data = json_decode(file_get_contents('php://input'), true);
@@ -135,13 +135,10 @@ function createNotification($conn) {
         return;
     }
 
-    $publishAt = isset($data['publish_at']) ? $data['publish_at'] : null;
+    $publishAt = isset($data['publish_at']) && $data['publish_at'] ? $data['publish_at'] : date('Y-m-d H:i:s');
     $expireAt = isset($data['expire_at']) ? $data['expire_at'] : null;
 
-    $sql = "CALL sp_manager_send_notification(
-        :title, :content, :publish_at, :expire_at,
-        @result_code, @result_message, @announcement_id
-    )";
+    $sql = "INSERT INTO announcements (title, content, publish_at, expire_at) VALUES (:title, :content, :publish_at, :expire_at)";
 
     $stmt = $conn->prepare($sql);
     $stmt->bindParam(':title', $data['title'], PDO::PARAM_STR);
@@ -150,22 +147,13 @@ function createNotification($conn) {
     $stmt->bindParam(':expire_at', $expireAt, PDO::PARAM_STR);
     $stmt->execute();
 
-    // 获取存储过程的输出参数
-    $result = $conn->query("SELECT @result_code as code, @result_message as message, @announcement_id as announcement_id")->fetch();
+    $announcementId = $conn->lastInsertId();
 
-    if ($result['code'] == 1) {
-        echo json_encode([
-            'success' => true,
-            'message' => $result['message'],
-            'data' => ['announcement_id' => $result['announcement_id']]
-        ]);
-    } else {
-        http_response_code(400);
-        echo json_encode([
-            'success' => false,
-            'message' => $result['message']
-        ]);
-    }
+    echo json_encode([
+        'success' => true,
+        'message' => 'Notification created successfully',
+        'data' => ['announcement_id' => $announcementId]
+    ]);
 }
 
 /**

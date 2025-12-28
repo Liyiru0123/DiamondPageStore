@@ -123,6 +123,9 @@ async function loadStaffData() {
         }
 
         addStaffActionButtonListeners();
+
+        // 删除 originalContent，防止 hideLoading 覆盖已渲染的数据
+        delete tableBody.dataset.originalContent;
     } catch (error) {
         console.error('Failed to load staff data:', error);
         tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-red-600">Failed to load staff data</td></tr>';
@@ -210,6 +213,9 @@ async function loadPricingData() {
             `;
             tableBody.appendChild(row);
         });
+
+        // 删除 originalContent，防止 hideLoading 覆盖已渲染的数据
+        delete tableBody.dataset.originalContent;
     } catch (error) {
         console.error('Failed to load pricing data:', error);
         tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-red-600">Failed to load pricing data</td></tr>';
@@ -361,6 +367,9 @@ async function loadUserManagementData() {
                 deleteUser(userId);
             });
         });
+
+        // 删除 originalContent，防止 hideLoading 覆盖已渲染的数据
+        delete tableBody.dataset.originalContent;
     } catch (error) {
         console.error('Failed to load user management data:', error);
         tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-red-600">Failed to load user data</td></tr>';
@@ -459,6 +468,9 @@ async function loadReplenishmentRequests() {
         });
 
         wireRequestActionButtons();
+
+        // 删除 originalContent，防止 hideLoading 覆盖已渲染的数据
+        delete tableBody.dataset.originalContent;
     } catch (error) {
         console.error('Failed to load replenishment requests:', error);
         tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-red-600">Failed to load requests</td></tr>';
@@ -778,5 +790,184 @@ function showMessage(message, type = 'info') {
         messageDiv.remove();
     }, 3000);
 }
+
+// =============================================================================
+// Staff Search - 使用 API 版本
+// =============================================================================
+
+/**
+ * 员工搜索函数 - 使用后端 API
+ * @param {string} searchTerm - 搜索关键词
+ */
+async function performStaffSearch(searchTerm) {
+    const tableBody = document.getElementById('staff-table-body');
+    if (!tableBody) return;
+
+    // 如果搜索词为空，重新加载所有数据
+    if (!searchTerm || searchTerm.trim() === '') {
+        loadStaffData();
+        return;
+    }
+
+    try {
+        const employees = await searchEmployeesAPI(searchTerm);
+        const staffCount = document.getElementById('staff-count');
+
+        tableBody.innerHTML = '';
+
+        if (employees.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                        <div class="flex flex-col items-center">
+                            <i class="fa fa-user-times text-3xl text-gray-300 mb-2"></i>
+                            <p>No staff found matching "${escapeHtml(searchTerm)}"</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            if (staffCount) staffCount.textContent = '0';
+            return;
+        }
+
+        employees.forEach(employee => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50 transition-colors';
+            row.dataset.storeID = String(employee.store_id);
+
+            let position = 'staff';
+            if (employee.job_title && employee.job_title.toLowerCase().includes('manager')) {
+                position = 'manager';
+            } else if (employee.job_title && employee.job_title.toLowerCase().includes('finance')) {
+                position = 'finance';
+            }
+            row.dataset.position = position;
+
+            row.innerHTML = `
+                <td class="px-4 py-4 text-sm font-medium">${escapeHtml(employee.employee_id)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(employee.user_id)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(employee.store_name)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(employee.full_name)}</td>
+                <td class="px-4 py-4 text-sm">
+                    <span class="px-2 py-1 text-xs ${position === 'manager' ? 'role-manager' : position === 'finance' ? 'role-finance' : 'role-staff'} rounded-full">
+                        ${escapeHtml(employee.job_title || 'Staff')}
+                    </span>
+                </td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(employee.phone)}</td>
+                <td class="px-4 py-4 text-sm">
+                    <div class="flex gap-2">
+                        <button class="text-primary hover:text-primary/80 edit-staff" title="Edit">
+                            <i class="fa fa-edit"></i>
+                        </button>
+                        <button class="text-blue-600 hover:text-blue-800 view-staff" title="View Details">
+                            <i class="fa fa-eye"></i>
+                        </button>
+                        <button class="text-red-600 hover:text-red-800 delete-staff" title="Delete">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+        if (staffCount) {
+            staffCount.textContent = String(employees.length);
+        }
+
+        addStaffActionButtonListeners();
+    } catch (error) {
+        console.error('Failed to search staff:', error);
+        showMessage('Failed to search staff: ' + error.message, 'error');
+    }
+}
+
+// =============================================================================
+// User Search - 使用 API 版本
+// =============================================================================
+
+/**
+ * 用户搜索函数 - 使用后端 API
+ * @param {string} searchTerm - 搜索关键词
+ */
+async function performUserSearch(searchTerm) {
+    const tableBody = document.getElementById('user-management-table-body');
+    if (!tableBody) return;
+
+    // 如果搜索词为空，重新加载所有数据
+    if (!searchTerm || searchTerm.trim() === '') {
+        loadUserManagementData();
+        return;
+    }
+
+    try {
+        const users = await searchUsersAPI(searchTerm);
+
+        tableBody.innerHTML = '';
+
+        if (users.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                        <div class="flex flex-col items-center">
+                            <i class="fa fa-user-times text-3xl text-gray-300 mb-2"></i>
+                            <p>No users found matching "${escapeHtml(searchTerm)}"</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        users.forEach(user => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50 transition-colors';
+            row.innerHTML = `
+                <td class="px-4 py-4 text-sm font-medium">${escapeHtml(user.user_id)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(user.username)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(user.user_type)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(user.full_name || 'N/A')}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(user.phone || 'N/A')}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(new Date(user.create_date).toLocaleDateString())}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(new Date(user.last_log_date).toLocaleDateString())}</td>
+                <td class="px-4 py-4 text-sm">
+                    <div class="flex gap-2">
+                        <button class="text-red-600 hover:text-red-800 delete-user-btn" data-user-id="${escapeHtml(user.user_id)}" title="Delete User">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+        document.querySelectorAll('#user-management-table-body .delete-user-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const userId = this.getAttribute('data-user-id');
+                deleteUser(userId);
+            });
+        });
+    } catch (error) {
+        console.error('Failed to search users:', error);
+        showMessage('Failed to search users: ' + error.message, 'error');
+    }
+}
+
+// =============================================================================
+// 显式覆盖 manager.js 中的同名函数，确保使用 API 版本
+// =============================================================================
+window.loadStaffData = loadStaffData;
+window.loadUserManagementData = loadUserManagementData;
+window.loadNotifications = loadNotifications;
+window.loadPricingData = loadPricingData;
+window.loadReplenishmentRequests = loadReplenishmentRequests;
+window.loadStockOverviewByBranch = loadStockOverviewByBranch;
+window.loadStockOverviewBySKU = loadStockOverviewBySKU;
+window.loadPaymentComparisonTable = loadPaymentComparisonTable;
+window.loadBookCategoryTable = loadBookCategoryTable;
+
+// 搜索函数覆盖
+window.performStaffSearch = performStaffSearch;
+window.performUserSearch = performUserSearch;
 
 console.log('Manager API Integration loaded successfully');

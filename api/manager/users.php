@@ -246,13 +246,17 @@ function deleteUser($conn) {
         }
 
         $relSql = "SELECT
-                        (SELECT COUNT(*) FROM members WHERE user_id = :user_id) AS member_count,
-                        (SELECT COUNT(*) FROM employees WHERE user_id = :user_id) AS employee_count,
-                        (SELECT COUNT(*) FROM orders WHERE user_id = :user_id) AS order_count,
-                        (SELECT COUNT(*) FROM invoices WHERE user_id = :user_id) AS invoice_count,
-                        (SELECT COUNT(*) FROM announcements WHERE created_by = :user_id) AS announcement_count";
+                        (SELECT COUNT(*) FROM members WHERE user_id = :uid1) AS member_count,
+                        (SELECT COUNT(*) FROM employees WHERE user_id = :uid2) AS employee_count,
+                        (SELECT COUNT(*) FROM orders WHERE user_id = :uid3) AS order_count,
+                        (SELECT COUNT(*) FROM invoices WHERE user_id = :uid4) AS invoice_count,
+                        (SELECT COUNT(*) FROM announcements WHERE created_by = :uid5) AS announcement_count";
         $relStmt = $conn->prepare($relSql);
-        $relStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $relStmt->bindValue(':uid1', $userId, PDO::PARAM_INT);
+        $relStmt->bindValue(':uid2', $userId, PDO::PARAM_INT);
+        $relStmt->bindValue(':uid3', $userId, PDO::PARAM_INT);
+        $relStmt->bindValue(':uid4', $userId, PDO::PARAM_INT);
+        $relStmt->bindValue(':uid5', $userId, PDO::PARAM_INT);
         $relStmt->execute();
         $rel = $relStmt->fetch();
 
@@ -321,18 +325,24 @@ function searchUsers($conn) {
             FROM users u
             LEFT JOIN members m ON u.user_id = m.user_id
             LEFT JOIN employees e ON u.user_id = e.user_id
-            WHERE u.username LIKE :keyword
-            OR m.first_name LIKE :keyword
-            OR m.last_name LIKE :keyword
-            OR m.phone LIKE :keyword
-            OR e.first_name LIKE :keyword
-            OR e.last_name LIKE :keyword
-            OR e.phone LIKE :keyword
+            WHERE u.username LIKE :kw1
+            OR m.first_name LIKE :kw2
+            OR m.last_name LIKE :kw3
+            OR m.phone LIKE :kw4
+            OR e.first_name LIKE :kw5
+            OR e.last_name LIKE :kw6
+            OR e.phone LIKE :kw7
             ORDER BY u.user_id";
 
     $searchTerm = "%$keyword%";
     $stmt = $conn->prepare($sql);
-    $stmt->bindParam(':keyword', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw1', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw2', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw3', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw4', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw5', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw6', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw7', $searchTerm, PDO::PARAM_STR);
     $stmt->execute();
     $users = $stmt->fetchAll();
 
