@@ -52,13 +52,13 @@ const MENU_CONFIG = {
         { id: 'invoice', icon: 'fa-file-text', text: 'Invoice Management', type: 'admin' }
     ],
 
-    // === 店长/经理 (Manager) - 拥有最高权限 ===
+    // === 店长/经理 (Manager)  ===
     manager: [
         { id: 'overview', icon: 'fa-tachometer', text: 'Dashboard', type: 'admin' },
-        { id: 'books', icon: 'fa-book', text: 'Book Management', type: 'admin' },
+        { id: 'inventory', icon: 'fa-cubes', text: 'Inventory Management', type: 'admin' },
         { id: 'staff', icon: 'fa-users', text: 'Staff Management', type: 'admin' },
-        { id: 'orders', icon: 'fa-list', text: 'Order Management', type: 'admin' },
-        { id: 'finance-report', icon: 'fa-line-chart', text: 'Financial Reports', type: 'admin' }
+        { id: 'user-management', icon: 'fa-user-cog', text: 'User Management', type: 'admin' },
+        { id: 'notifications', icon: 'fa-bell', text: 'Notifications', type: 'admin' }
     ],
 
     // === 普通店员 (Staff) - 主要是销售和库存 ===
@@ -68,70 +68,107 @@ const MENU_CONFIG = {
         { id: 'orders', icon: 'fa-shopping-cart', text: 'Order Processing', type: 'admin' },
         { id: 'stock-request', icon: 'fa-truck', text: 'Stock Requests', type: 'admin' }
     ],
+
+    guest: [
+        { id: 'home', icon: 'fa-home', text: 'Home', type: 'public' },
+        { id: 'search', icon: 'fa-search', text: 'Book Search', type: 'public' },
+        { id: 'categories', icon: 'fa-th-large', text: 'Book Categories', type: 'public' }
+    ]
 };
 
-// window.switchPage = function(pageId) {
-//     console.log('Switching to:', pageId);
-//     sessionStorage.setItem('currentPage', pageId);
+/**
+ * [文件名]: scripts/layout.js
+ * [修改说明]: 
+ * 1. 修复了变量提升导致的 ReferenceError。
+ * 2. 增加了页面不存在时的强制回退逻辑，解决首屏空白问题。
+ * 3. 优化了入场动画的执行顺序。
+ */
+window.switchPage = function (pageId) {
+    if (!pageId) return;
+    console.log(`[Router] Switching to: ${pageId}`);
+
+    // 1. 优先获取目标元素并进行容错处理
+    let targetPage = document.getElementById(`${pageId}-page`);
     
-//     // 1. 更新所有具有 data-page 属性的元素高亮
-//     document.querySelectorAll('[data-page]').forEach(el => {
-//         const isMatch = el.getAttribute('data-page') === pageId;
-//         // 清除所有高亮类 (兼容前后台两种风格)
-//         el.classList.remove('sidebar-item-active', 'bg-accent/30', 'text-primary', 'font-medium', 'bg-brown-dark', 'border-l-4', 'border-white');
+    if (!targetPage) {
+        console.warn(`[Router] Page "${pageId}-page" not found, falling back to home.`);
+        pageId = 'home';
+        targetPage = document.getElementById('home-page');
         
-//         if (isMatch) {
-//             if (el.closest('.bg-gradient-to-b')) {
-//                 el.classList.add('bg-brown-dark', 'border-l-4', 'border-white');
-//             } else {
-//                 el.classList.add('bg-accent/30', 'text-primary', 'font-medium');
-//             }
-//         }
-//     });
+        // 如果连 home 都没有，说明页面结构有问题，中断执行避免崩溃
+        if (!targetPage) {
+            console.error('[Router] Critical: Home page not found in DOM.');
+            return;
+        }
+    }
 
-//     // 2. 切换页面显隐
-//     document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
-//     const target = document.getElementById(`${pageId}-page`);
-//     if (target) {
-//         target.classList.remove('hidden');
-//     }
-
-//     // 3. 触发角色特定的回调函数 (如果同事写了的话)
-//     if (typeof window.financeSwitchPage === 'function') window.financeSwitchPage(pageId);
-//     if (typeof window.managerSwitchPage === 'function') window.managerSwitchPage(pageId);
-// };
-
-window.switchPage = function(pageId) {
-    // 1. 记录状态 (Session)
+    // 2. 状态持久化 (确保刷新后能停留在当前有效页面)
     sessionStorage.setItem('currentPage', pageId);
-    
-    // 2. 更新侧边栏高亮 (同时兼容前台和后台的样式类名)
+
+    // 3. 统一侧边栏高亮处理 (兼容 Customer 和 Admin 两套样式系统)
     document.querySelectorAll('[data-page]').forEach(el => {
-        // 移除所有可能的高亮类
-        el.classList.remove('sidebar-item-active', 'bg-accent/30', 'text-primary', 'font-medium', 'bg-brown-dark', 'border-l-4', 'border-white');
-        
-        // 如果匹配，添加高亮
-        if (el.getAttribute('data-page') === pageId) {
-            // 判断是后台(有bg-accent) 还是前台(bg-gradient)
-            if (document.getElementById('sidebar').classList.contains('bg-gradient-to-b')) {
-                // Customer 样式
-                el.classList.add('sidebar-item-active'); 
+        const isMatch = el.getAttribute('data-page') === pageId;
+
+        // 移除所有高亮类名
+        el.classList.remove(
+            'sidebar-item-active', 'bg-brown-dark', 'border-l-4', 'border-white', // Customer 风格
+            'bg-accent/30', 'text-primary', 'font-medium' // Admin 风格
+        );
+
+        if (isMatch) {
+            // 根据父容器样式判断应用哪套高亮类
+            const sidebarEl = el.closest('#sidebar');
+            const isCustomerSidebar = sidebarEl && sidebarEl.classList.contains('bg-gradient-to-b');
+            
+            if (isCustomerSidebar) {
+                el.classList.add('sidebar-item-active');
             } else {
-                // Admin/Staff 样式
                 el.classList.add('bg-accent/30', 'text-primary', 'font-medium');
             }
         }
     });
 
-    // 3. 切换页面内容区域
-    document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
-    const target = document.getElementById(`${pageId}-page`);
-    if (target) {
-        target.classList.remove('hidden');
+    // 4. 执行内容显隐切换
+    const pages = document.querySelectorAll('.page-content');
+    pages.forEach(p => {
+        p.classList.add('hidden');
+        p.style.opacity = '0'; // 为淡入动画做准备
+    });
+
+    // 5. 触发入场动画 (微调：使用 transition-all 配合 opacity)
+    targetPage.classList.remove('hidden');
+    requestAnimationFrame(() => {
+        targetPage.style.transition = 'opacity 300ms ease-in-out';
+        targetPage.style.opacity = '1';
+    });
+
+    // 6. 数据刷新钩子 (解耦触发各模块初始化)
+    const triggerHooks = {
+        'favorites': () => typeof updateFavoritesUI === 'function' && updateFavoritesUI(),
+        'member': () => typeof updateMemberPageUI === 'function' && updateMemberPageUI(),
+        'orders': () => typeof renderOrdersUI === 'function' && renderOrdersUI('all'),
+        'search': () => {
+            const kw = document.getElementById('search-input')?.value;
+            if (kw && typeof searchBooks === 'function') searchBooks();
+        }
+    };
+
+    if (triggerHooks[pageId]) {
+        try {
+            triggerHooks[pageId]();
+        } catch (e) {
+            console.error(`[Router] Hook error for ${pageId}:`, e);
+        }
     }
 
-    // 4. 触发特定页面的回调 (可选，防止报错)
-    if (typeof window.staffPageInit === 'function') window.staffPageInit(pageId);
+    // 7. 移动端适配：切换后自动收起侧边栏
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar && window.innerWidth < 768) {
+        sidebar.classList.add('-translate-x-full');
+    }
+
+    // 8. 交互调优：平滑滚动补偿
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
 window.toggleSidebar = function () {
@@ -155,7 +192,7 @@ window.toggleSidebar = function () {
     }
 };
 
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
     if (e.target.closest('#logout-btn')) {
         sessionStorage.removeItem('currentPage'); // 登出时清除页面记忆
     }
@@ -172,16 +209,14 @@ function renderStoreSidebar(role, activePage) {
 
     const menuHtml = items.map(item => {
         if (item.type === 'separator') return '<div class="my-3 border-t border-brown-light/20"></div>';
-
-        // 初始高亮逻辑
         const activeClass = (item.id === activePage) ? 'sidebar-item-active' : '';
-        const badgeHtml = item.badgeId ? `<span id="${item.badgeId}" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>` : '';
+        const badgeHtml = item.badgeId ? `<span id="${item.badgeId}" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">0</span>` : '';
 
         return `
-            <div class="sidebar-item sidebar-item-public-hover ${activeClass} relative" 
+            <div class="sidebar-item sidebar-item-public-hover ${activeClass} relative group" 
                  data-page="${item.id}"
-                 onclick="switchPage('${item.id}')"> <!-- 添加这一行 -->
-                <i class="fa ${item.icon} text-xl w-6 text-center"></i>
+                 onclick="switchPage('${item.id}')">
+                <i class="fa ${item.icon} text-xl w-6 text-center group-hover:scale-110 transition-transform"></i>
                 <span class="sidebar-text ml-3">${item.text}</span>
                 ${badgeHtml}
             </div>
@@ -189,14 +224,24 @@ function renderStoreSidebar(role, activePage) {
     }).join('');
 
     container.innerHTML = `
-        <aside id="sidebar" class="bg-gradient-to-b from-brown-dark to-brown min-h-screen flex-shrink-0 shadow-lg transform -translate-x-full md:translate-x-0 fixed md:static top-0 left-0 z-40 transition-all duration-300 w-64 h-full">
+        <aside id="sidebar" class="bg-gradient-to-b from-brown-dark/95 to-brown min-h-screen flex-shrink-0 shadow-lg transform -translate-x-full md:translate-x-0 fixed md:static top-0 left-0 z-40 transition-all duration-300 w-64 flex flex-col h-full">
             <div class="p-4 border-b border-brown-light/30 flex items-center justify-between">
-                <h2 class="text-white text-lg font-bold font-serif">Diamond Store</h2>
-                <button class="text-white md:hidden" onclick="document.getElementById('sidebar').classList.add('-translate-x-full')">
+                <h2 class="text-white text-lg font-bold font-serif tracking-tight">Diamond Store</h2>
+                <button class="text-white md:hidden hover:rotate-90 transition-transform" onclick="document.getElementById('sidebar').classList.add('-translate-x-full')">
                     <i class="fa fa-times"></i>
                 </button>
             </div>
-            <nav class="mt-4">${menuHtml}</nav>
+            
+            <!-- 导航区域 -->
+            <nav class="mt-4 flex-1">${menuHtml}</nav>
+            
+            <!-- 任务标准化：侧边栏底部登出按钮 -->
+            <div class="p-4 border-t border-brown-light/20">
+                <button onclick="logout()" class="flex items-center gap-3 px-4 py-3 w-full text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200">
+                    <i class="fa fa-sign-out text-lg"></i>
+                    <span class="font-medium">Logout</span>
+                </button>
+            </div>
         </aside>
     `;
 }
@@ -278,8 +323,8 @@ function renderAdminHeader(role) {
 
     // 逻辑：只有非 manager 角色才预留显示分店名的位置
     // 初始内容为空，或者写 (Loading...)，等待 JS 填充
-    const storeNameHtml = (role !== 'manager') 
-        ? `<span id="header-store-name" class="font-normal text-gray-500 text-lg ml-3 border-l border-gray-300 pl-3">Loading...</span>` 
+    const storeNameHtml = (role !== 'manager')
+        ? `<span id="header-store-name" class="font-normal text-gray-500 text-lg ml-3 border-l border-gray-300 pl-3">Loading...</span>`
         : '';
 
     container.innerHTML = `
@@ -326,27 +371,36 @@ function renderAdminHeader(role) {
  * 5. 入口函数。页面加载时调用它，它负责判断角色、渲染对应的头和侧边栏，并切换到默认页面。
  */
 window.initLayout = function (role = 'customer', defaultPage = 'home') {
-    // 1. 明确持久化逻辑：优先从 sessionStorage 获取之前所在的页面
-    const savedPage = sessionStorage.getItem('currentPage');
-    const activePage = savedPage || defaultPage;
+    // 1. 角色安全检查
+    const validRoles = Object.keys(MENU_CONFIG);
+    const userRole = validRoles.includes(role) ? role : 'customer';
 
-    const backOfficeRoles = ['finance', 'manager', 'staff'];
-    const isBackOffice = backOfficeRoles.includes(role);
+    // 2. 获取目标页面，并校验该页面是否在当前角色的配置中
+    let savedPage = sessionStorage.getItem('currentPage');
+    const roleMenuIds = MENU_CONFIG[userRole].map(item => item.id);
 
-    if (isBackOffice) {
-        document.body.classList.remove('bg-brown-cream');
-        document.body.classList.add('bg-gray-50', 'text-dark');
-        renderAdminHeader(role);
-        renderAdminSidebar(role, activePage); // 使用 activePage 确保刷新后高亮正确
-    } else {
-        document.body.classList.add('bg-brown-cream');
-        renderStoreHeader(role);
-        renderStoreSidebar(role, activePage);
+    // 如果缓存的页面 ID 不属于当前角色的菜单，则强制重置为 defaultPage
+    if (!savedPage || !roleMenuIds.includes(savedPage)) {
+        savedPage = defaultPage;
     }
 
-    // 2. 初始化显示：确保页面内容也同步切换到 activePage
-    // 加一个小的延迟确保 DOM 渲染完成
-    setTimeout(() => {
-        window.switchPage(activePage);
-    }, 50);
+    const backOfficeRoles = ['finance', 'manager', 'staff'];
+    const isBackOffice = backOfficeRoles.includes(userRole);
+
+    // 3. 执行布局渲染
+    if (isBackOffice) {
+        document.body.className = 'bg-gray-50 text-dark min-h-screen flex overflow-x-hidden font-sans';
+        renderAdminHeader(userRole);
+        renderAdminSidebar(userRole, savedPage);
+    } else {
+        document.body.className = 'bg-brown-cream min-h-screen flex overflow-x-hidden font-serif';
+        renderStoreHeader(userRole);
+        renderStoreSidebar(userRole, savedPage);
+    }
+
+    // 4. 立即执行首次切换，取消 setTimeout 的不稳定延迟
+    // 使用 requestAnimationFrame 确保 DOM 节点已在文档流中
+    requestAnimationFrame(() => {
+        window.switchPage(savedPage);
+    });
 };

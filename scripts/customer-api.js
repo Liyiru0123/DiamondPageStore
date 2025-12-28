@@ -48,26 +48,30 @@ function getCurrentMemberId() {
 }
 
 // 通用API请求函数
+
 async function apiRequest(url, options = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒强制超时
+
     try {
         const response = await fetch(API_CONFIG.baseURL + url, {
+            ...options,
+            signal: controller.signal, // 绑定超时信号
             headers: {
                 'Content-Type': 'application/json',
                 ...options.headers
-            },
-            ...options
+            }
         });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
 
         const data = await response.json();
-
-        if (!data.success) {
-            throw new Error(data.message || 'API request failed');
-        }
-
-        return data;
+        return data; // 这里确保返回的是后端定义的 {success, data, message}
     } catch (error) {
-        console.error('API Error:', error);
-        throw error;
+        clearTimeout(timeoutId);
+        console.error('--- API 请求崩溃 ---', error);
+        throw error; // 必须抛出，否则调用者会以为请求还在进行
     }
 }
 

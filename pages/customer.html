@@ -13,6 +13,7 @@
 
   <!-- 在各页面 head 标签最顶部插入 -->
   <script>
+    // [文件名]: customer.html 
     (function () {
       const token = localStorage.getItem('auth_token');
       const role = localStorage.getItem('user_role');
@@ -24,7 +25,7 @@
         return;
       }
 
-      // 2. 角色越权检查 (可选增强)
+      // 2. 角色越权检查修复
       const roleRouteMap = {
         'customer': 'customer.html',
         'staff': 'staff.html',
@@ -32,10 +33,14 @@
         'finance': 'finance.html'
       };
 
-      // 如果当前文件名不是该角色应属的页面，且不是 login.html，则强制纠正
-      if (roleRouteMap[role] && currentPage !== roleRouteMap[role] && currentPage !== 'login.html') {
-        console.warn("Access denied: Redirecting to authorized page.");
-        window.location.href = roleRouteMap[role];
+      // 如果当前角色不是 customer，且试图访问 customer.html
+      // 说明是角色残留，强制清空并去登录
+      if (role !== 'customer') {
+        console.warn("Role mismatch. Clearing session...");
+        localStorage.removeItem('user_role');
+        localStorage.removeItem('auth_token');
+        sessionStorage.removeItem('currentPage'); // 清除残留的页面ID
+        window.location.href = 'login.html';
       }
     })();
   </script>

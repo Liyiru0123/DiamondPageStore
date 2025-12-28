@@ -1,14 +1,44 @@
 // scripts/customer.js
 
+const App = {
+  async init() {
+    console.log("[App] Initializing Storefront...");
+
+    // 1. 鉴权
+    checkAuth(['customer']);
+
+    // 2. 基础数据初始化
+    initCart();
+
+    // 3. API数据挂载 (由 customer-api-integration.js 增强提供)
+    if (typeof initFavorites === 'function') {
+      await initFavorites();
+    }
+
+    // 4. 首屏渲染
+    if (typeof renderCategoryBooks === 'function') {
+      renderCategoryBooks('all');
+    }
+
+    // 5. 事件绑定
+    bindEvents();
+
+    console.log("[App] Ready.");
+  }
+};
+
+// 确保 DOM 加载后仅执行一次初始化序列
+document.addEventListener('DOMContentLoaded', () => App.init());
+
 // 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', () => {
-  checkAuth(['customer']);
-  initCart();
-  initFavorites();
-  renderDiscountBooks();
-  renderCategoryBooks('all');
-  bindEvents();
-});
+//document.addEventListener('DOMContentLoaded', () => {
+//  checkAuth(['customer']);
+//  initCart();
+//  initFavorites();
+//  renderDiscountBooks();
+//  renderCategoryBooks('all');
+//  bindEvents();
+//});
 
 // 绑定所有事件
 function bindEvents() {
@@ -31,7 +61,7 @@ function bindEvents() {
     }
   });
 
-  // 3. 顶部购物车快捷�¥口
+  // 3. 顶部购物车快捷入口
   const quickCart = document.getElementById('cart-quick-entry');
   if (quickCart) {
     quickCart.addEventListener('click', () => {
@@ -164,59 +194,19 @@ function bindEvents() {
   }
 }
 
-/**
- * 核心：页面切换与侧边栏高亮修复
- */
-function switchPage(pageId) {
-  const pages = document.querySelectorAll('.page-content');
-  pages.forEach(page => page.classList.add('hidden'));
-
-  const targetPage = document.getElementById(`${pageId}-page`);
-  if (targetPage) {
-    targetPage.classList.remove('hidden');
-    targetPage.style.opacity = '0';
-    setTimeout(() => {
-      targetPage.style.transition = 'opacity 0.3s ease';
-      targetPage.style.opacity = '1';
-    }, 50);
-
-    //执行刷新渲染
-    if (pageId === 'favorites') {
-      updateFavoritesUI();
-    }
-    if (pageId === 'member') {
-      updateMemberPageUI();
-    }
-  }
-
-  const sidebarItems = document.querySelectorAll('.sidebar-item');
-  sidebarItems.forEach(item => {
-    if (item.getAttribute('data-page') === pageId) {
-      item.classList.add('sidebar-item-active');
-    } else {
-      item.classList.remove('sidebar-item-active');
-    }
-  });
-
-  const sidebar = document.getElementById('sidebar');
-  if (window.innerWidth < 768 && sidebar) {
-    sidebar.classList.add('-translate-x-full');
-  }
-
-  window.scrollTo(0, 0);
-}
 
 // 书籍卡片模板 (确保 favCount 实时读取 book 对象)
 const bookCardTemplate = (book) => `
-  <div class="book-card-item bg-white rounded-xl shadow-sm border border-brown-light/20 hover:shadow-md transition-all duration-300 group cursor-pointer" data-id="${book.id}">
+  <div class="book-card-item bg-white rounded-xl shadow-sm border border-brown-light/20 hover:shadow-md transition-all duration-300 group cursor-pointer" 
+      data-id="${book.id}" data-isbn="${book.isbn}">
     <div class="p-5">
       <div class="flex justify-between items-start gap-2 mb-2">
         <h3 class="font-bold text-lg text-brown-dark line-clamp-2 flex-1">${book.title}</h3>
         <div class="flex flex-col items-center text-gray-400 group-hover:text-red-500 transition-colors">
-           <button class="favorite-btn" data-id="${book.id}">
-              <i class="fa ${favorites.some(f => f.id === book.id) ? 'fa-heart text-red-500' : 'fa-heart-o'} text-xl"></i>
+           <button class="favorite-btn" data-id="${book.id}" data-isbn="${book.isbn}">
+              <i class="fa ${favorites.some(f => f.isbn === book.isbn) ? 'fa-heart text-red-500' : 'fa-heart-o'} text-xl"></i>
            </button>
-           <span class="fav-count-display text-[10px] mt-1" data-id="${book.id}">${book.favCount || 0}</span>
+           <span class="fav-count-display text-[10px] mt-1" data-id="${book.isbn}">${book.favCount || 0}</span>
         </div>
       </div>
       <div class="text-sm text-gray-600 mb-3 space-y-1">
@@ -229,7 +219,8 @@ const bookCardTemplate = (book) => `
       </p>
       <div class="flex items-center justify-between pt-4 border-t border-brown-light/10">
         <span class="text-xl font-bold text-brown">¥${book.price.toFixed(2)}</span>
-        <button class="addCartBtn bg-brown hover:bg-brown-dark text-white px-4 py-1.5 rounded-full text-sm transition-colors flex items-center gap-2" data-id="${book.id}">
+        <button class="addCartBtn bg-brown hover:bg-brown-dark text-white px-4 py-1.5 rounded-full text-sm transition-colors flex items-center gap-2"
+             data-id="${book.id}" data-isbn="${book.isbn}">
           <i class="fa fa-plus"></i> Cart
         </button>
       </div>
@@ -238,32 +229,7 @@ const bookCardTemplate = (book) => `
 `;
 
 function renderCategoryBooks(category) {
-  const container = document.getElementById('category-books');
-  const sortVal = document.getElementById('category-sort-filter')?.value || 'default';
-  if (!container) return;
-
-  // 1. 过滤逻辑
-  let filteredBooks = category === 'all'
-    ? [...mockBooks]
-    : mockBooks.filter(book =>
-      book.category.toLowerCase().includes(category.toLowerCase())
-    );
-
-  // 2. 排序逻辑 (TODO: 待替换为后端�¥口)
-  // 此处目前为前端纯逻辑排序
-  if (sortVal === 'fav-desc') {
-    filteredBooks.sort((a, b) => (b.favCount || 0) - (a.favCount || 0));
-  }
-
-  if (filteredBooks.length === 0) {
-    container.innerHTML = '<p class="text-center py-10 col-span-full text-gray-500 italic">No books found in this category.</p>';
-    return;
-  }
-
-  container.innerHTML = filteredBooks.map(bookCardTemplate).join('');
-
-  bindCartAndFavoriteEvents();
-  bindBookCardClickEvents();
+  console.warn("[App] renderCategoryBooks needs API integration.");
 }
 
 function renderDiscountBooks() {
@@ -794,15 +760,15 @@ function saveProfile() {
   const user = JSON.parse(localStorage.getItem('current_user') || '{}');
   user.username = newUsername;
   user.email = newEmail;
-  if(newPassword) user.password = newPassword; // 实际场景需加密
+  if (newPassword) user.password = newPassword; // 实际场景需加密
 
   localStorage.setItem('current_user', JSON.stringify(user));
-  
+
   // TODO: 待替换为后端�¥口 updateProfileAPI({userId: user.id, username: newUsername, email: newEmail, password: newPassword})
-  
+
   showAlert("Profile updated successfully!");
   document.getElementById('profile-modal').classList.add('hidden');
-  
+
   // 如果 Header 有显示用户名，此处可触发刷新逻辑
 }
 

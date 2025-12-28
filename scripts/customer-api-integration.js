@@ -5,6 +5,7 @@
 // ========== Global Variables ==========
 let allBooks = []; // Cache all books fetched from API
 let ordersCache = []; // Cache orders list from API
+let favorites = favorites || [];
 function getBookById(id) {
     return allBooks.find(book => book.id === id) || null;
 }
@@ -94,50 +95,60 @@ async function renderCategoryBooks(category) {
 /**
  * Search books (using API)
  */
+
 async function searchBooks(keyword) {
-    if (!keyword) {
-        showAlert('Please enter a search keyword');
-        return;
-    }
+    if (!keyword) return showAlert('Please enter keywords');
 
     const resultsContainer = document.getElementById('search-results');
     const noResults = document.getElementById('no-results');
-    const keywordSpan = document.getElementById('search-keyword');
-
-    // Switch to search page
+    
+    // 1. UI 锁定与清理
     switchPage('search');
-
-    // Show loading state
-    resultsContainer.innerHTML = '<div class="col-span-full text-center py-10"><i class="fa fa-spinner fa-spin text-brown text-2xl"></i> Searching...</div>';
+    resultsContainer.innerHTML = `<div class="col-span-full py-20 text-center" id="search-spinner">
+        <i class="fa fa-spinner fa-spin text-3xl text-brown"></i>
+        <p class="mt-2 text-sm text-gray-500">Searching store...</p>
+    </div>`;
     noResults.classList.add('hidden');
 
     try {
-        const priceRange = document.getElementById('price-filter')?.value || 'all';
-        const language = document.getElementById('language-filter')?.value || 'all';
-        const sortBy = document.getElementById('sort-filter')?.value || 'default';
+        const filters = {
+            priceRange: document.getElementById('price-filter')?.value || 'all',
+            language: document.getElementById('language-filter')?.value || 'all',
+            sortBy: document.getElementById('sort-filter')?.value || 'default'
+        };
 
-        const filters = { priceRange, language, sortBy };
-        const books = await searchBooksAPI(keyword, filters);
-        allBooks = books;
+        // 2. 发起请求
+        const response = await searchBooksAPI(keyword, filters);
+        
+        // 关键逻辑：确保 response.data 是数组且存在
+        const books = (response && response.success) ? response.data : [];
+        allBooks = books; // 更新全局缓存供详情页使用
 
-        if (keywordSpan) {
-            keywordSpan.textContent = `"${keyword}"`;
-        }
-
+        // 3. 渲染
         if (books.length === 0) {
             resultsContainer.innerHTML = '';
             noResults.classList.remove('hidden');
-            return;
+        } else {
+            noResults.classList.add('hidden');
+            // 容错处理：确保 book 对象包含必要字段再渲染
+            resultsContainer.innerHTML = books.map(book => {
+                if(!book.isbn) book.isbn = `temp-${book.id}`; // 临时补齐 ISBN 防止崩溃
+                return bookCardTemplate(book);
+            }).join('');
+            
+            bindCartAndFavoriteEvents();
+            bindBookCardClickEvents();
         }
-
-        noResults.classList.add('hidden');
-        resultsContainer.innerHTML = books.map(book => bookCardTemplate(book)).join('');
-        bindCartAndFavoriteEvents();
-        bindBookCardClickEvents();
     } catch (error) {
-        console.error('Search failed:', error);
-        resultsContainer.innerHTML = '<p class="col-span-full text-center py-10 text-red-500">Search failed. Please try again.</p>';
-        showAlert('Search failed');
+        console.error("[Search] Failed:", error);
+        resultsContainer.innerHTML = `<div class="col-span-full text-center py-10 text-red-500">
+            <i class="fa fa-exclamation-triangle mb-2"></i>
+            <p>Service temporarily unavailable. Please try again later.</p>
+        </div>`;
+    } finally {
+        // 无论如何移除特定的 Spinner 占位符
+        const spinner = document.getElementById('search-spinner');
+        if (spinner) spinner.remove();
     }
 }
 
@@ -146,43 +157,32 @@ async function searchBooks(keyword) {
 /**
  * Toggle favorite status (using API)
  */
-async function toggleFavorite(bookId) {
-    const id = parseInt(bookId);
-    const book = allBooks.find(b => b.id === id);
+async function toggleFavorite(isbn) {
+    // 根据 ISBN 查找当前缓存中的书籍数据
+    const book = allBooks.find(b => b.isbn === isbn);
+    if (!book) return;
 
-    if (!book) {
-        showAlert('Book not found');
-        return;
-    }
-
-    const index = favorites.findIndex(f => f.id === id);
+    const index = favorites.findIndex(f => f.isbn === isbn);
     const isCurrentlyFavorited = index > -1;
 
     try {
         if (isCurrentlyFavorited) {
-            // Remove from favorites
-            await removeFavoriteAPI(book.isbn);
+            await removeFavoriteAPI(isbn); // 调用 API 的唯一主键 ISBN
             favorites.splice(index, 1);
             book.favCount = Math.max(0, (book.favCount || 0) - 1);
-            showAlert('Removed from favorites');
         } else {
-            // Add to favorites
-            await addFavoriteAPI(book.isbn);
+            await addFavoriteAPI(isbn);
             favorites.push(book);
             book.favCount = (book.favCount || 0) + 1;
-            showAlert('Added to favorites!');
         }
 
-        // Update UI
-        updateFavoriteButtons();
-
-        // If on favorites page, refresh list
+        // 响应式更新：自动同步全站收藏按钮和详情弹窗
+        updateFavoriteButtons(); 
         if (!document.getElementById('favorites-page').classList.contains('hidden')) {
             updateFavoritesUI();
         }
     } catch (error) {
-        console.error('Failed to toggle favorite:', error);
-        showAlert('Failed to update favorite');
+        showAlert('Action failed. Please check network.');
     }
 }
 
@@ -298,38 +298,32 @@ function bindBookCardClickEvents() {
  * Handle checkout (using API)
  */
 async function handleCheckout() {
-    if (cart.length === 0) {
-        showAlert("Cart is empty");
-        return;
-    }
+    if (cart.length === 0) return showAlert("Cart is empty");
 
-    // Show loading state
     const checkoutBtn = document.getElementById('proceed-checkout');
-    const originalText = checkoutBtn.innerHTML;
-    checkoutBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Creating order...';
+    // --- UI 锁定：开始 ---
+    const originalContent = checkoutBtn.innerHTML;
     checkoutBtn.disabled = true;
+    checkoutBtn.classList.add('opacity-75', 'cursor-not-allowed');
+    checkoutBtn.innerHTML = `<i class="fa fa-spinner fa-spin mr-2"></i> Processing...`;
 
     try {
         const response = await createOrderAPI(cart);
-
         if (response.success) {
-            // Clear shopping cart
             cart = [];
             localStorage.setItem('bookCart', JSON.stringify(cart));
             updateCartUI();
-
-            showAlert("Order created! Please pay within 30 minutes.");
-            switchPage('orders');
-            renderOrdersUI('all');
-        } else {
-            showAlert(response.message || "Failed to create order");
+            showAlert("Order created successfully!");
+            switchPage('orders'); // 内部会自动触发响应式渲染 renderOrdersUI
         }
     } catch (error) {
         console.error('Checkout failed:', error);
-        showAlert('Failed to create order. Please try again.');
+        showAlert('Checkout failed. Please try again.');
     } finally {
-        checkoutBtn.innerHTML = originalText;
+        // --- UI 释放：结束 ---
         checkoutBtn.disabled = false;
+        checkoutBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+        checkoutBtn.innerHTML = originalContent;
     }
 }
 
@@ -720,7 +714,7 @@ async function updateCartUI() {
                             <span class="px-2">${item.quantity}</span>
                             <button class="cart-plus p-1 w-8 h-8" data-id="${item.id}">+</button>
                         </div>
-                        <span class="font-bold text-red-600 w-20 text-right">?${itemTotal.toFixed(2)}</span>
+                        <span class="font-bold text-red-600 w-20 text-right">¥${itemTotal.toFixed(2)}</span>
                         <button class="cart-remove text-gray-400 hover:text-red-500" data-id="${item.id}"><i class="fa fa-trash"></i></button>
                     </div>
                 </div>
@@ -730,13 +724,13 @@ async function updateCartUI() {
         if (discount > 0) {
             cartTotal.innerHTML = `
                 <div class="text-right space-y-1">
-                    <p class="text-gray-600">Subtotal: <span class="font-bold">?${subtotal.toFixed(2)}</span></p>
-                    <p class="text-green-600">Member Discount (${discountPercent}%): <span class="font-bold">-?${discount.toFixed(2)}</span></p>
-                    <p class="text-xl text-brown-dark">Total: <span class="font-bold">?${totalPrice.toFixed(2)}</span></p>
+                    <p class="text-gray-600">Subtotal: <span class="font-bold">¥${subtotal.toFixed(2)}</span></p>
+                    <p class="text-green-600">Member Discount (${discountPercent}%): <span class="font-bold">-¥${discount.toFixed(2)}</span></p>
+                    <p class="text-xl text-brown-dark">Total: <span class="font-bold">¥${totalPrice.toFixed(2)}</span></p>
                 </div>
             `;
         } else {
-            cartTotal.textContent = `?${totalPrice.toFixed(2)}`;
+            cartTotal.textContent = `¥${totalPrice.toFixed(2)}`;
         }
 
         bindCartItemEvents();
