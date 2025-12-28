@@ -1,23 +1,23 @@
 // scripts/customer-api-integration.js
-// 此文件覆盖customer.js中的函数，将模拟数据替换为API调用
-// 必须在customer.js之后加载
+// This file overrides functions in customer.js, replacing mock data with API calls
+// Must be loaded after customer.js
 
-// ========== 全局变量 ==========
-let allBooks = []; // �����API��ȡ�������鼮
-let ordersCache = []; // ��API�������¶����б�
+// ========== Global Variables ==========
+let allBooks = []; // Cache all books fetched from API
+let ordersCache = []; // Cache orders list from API
 function getBookById(id) {
     return allBooks.find(book => book.id === id) || null;
 }
 
-// ========== 初始化函数覆�?==========
+// ========== Initialization Function Overrides ==========
 
 /**
- * 初始化收藏（从API获取�?
+ * Initialize favorites (fetch from API)
  */
 async function initFavorites() {
     try {
         favorites = await fetchFavorites();
-        // 转换为前端需要的格式
+        // Convert to frontend required format
         favorites = favorites.map(fav => ({
             id: fav.id,
             isbn: fav.isbn,
@@ -31,7 +31,7 @@ async function initFavorites() {
             binding: fav.binding,
             stock: fav.stock,
             storeName: fav.storeName,
-            favCount: 0 // 收藏数由书籍数据提供
+            favCount: 0 // Favorite count provided by book data
         }));
         updateFavoriteButtons();
     } catch (error) {
@@ -41,22 +41,22 @@ async function initFavorites() {
 }
 
 /**
- * 渲染折扣书籍（暂时使用普通书籍列表）
+ * Render discount books (currently using regular book list)
  */
 async function renderDiscountBooks() {
     try {
         const books = await fetchBooks({ sortBy: 'popular' });
-        allBooks = books; // 缓存数据
-        // 这里可�\uFFE5添加折扣书籍的渲染逻辑
+        allBooks = books; // Cache data
+        // Additional discount book rendering logic can be added here
     } catch (error) {
         console.error('Failed to load discount books:', error);
     }
 }
 
-// ========== 书籍相关函数覆盖 ==========
+// ========== Book-Related Function Overrides ==========
 
 /**
- * 渲染分类书籍（使用API�?
+ * Render category books (using API)
  */
 async function renderCategoryBooks(category) {
     const container = document.getElementById('category-books');
@@ -64,7 +64,7 @@ async function renderCategoryBooks(category) {
 
     if (!container) return;
 
-    // 显示加载状�?
+    // Show loading state
     container.innerHTML = '<div class="col-span-full text-center py-10"><i class="fa fa-spinner fa-spin text-brown text-2xl"></i> Loading...</div>';
 
     try {
@@ -74,7 +74,7 @@ async function renderCategoryBooks(category) {
         };
 
         const books = await fetchBooks(filters);
-        allBooks = books; // 缓存
+        allBooks = books; // Cache books data
 
         if (books.length === 0) {
             container.innerHTML = '<p class="text-center py-10 col-span-full text-gray-500 italic">No books found in this category.</p>';
@@ -92,7 +92,7 @@ async function renderCategoryBooks(category) {
 }
 
 /**
- * 搜索书籍（使用API�?
+ * Search books (using API)
  */
 async function searchBooks(keyword) {
     if (!keyword) {
@@ -104,10 +104,10 @@ async function searchBooks(keyword) {
     const noResults = document.getElementById('no-results');
     const keywordSpan = document.getElementById('search-keyword');
 
-    // 切换到搜索页�?
+    // Switch to search page
     switchPage('search');
 
-    // 显示加载状�?
+    // Show loading state
     resultsContainer.innerHTML = '<div class="col-span-full text-center py-10"><i class="fa fa-spinner fa-spin text-brown text-2xl"></i> Searching...</div>';
     noResults.classList.add('hidden');
 
@@ -141,10 +141,10 @@ async function searchBooks(keyword) {
     }
 }
 
-// ========== 收藏相关函数覆盖 ==========
+// ========== Favorites-Related Function Overrides ==========
 
 /**
- * 切换收藏状态（使用API�?
+ * Toggle favorite status (using API)
  */
 async function toggleFavorite(bookId) {
     const id = parseInt(bookId);
@@ -160,23 +160,23 @@ async function toggleFavorite(bookId) {
 
     try {
         if (isCurrentlyFavorited) {
-            // 取消收藏
+            // Remove from favorites
             await removeFavoriteAPI(book.isbn);
             favorites.splice(index, 1);
             book.favCount = Math.max(0, (book.favCount || 0) - 1);
             showAlert('Removed from favorites');
         } else {
-            // 添加收藏
+            // Add to favorites
             await addFavoriteAPI(book.isbn);
             favorites.push(book);
             book.favCount = (book.favCount || 0) + 1;
             showAlert('Added to favorites!');
         }
 
-        // 更新UI
+        // Update UI
         updateFavoriteButtons();
 
-        // 如果在收藏页，刷新列�?
+        // If on favorites page, refresh list
         if (!document.getElementById('favorites-page').classList.contains('hidden')) {
             updateFavoritesUI();
         }
@@ -187,13 +187,13 @@ async function toggleFavorite(bookId) {
 }
 
 /**
- * 更新收藏页面UI（使用API数据�?
+ * Update favorites page UI (using API data)
  */
 async function updateFavoritesUI() {
     const container = document.getElementById('favorites-list');
     if (!container) return;
 
-    // 显示加载状�?
+    // Show loading state
     container.innerHTML = '<div class="col-span-full text-center py-10"><i class="fa fa-spinner fa-spin text-brown text-2xl"></i> Loading favorites...</div>';
 
     try {
@@ -204,7 +204,7 @@ async function updateFavoritesUI() {
             return;
         }
 
-        // 转换为前端格式并渲染
+        // Convert to frontend format and render
         const favBooks = favorites.map(fav => ({
             id: fav.id,
             isbn: fav.isbn,
@@ -292,10 +292,10 @@ function bindBookCardClickEvents() {
     });
 }
 
-// ========== 订单相关函数覆盖 ==========
+// ========== Order-Related Function Overrides ==========
 
 /**
- * 处理结账（使用API�?
+ * Handle checkout (using API)
  */
 async function handleCheckout() {
     if (cart.length === 0) {
@@ -303,7 +303,7 @@ async function handleCheckout() {
         return;
     }
 
-    // 显示加载状�?
+    // Show loading state
     const checkoutBtn = document.getElementById('proceed-checkout');
     const originalText = checkoutBtn.innerHTML;
     checkoutBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Creating order...';
@@ -313,7 +313,7 @@ async function handleCheckout() {
         const response = await createOrderAPI(cart);
 
         if (response.success) {
-            // 清空购物�?
+            // Clear shopping cart
             cart = [];
             localStorage.setItem('bookCart', JSON.stringify(cart));
             updateCartUI();
@@ -334,7 +334,7 @@ async function handleCheckout() {
 }
 
 /**
- * 渲染订单UI（使用API�?
+ * Render orders UI (using API)
  */
 async function renderOrdersUI(filterStatus = 'all') {
     const list = document.getElementById('orders-list');
@@ -342,7 +342,7 @@ async function renderOrdersUI(filterStatus = 'all') {
 
     if (!list) return;
 
-    // 显示加载状�?
+    // Show loading state
     list.innerHTML = '<div class="text-center py-10"><i class="fa fa-spinner fa-spin text-brown text-2xl"></i> Loading orders...</div>';
 
     try {
@@ -360,7 +360,7 @@ async function renderOrdersUI(filterStatus = 'all') {
 
         if (footer) footer.classList.remove('hidden');
 
-        // 渲染订单列表
+        // Render order list
         list.innerHTML = orders.map(order => renderOrderCard(order)).join('');
         updateOrderFooterUI();
     } catch (error) {
@@ -414,7 +414,7 @@ function renderOrderCard(order) {
 }
 
 /**
- * 处理支付执行（使用API�?
+ * Handle payment execution (using API)
  */
 async function handlePaymentExecution() {
     const btnText = document.getElementById('pay-btn-text');
@@ -427,17 +427,17 @@ async function handlePaymentExecution() {
         const selectedIds = pendingPayIds;
 
         if (selectedIds.length === 1) {
-            // 单个订单支付
+            // Single order payment
             await payOrderAPI(selectedIds[0]);
         } else {
-            // 多个订单合并支付
+            // Multiple orders combined payment
             await payMultipleOrdersAPI(selectedIds);
         }
 
         document.getElementById('payment-modal').classList.add('hidden');
         showAlert("Payment successful!");
 
-        // 刷新订单列表
+        // Refresh order list
         const activeStatus = document.querySelector('.order-status-btn.bg-brown')?.dataset.status || 'all';
         await renderOrdersUI(activeStatus);
     } catch (error) {
@@ -450,7 +450,7 @@ async function handlePaymentExecution() {
 }
 
 /**
- * 处理取消订单（使用API�?
+ * Handle order cancellation (using API)
  */
 async function handleCancelOrderClick(orderId) {
     if (!confirm("Are you sure you want to cancel this order?")) return;
@@ -459,7 +459,7 @@ async function handleCancelOrderClick(orderId) {
         await cancelOrderAPI(orderId, 'User Cancelled');
         showAlert("Order cancelled.");
 
-        // 刷新订单列表
+        // Refresh order list
         const activeStatus = document.querySelector('.order-status-btn.bg-brown')?.dataset.status || 'all';
         await renderOrdersUI(activeStatus);
     } catch (error) {
@@ -518,10 +518,10 @@ function updateOrderFooterUI() {
     if (mergeBtn) mergeBtn.disabled = selectedIds.length === 0;
 }
 
-// ========== 会员相关函数覆盖 ==========
+// ========== Member-Related Function Overrides ==========
 
 /**
- * 更新会员页面UI（使用API�?
+ * Update member page UI (using API)
  */
 async function updateMemberPageUI() {
     const memberId = getCurrentMemberId();
@@ -530,21 +530,21 @@ async function updateMemberPageUI() {
         const memberInfo = await fetchMemberInfo();
         const tiers = await fetchMemberTiers();
 
-        // 填充会员信息
+        // Populate member information
         document.getElementById('display-user-name').textContent = memberInfo.username || memberInfo.firstName;
         document.getElementById('member-total-spent').textContent = `\uFFE5${memberInfo.totalSpent.toFixed(2)}`;
         document.getElementById('member-points').textContent = memberInfo.points.toLocaleString();
         document.getElementById('member-level-badge').textContent = memberInfo.tier.name;
 
-        // 使用后端计算的折扣百分比
+        // Use backend-calculated discount percentage
         document.getElementById('member-discount-text').textContent = `${memberInfo.tier.discountPercent}%`;
 
-        // 渲染等级卡片
+        // Render tier cards
         const tierContainer = document.getElementById('member-tier-cards');
         if (tierContainer) {
             tierContainer.innerHTML = tiers.map(tier => {
                 const isCurrent = memberInfo.tier.tierId === tier.tierId;
-                // 使用后端计算的折扣百分比
+                // Use backend-calculated discount percentage
                 return `
                     <div class="p-4 border-2 rounded-xl transition-all ${isCurrent ? 'border-brown bg-brown/5 shadow-md' : 'border-gray-100 opacity-60'}">
                         <i class="fa fa-trophy text-${isCurrent ? 'brown' : 'gray-400'} text-2xl mb-2"></i>
@@ -563,10 +563,10 @@ async function updateMemberPageUI() {
     }
 }
 
-// ========== 个人资料相关函数覆盖 ==========
+// ========== Profile-Related Function Overrides ==========
 
 /**
- * 打开个人资料弹窗（使用API获取数据�?
+ * Open profile modal (fetch data from API)
  */
 async function openProfileModal() {
     try {
@@ -584,7 +584,7 @@ async function openProfileModal() {
 }
 
 /**
- * 保存个人资料（使用API�?
+ * Save profile (using API)
  */
 async function saveProfile() {
     const username = document.getElementById('profile-username').value;
@@ -596,9 +596,9 @@ async function saveProfile() {
             first_name: username.split(' ')[0] || username,
             last_name: username.split(' ')[1] || '',
             email: email,
-            phone: 0, // 需要从表单获取
-            address: '', // 需要从表单获取
-            birthday: null // 需要从表单获取
+            phone: 0, // TODO: Get from form
+            address: '', // TODO: Get from form
+            birthday: null // TODO: Get from form
         };
 
         await updateProfileAPI(profileData);
@@ -610,15 +610,15 @@ async function saveProfile() {
     }
 }
 
-// ========== 公告相关函数覆盖 ==========
+// ========== Announcement-Related Function Overrides ==========
 
 /**
- * 打开历史公告（使用API�?
+ * Open historical announcements (using API)
  */
 async function openAnnouncements() {
     const container = document.getElementById('announcement-list');
 
-    // 显示加载状�?
+    // Show loading state
     container.innerHTML = '<div class="text-center py-10"><i class="fa fa-spinner fa-spin text-brown text-2xl"></i> Loading...</div>';
 
     try {
@@ -641,11 +641,11 @@ async function openAnnouncements() {
     }
 }
 
-// ========== 购物车相关函数覆盖 ==========
+// ========== Shopping Cart-Related Function Overrides ==========
 
 /**
- * 更新购物车UI（使用后端API计算价格）
- * 替代前端价格计算，防止价格篡改
+ * Update cart UI (calculate prices using backend API)
+ * Replaces frontend price calculation to prevent price tampering
  */
 async function updateCartUI() {
     const cartList = document.getElementById('cart-list');
@@ -749,14 +749,14 @@ async function updateCartUI() {
     }
 }
 
-// ========== 页面切换时的数据刷新 ==========
+// ========== Data Refresh on Page Switch ==========
 
-// 覆盖原有的switchPage，增加数据刷�?
+// Override original switchPage to add data refresh
 const originalSwitchPage = switchPage;
 switchPage = function(pageId) {
     originalSwitchPage(pageId);
 
-    // 页面切换时刷新数�?
+    // Refresh data when switching pages
     if (pageId === 'favorites') {
         updateFavoritesUI();
     }
@@ -772,5 +772,5 @@ switchPage = function(pageId) {
     }
 };
 
-console.log('�?API integration loaded successfully');
+console.log('Customer API integration loaded successfully');
 

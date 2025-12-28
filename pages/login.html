@@ -13,48 +13,97 @@
 <body class="bg-brown-cream min-h-screen flex items-center justify-center p-6">
     <div class="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-brown-light/20">
         <div class="p-8">
-            <div class="text-center mb-8">
-                <h1 class="text-3xl font-serif font-bold text-brown-dark">Welcome Back</h1>
-                <p class="text-gray-500 mt-2">Please enter your details to sign in</p>
+            <!-- 第一步：身份选择界面 -->
+            <div id="identity-section" class="space-y-6">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-serif font-bold text-brown-dark">Identify Yourself</h1>
+                    <p class="text-gray-500 mt-2">Please select your role to continue</p>
+                </div>
+                <div class="grid grid-cols-1 gap-4">
+                    <button id="select-staff"
+                        class="group p-6 border-2 border-brown-light/30 rounded-xl hover:border-brown hover:bg-brown/5 transition-all text-left">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-bold text-brown-dark">Staff Member</h3>
+                                <p class="text-sm text-gray-500">Store Manager, Sales, or Finance</p>
+                            </div>
+                            <i
+                                class="fa fa-chevron-right text-brown-light group-hover:text-brown transition-colors"></i>
+                        </div>
+                    </button>
+                    <button id="select-user"
+                        class="group p-6 border-2 border-brown-light/30 rounded-xl hover:border-brown hover:bg-brown/5 transition-all text-left">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-bold text-brown-dark">Customer</h3>
+                                <p class="text-sm text-gray-500">Shopping, Track Orders, or Register</p>
+                            </div>
+                            <i
+                                class="fa fa-chevron-right text-brown-light group-hover:text-brown transition-colors"></i>
+                        </div>
+                    </button>
+                </div>
             </div>
 
-            <form id="login-form" class="space-y-5">
-                <div>
-                    <label class="block text-sm font-bold text-brown-dark mb-1">Username</label>
-                    <input type="text" id="username" required
-                        class="w-full px-4 py-3 rounded-lg border border-brown-light focus:ring-2 focus:ring-brown focus:outline-none transition-all"
-                        placeholder="Enter your username">
-                </div>
-                <div>
-                    <label class="block text-sm font-bold text-brown-dark mb-1">Password</label>
-                    <input type="password" id="password" required
-                        class="w-full px-4 py-3 rounded-lg border border-brown-light focus:ring-2 focus:ring-brown focus:outline-none transition-all"
-                        placeholder="••••••••">
-                </div>
-                <div>
-                    <label class="block text-sm font-bold text-brown-dark mb-1">Login Role</label>
-                    <select id="role"
-                        class="w-full px-4 py-3 rounded-lg border border-brown-light focus:ring-2 focus:ring-brown focus:outline-none transition-all bg-white">
-                        <option value="customer">Customer</option>
-                        <option value="staff">Sales Staff</option>
-                        <option value="manager">Store Manager</option>
-                        <option value="finance">Finance Staff</option>
-                    </select>
-                </div>
-                <button type="submit" id="login-submit-btn"
-                    class="w-full bg-brown text-white py-3 rounded-lg font-bold hover:bg-brown-dark transition-all shadow-md active:scale-[0.98] flex justify-center items-center">
-                    <span>Sign In</span>
-                    <!-- 预留加载状态，初始隐藏 -->
-                    <i id="login-spinner" class="fa fa-spinner fa-spin ml-2 hidden"></i>
+            <!-- 第二步：认证界面 (初始隐藏) -->
+            <div id="auth-section" class="hidden">
+                <button id="back-to-identity"
+                    class="mb-4 text-sm text-gray-500 hover:text-brown flex items-center gap-1 transition-colors">
+                    <i class="fa fa-arrow-left"></i> Back to selection
                 </button>
 
-                <!-- 注册按钮 -->
-                <p class="text-center text-sm text-gray-500 mt-4">
-                    Don't have an account?
-                    <a href="#" class="text-brown font-bold hover:underline">Register Now</a>
-                </p>
-            </form>
+                <div class="text-center mb-8">
+                    <h1 id="auth-title" class="text-3xl font-serif font-bold text-brown-dark">Welcome Back</h1>
+                    <p id="auth-subtitle" class="text-gray-500 mt-2">Please enter your details</p>
+                </div>
+
+                <!-- 原有的 login-form 移入此处 -->
+                <form id="login-form" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-bold text-brown-dark mb-1">Username</label>
+                        <input type="text" id="username" required
+                            class="w-full px-4 py-3 rounded-lg border border-brown-light focus:ring-2 focus:ring-brown focus:outline-none transition-all"
+                            placeholder="Enter your username">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-brown-dark mb-1">Password</label>
+                        <input type="password" id="password" required
+                            class="w-full px-4 py-3 rounded-lg border border-brown-light focus:ring-2 focus:ring-brown focus:outline-none transition-all"
+                            placeholder="••••••••">
+                    </div>
+                    <div id="confirm-password-wrapper" class="hidden">
+                        <label class="block text-sm font-bold text-brown-dark mb-1">Confirm Password</label>
+                        <input type="password" id="confirm-password"
+                            class="w-full px-4 py-3 rounded-lg border border-brown-light focus:ring-2 focus:ring-brown focus:outline-none transition-all"
+                            placeholder="••••••••">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-brown-dark mb-1">Login Role</label>
+                        <select id="role"
+                            class="w-full px-4 py-3 rounded-lg border border-brown-light focus:ring-2 focus:ring-brown focus:outline-none transition-all bg-white">
+                            <option value="customer">Customer</option>
+                            <option value="staff">Sales Staff</option>
+                            <option value="manager">Store Manager</option>
+                            <option value="finance">Finance Staff</option>
+                        </select>
+                    </div>
+                    <button type="submit" id="login-submit-btn"
+                        class="w-full bg-brown text-white py-3 rounded-lg font-bold hover:bg-brown-dark transition-all shadow-md active:scale-[0.98] flex justify-center items-center">
+                        <span>Sign In</span>
+                        <!-- 预留加载状态，初始隐藏 -->
+                        <i id="login-spinner" class="fa fa-spinner fa-spin ml-2 hidden"></i>
+                    </button>
+
+                    <!-- 注册按钮 -->
+                    <p class="text-center text-sm text-gray-500 mt-4">
+                        <span id="switch-text">Don't have an account?</span>
+                        <a href="javascript:void(0)" id="auth-switch-btn"
+                            class="text-brown font-bold hover:underline">Register Now</a>
+                    </p>
+                </form>
+            </div>
         </div>
+    </div>
     </div>
     <script src="../scripts/common.js"></script>
     <script src="../scripts/login.js"></script>

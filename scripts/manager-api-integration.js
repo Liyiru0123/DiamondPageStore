@@ -6,15 +6,74 @@
 const MANAGER_CURRENCY_LABEL = 'CNY';
 
 // =============================================================================
+// HTML Escaping Function (XSS Protection)
+// =============================================================================
+
+/**
+ * Escapes HTML special characters to prevent XSS attacks
+ * @param {string} str - The string to escape
+ * @returns {string} - The escaped string
+ */
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(str);
+    return div.innerHTML;
+}
+
+// =============================================================================
+// Loading State Management
+// =============================================================================
+
+let loadingCount = 0;
+
+/**
+ * Shows a loading indicator
+ * @param {string} targetId - Optional ID of element to show loading on
+ */
+function showLoading(targetId) {
+    loadingCount++;
+    if (targetId) {
+        const target = document.getElementById(targetId);
+        if (target) {
+            const spinner = document.createElement('div');
+            spinner.className = 'loading-spinner';
+            spinner.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Loading...';
+            spinner.style.cssText = 'text-align: center; padding: 20px; color: #666;';
+            target.dataset.originalContent = target.innerHTML;
+            target.innerHTML = '';
+            target.appendChild(spinner);
+        }
+    }
+}
+
+/**
+ * Hides the loading indicator
+ * @param {string} targetId - Optional ID of element to hide loading from
+ */
+function hideLoading(targetId) {
+    loadingCount = Math.max(0, loadingCount - 1);
+    if (targetId) {
+        const target = document.getElementById(targetId);
+        if (target && target.dataset.originalContent) {
+            target.innerHTML = target.dataset.originalContent;
+            delete target.dataset.originalContent;
+        }
+    }
+}
+
+// =============================================================================
 // Staff Management
 // =============================================================================
 
 async function loadStaffData() {
+    const tableBody = document.getElementById('staff-table-body');
+    if (!tableBody) return;
+
+    showLoading('staff-table-body');
     try {
         const employees = await fetchEmployeesAPI();
-        const tableBody = document.getElementById('staff-table-body');
         const staffCount = document.getElementById('staff-count');
-        if (!tableBody) return;
 
         tableBody.innerHTML = '';
 
@@ -32,16 +91,16 @@ async function loadStaffData() {
             row.dataset.position = position;
 
             row.innerHTML = `
-                <td class="px-4 py-4 text-sm font-medium">${employee.employee_id}</td>
-                <td class="px-4 py-4 text-sm">${employee.user_id}</td>
-                <td class="px-4 py-4 text-sm">${employee.store_name}</td>
-                <td class="px-4 py-4 text-sm">${employee.full_name}</td>
+                <td class="px-4 py-4 text-sm font-medium">${escapeHtml(employee.employee_id)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(employee.user_id)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(employee.store_name)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(employee.full_name)}</td>
                 <td class="px-4 py-4 text-sm">
                     <span class="px-2 py-1 text-xs ${position === 'manager' ? 'role-manager' : position === 'finance' ? 'role-finance' : 'role-staff'} rounded-full">
-                        ${employee.job_title || 'Staff'}
+                        ${escapeHtml(employee.job_title || 'Staff')}
                     </span>
                 </td>
-                <td class="px-4 py-4 text-sm">${employee.phone}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(employee.phone)}</td>
                 <td class="px-4 py-4 text-sm">
                     <div class="flex gap-2">
                         <button class="text-primary hover:text-primary/80 edit-staff" title="Edit">
@@ -66,7 +125,10 @@ async function loadStaffData() {
         addStaffActionButtonListeners();
     } catch (error) {
         console.error('Failed to load staff data:', error);
+        tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-red-600">Failed to load staff data</td></tr>';
         showMessage('Failed to load staff data: ' + error.message, 'error');
+    } finally {
+        hideLoading('staff-table-body');
     }
 }
 
@@ -120,27 +182,27 @@ function addStaffActionButtonListeners() {
 // =============================================================================
 
 async function loadPricingData() {
+    const tableBody = document.getElementById('pricing-table-body');
+    if (!tableBody) return;
+
+    showLoading('pricing-table-body');
     try {
         const books = await fetchBooksAPI();
-
-        const tableBody = document.getElementById('pricing-table-body');
-        if (!tableBody) return;
-
         tableBody.innerHTML = '';
 
         books.forEach(book => {
             const row = document.createElement('tr');
             row.className = 'hover:bg-gray-50';
             row.innerHTML = `
-                <td class="px-6 py-4">${book.ISBN}</td>
-                <td class="px-6 py-4">${book.name}</td>
-                <td class="px-6 py-4">${book.authors || 'Unknown'}</td>
-                <td class="px-6 py-4">${book.publisher}</td>
-                <td class="px-6 py-4">${book.binding}</td>
+                <td class="px-6 py-4">${escapeHtml(book.ISBN)}</td>
+                <td class="px-6 py-4">${escapeHtml(book.name)}</td>
+                <td class="px-6 py-4">${escapeHtml(book.authors || 'Unknown')}</td>
+                <td class="px-6 py-4">${escapeHtml(book.publisher)}</td>
+                <td class="px-6 py-4">${escapeHtml(book.binding)}</td>
                 <td class="px-6 py-4">${MANAGER_CURRENCY_LABEL} ${parseFloat(book.unit_price).toFixed(2)}</td>
-                <td class="px-6 py-4">${book.total_stock}</td>
+                <td class="px-6 py-4">${escapeHtml(book.total_stock)}</td>
                 <td class="px-6 py-4">
-                    <button onclick="editPricing(${book.sku_id}, '${book.name}', ${book.unit_price})"
+                    <button onclick="editPricing(${book.sku_id}, '${escapeHtml(book.name)}', ${book.unit_price})"
                         class="text-primary hover:text-primary-dark">
                         <i class="fa fa-edit"></i> Edit Price
                     </button>
@@ -150,7 +212,10 @@ async function loadPricingData() {
         });
     } catch (error) {
         console.error('Failed to load pricing data:', error);
+        tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-red-600">Failed to load pricing data</td></tr>';
         showMessage('Failed to load pricing data: ' + error.message, 'error');
+    } finally {
+        hideLoading('pricing-table-body');
     }
 }
 
@@ -194,11 +259,11 @@ async function loadNotifications() {
             item.innerHTML = `
                 <div class="flex justify-between items-start">
                     <div>
-                        <h4 class="font-semibold text-gray-900">${notif.title}</h4>
-                        <p class="text-sm text-gray-600 mt-1">${notif.content}</p>
+                        <h4 class="font-semibold text-gray-900">${escapeHtml(notif.title)}</h4>
+                        <p class="text-sm text-gray-600 mt-1">${escapeHtml(notif.content)}</p>
                         <p class="text-xs text-gray-500 mt-2">
-                            Publish: ${new Date(notif.publish_at).toLocaleString()}
-                            ${notif.expire_at ? ` | Expire: ${new Date(notif.expire_at).toLocaleString()}` : ''}
+                            Publish: ${escapeHtml(new Date(notif.publish_at).toLocaleString())}
+                            ${notif.expire_at ? ` | Expire: ${escapeHtml(new Date(notif.expire_at).toLocaleString())}` : ''}
                         </p>
                     </div>
                     <div class="flex gap-2">
@@ -260,28 +325,28 @@ async function deleteNotification(announcementId) {
 // =============================================================================
 
 async function loadUserManagementData() {
+    const tableBody = document.getElementById('user-management-table-body');
+    if (!tableBody) return;
+
+    showLoading('user-management-table-body');
     try {
         const users = await fetchUsersAPI();
-
-        const tableBody = document.getElementById('user-management-table-body');
-        if (!tableBody) return;
-
         tableBody.innerHTML = '';
 
         users.forEach(user => {
             const row = document.createElement('tr');
             row.className = 'hover:bg-gray-50 transition-colors';
             row.innerHTML = `
-                <td class="px-4 py-4 text-sm font-medium">${user.user_id}</td>
-                <td class="px-4 py-4 text-sm">${user.username}</td>
-                <td class="px-4 py-4 text-sm">${user.user_type}</td>
-                <td class="px-4 py-4 text-sm">${user.full_name || 'N/A'}</td>
-                <td class="px-4 py-4 text-sm">${user.phone || 'N/A'}</td>
-                <td class="px-4 py-4 text-sm">${new Date(user.create_date).toLocaleDateString()}</td>
-                <td class="px-4 py-4 text-sm">${new Date(user.last_log_date).toLocaleDateString()}</td>
+                <td class="px-4 py-4 text-sm font-medium">${escapeHtml(user.user_id)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(user.username)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(user.user_type)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(user.full_name || 'N/A')}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(user.phone || 'N/A')}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(new Date(user.create_date).toLocaleDateString())}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(new Date(user.last_log_date).toLocaleDateString())}</td>
                 <td class="px-4 py-4 text-sm">
                     <div class="flex gap-2">
-                        <button class="text-red-600 hover:text-red-800 delete-user-btn" data-user-id="${user.user_id}" title="Delete User">
+                        <button class="text-red-600 hover:text-red-800 delete-user-btn" data-user-id="${escapeHtml(user.user_id)}" title="Delete User">
                             <i class="fa fa-trash"></i>
                         </button>
                     </div>
@@ -298,7 +363,10 @@ async function loadUserManagementData() {
         });
     } catch (error) {
         console.error('Failed to load user management data:', error);
+        tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-red-600">Failed to load user data</td></tr>';
         showMessage('Failed to load user data: ' + error.message, 'error');
+    } finally {
+        hideLoading('user-management-table-body');
     }
 }
 
@@ -322,6 +390,10 @@ async function deleteUser(userId) {
 let managerReplenishmentCache = [];
 
 async function loadReplenishmentRequests() {
+    const tableBody = document.getElementById('replenishment-table-body');
+    if (!tableBody) return;
+
+    showLoading('replenishment-table-body');
     try {
         const status = document.getElementById('request-status-filter')?.value || '';
         const urgency = document.getElementById('request-urgency-filter')?.value || '';
@@ -338,10 +410,6 @@ async function loadReplenishmentRequests() {
 
         const requests = await fetchReplenishmentRequestsAPI(filters);
         managerReplenishmentCache = requests;
-
-        const tableBody = document.getElementById('replenishment-table-body');
-        if (!tableBody) return;
-
         tableBody.innerHTML = '';
 
         requests.forEach(request => {
@@ -358,13 +426,13 @@ async function loadReplenishmentRequests() {
                 : 'bg-yellow-100 text-yellow-800';
 
             row.innerHTML = `
-                <td class="px-4 py-4 text-sm font-medium">${request.request_id}</td>
-                <td class="px-4 py-4 text-sm">${request.store_name}</td>
-                <td class="px-4 py-4 text-sm">${new Date(request.request_date).toLocaleString()}</td>
-                <td class="px-4 py-4 text-sm">${request.sku_count}</td>
-                <td class="px-4 py-4 text-sm">${request.total_quantity}</td>
+                <td class="px-4 py-4 text-sm font-medium">${escapeHtml(request.request_id)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(request.store_name)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(new Date(request.request_date).toLocaleString())}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(request.sku_count)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(request.total_quantity)}</td>
                 <td class="px-4 py-4 text-sm">
-                    <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${request.status}</span>
+                    <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${escapeHtml(request.status)}</span>
                 </td>
                 <td class="px-4 py-4 text-sm">
                     <div class="flex gap-2">
@@ -393,7 +461,10 @@ async function loadReplenishmentRequests() {
         wireRequestActionButtons();
     } catch (error) {
         console.error('Failed to load replenishment requests:', error);
+        tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-red-600">Failed to load requests</td></tr>';
         showMessage('Failed to load requests: ' + error.message, 'error');
+    } finally {
+        hideLoading('replenishment-table-body');
     }
 }
 
@@ -441,15 +512,15 @@ function viewRequestDetail(requestId) {
 
     content.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div><strong>Request ID:</strong> ${request.request_id}</div>
-            <div><strong>Status:</strong> ${request.status}</div>
-            <div><strong>Store:</strong> ${request.store_name}</div>
-            <div><strong>SKU:</strong> ${request.sku_id}</div>
-            <div><strong>Book:</strong> ${request.book_name}</div>
-            <div><strong>Quantity:</strong> ${request.requested_quantity}</div>
-            <div><strong>Urgency:</strong> ${request.urgency_level}</div>
-            <div><strong>Date:</strong> ${new Date(request.request_date).toLocaleString()}</div>
-            <div class="md:col-span-2"><strong>Reason:</strong> ${request.reason || 'N/A'}</div>
+            <div><strong>Request ID:</strong> ${escapeHtml(request.request_id)}</div>
+            <div><strong>Status:</strong> ${escapeHtml(request.status)}</div>
+            <div><strong>Store:</strong> ${escapeHtml(request.store_name)}</div>
+            <div><strong>SKU:</strong> ${escapeHtml(request.sku_id)}</div>
+            <div><strong>Book:</strong> ${escapeHtml(request.book_name)}</div>
+            <div><strong>Quantity:</strong> ${escapeHtml(request.requested_quantity)}</div>
+            <div><strong>Urgency:</strong> ${escapeHtml(request.urgency_level)}</div>
+            <div><strong>Date:</strong> ${escapeHtml(new Date(request.request_date).toLocaleString())}</div>
+            <div class="md:col-span-2"><strong>Reason:</strong> ${escapeHtml(request.reason || 'N/A')}</div>
         </div>
     `;
 
@@ -538,16 +609,16 @@ async function loadStockOverviewByBranch(branchId = 'all') {
             const row = document.createElement('tr');
             row.className = 'hover:bg-gray-50';
             row.innerHTML = `
-                <td class="px-4 py-4 text-sm font-medium">${item.sku_id}</td>
-                <td class="px-4 py-4 text-sm">${item.book_name}</td>
-                <td class="px-4 py-4 text-sm">${item.store_name}</td>
-                <td class="px-4 py-4 text-sm">${item.total_quantity}</td>
-                <td class="px-4 py-4 text-sm">${item.last_inbound_date ? new Date(item.last_inbound_date).toLocaleDateString() : 'N/A'}</td>
+                <td class="px-4 py-4 text-sm font-medium">${escapeHtml(item.sku_id)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(item.book_name)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(item.store_name)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(item.total_quantity)}</td>
+                <td class="px-4 py-4 text-sm">${item.last_inbound_date ? escapeHtml(new Date(item.last_inbound_date).toLocaleDateString()) : 'N/A'}</td>
                 <td class="px-4 py-4 text-sm">
                     <span class="px-2 py-1 text-xs rounded-full ${
                         item.stock_status === 'High' ? 'stock-high' :
                         item.stock_status === 'Medium' ? 'stock-medium' : 'stock-low'
-                    }">${item.stock_status}</span>
+                    }">${escapeHtml(item.stock_status)}</span>
                 </td>
             `;
             tableBody.appendChild(row);
@@ -598,12 +669,12 @@ async function loadStockOverviewBySKU() {
 
             const storeCells = sortedStores.map(store => {
                 const qty = item.store_stock[store.store_id] || 0;
-                return `<td class="px-4 py-4 text-sm">${qty}</td>`;
+                return `<td class="px-4 py-4 text-sm">${escapeHtml(qty)}</td>`;
             }).join('');
 
             row.innerHTML = `
-                <td class="px-4 py-4 text-sm font-medium">${item.sku_id}</td>
-                <td class="px-4 py-4 text-sm">${item.book_name}</td>
+                <td class="px-4 py-4 text-sm font-medium">${escapeHtml(item.sku_id)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(item.book_name)}</td>
                 ${storeCells}
             `;
             tableBody.appendChild(row);
@@ -627,10 +698,10 @@ async function loadPaymentComparisonTable() {
 
         const rows = paymentData.map(payment => `
             <tr class="border-b">
-                <td class="px-4 py-2">${payment.payment_method}</td>
-                <td class="px-4 py-2">${payment.payment_count}</td>
+                <td class="px-4 py-2">${escapeHtml(payment.payment_method)}</td>
+                <td class="px-4 py-2">${escapeHtml(payment.payment_count)}</td>
                 <td class="px-4 py-2">${MANAGER_CURRENCY_LABEL} ${parseFloat(payment.total_amount).toFixed(2)}</td>
-                <td class="px-4 py-2">${payment.percentage_of_total}%</td>
+                <td class="px-4 py-2">${escapeHtml(payment.percentage_of_total)}%</td>
             </tr>
         `).join('');
 
@@ -661,10 +732,10 @@ async function loadBookCategoryTable() {
 
         const rows = categoryData.map(category => `
             <tr class="border-b">
-                <td class="px-4 py-2">${category.category_name}</td>
-                <td class="px-4 py-2">${category.total_quantity_sold}</td>
+                <td class="px-4 py-2">${escapeHtml(category.category_name)}</td>
+                <td class="px-4 py-2">${escapeHtml(category.total_quantity_sold)}</td>
                 <td class="px-4 py-2">${MANAGER_CURRENCY_LABEL} ${parseFloat(category.total_sales).toFixed(2)}</td>
-                <td class="px-4 py-2">${category.revenue_percentage}%</td>
+                <td class="px-4 py-2">${escapeHtml(category.revenue_percentage)}%</td>
             </tr>
         `).join('');
 
