@@ -1,20 +1,24 @@
 <?php
-require_once '../../config/database.php';
-
+// api/staff/get_inventory.php
 header('Content-Type: application/json');
-
-// 假设当前员工属于 Store ID = 1 (实际应从 Session 获取)
-$store_id = 1; 
+require_once '../../config/database.php';
+session_start();
 
 try {
-    $db = getDB();
-    // 调用存储过程
-    $stmt = $db->prepare("CALL sp_staff_get_inventory(?)");
+    if (!isset($pdo)) {
+        $database = new DatabaseLocal();
+        $pdo = $database->getConnection();
+    }
+
+    $store_id = isset($_GET['store_id']) ? intval($_GET['store_id']) : 1;
+
+    $stmt = $pdo->prepare("CALL sp_staff_get_inventory(?)");
     $stmt->execute([$store_id]);
-    $inventory = $stmt->fetchAll();
+    $inventory = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode(['success' => true, 'data' => $inventory]);
-} catch (Exception $e) {
+
+} catch (PDOException $e) {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>

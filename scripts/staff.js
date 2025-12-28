@@ -6,43 +6,92 @@ let staffPageState = {
     orders: 1
 };
 
+
+// 全局变量存储当前员工信息
+let currentStaff = {
+    store_id: null,
+    store_name: '',
+    employee_id: null,
+    name: ''
+};
+let globalBooks = [];
+let globalOrders = [];      // 用于前端搜索和过滤的本地缓存
+
 /**
  * ------------------------------------------------------------------
- * 1. 全局切换页面函数.点击侧边栏执行切换
+ * 1. 初始化逻辑 (入口)
  * ------------------------------------------------------------------
  */
-// window.switchPage = function (pageId) {
-//     // 1. 隐藏所有页面内容
-//     document.querySelectorAll('.page-content').forEach(el => {
-//         el.classList.add('hidden');
-//     });
+document.addEventListener('DOMContentLoaded', () => {
+    // 设置日期
+    setupDate();
 
-//     // 2. 显示目标页面
-//     const targetPage = document.getElementById(pageId + '-page');
-//     if (targetPage) {
-//         targetPage.classList.remove('hidden');
-//     } else {
-//         console.error(`Page ID "${pageId}-page" not found.`);
-//     }
+    // 关键改变：先获取当前员工信息，成功后再加载数据
+    initStaffSession();
 
-//     // 3. 更新侧边栏激活状态
-//     // 基础样式 (必须与 layout.js 中的定义一致)
-//     const baseClasses = "flex items-center gap-3 px-4 py-3 text-gray-700 rounded-lg transition-all duration-300 hover:bg-accent/20 hover:text-primary cursor-pointer mb-1";
-//     const activeClasses = "bg-accent/30 text-primary font-medium";
+    // 绑定通用事件
+    setupInternalEventListeners();
+});
 
-//     const allLinks = document.querySelectorAll('#sidebar div[data-page]');
-//     allLinks.forEach(link => {
-//         // 重置样式
-//         link.className = baseClasses;
-//         // 如果是当前页，追加激活样式
-//         if (link.getAttribute('data-page') === pageId) {
-//             link.className = `${baseClasses} ${activeClasses}`;
-//         }
-//     });
-// };
+function setupDate() {
+    const currentDateElement = document.getElementById('current-date');
+    if (currentDateElement) {
+        const now = new Date();
+        currentDateElement.textContent = now.toLocaleDateString('en-US', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+    }
+}
 
-const CURRENT_STORE_ID = 1; // 假设当前登录的是 1号店 (Downtown Store)
-let globalBooks = [];       // 用于前端搜索和过滤的本地缓存
+/**
+ * 获取当前登录员工信息
+ */
+async function initStaffSession() {
+    try {
+        const response = await fetch('../api/staff/get_current_staff.php');
+        const result = await response.json();
+
+        if (result.success) {
+            // 1. 保存到全局变量
+            currentStaff = result.data;
+
+            console.log("Staff Verified:", currentStaff.full_name, "@", currentStaff.store_name);
+
+            // 2. 更新 UI 显示店铺名称
+            const headerStoreEl = document.getElementById('header-store-name');
+            if (headerStoreEl) {
+                headerStoreEl.textContent = currentStaff.store_name; // 例如 "Downtown Store"
+            }
+
+            // 顺便把 Header 里的 "CurrentUser" 也替换成真名 (可选)
+            const headerUserEl = document.getElementById('header-user-name');
+            if (headerUserEl) {
+                headerUserEl.textContent = currentStaff.full_name;
+            }
+
+            // 3. 拿到 Store ID 后，再去获取业务数据 (链式调用)
+            // 传递 store_id 给后续函数
+            fetchInventory(currentStaff.store_id);
+            fetchOrders(currentStaff.store_id);
+            fetchStockRequests(currentStaff.store_id);
+
+            // 还可以更新 Dashboard 的统计
+            // fetchDashboardStats(currentStaff.store_id); // 稍后实现
+
+        } else {
+            alert("Session Error: " + result.message);
+            window.location.href = '../index.html'; // 或 login.html
+        }
+    } catch (error) {
+        console.error('Session Init Failed:', error);
+        const headerStoreEl = document.getElementById('header-store-name');
+        if (headerStoreEl) {
+            headerStoreEl.textContent = '(Error)';
+            headerStoreEl.classList.add('text-red-500');
+        }
+    }
+}
+
 /**
  * ------------------------------------------------------------------
  * 2. 模拟数据 (Sample Data)
@@ -111,47 +160,68 @@ const stockRequests = [
     { id: 502, dateRequested: "2023-06-05", items: 3, status: "delivered", expectedDelivery: "2023-06-12" },
     { id: 503, dateRequested: "2023-05-28", items: 7, status: "delivered", expectedDelivery: "2023-06-05" }
 ];
+
 /**
  * ------------------------------------------------------------------
  * 3. 获取数据
  * ------------------------------------------------------------------
  */
 // A. 获取库存数据的函数
-async function fetchInventory() {
+async function fetchInventory(storeId) {
+    if (!storeId) return;
     try {
-        // 请求 PHP 接口
-        const response = await fetch('../api/staff/get_inventory.php');
+        // GET 请求可以通过 URL 参数传递 store_id
+        const response = await fetch(`../api/staff/get_inventory.php?store_id=${storeId}`);
         const result = await response.json();
 
         if (result.success) {
-            globalBooks = result.data; // 数据格式已经由 SQL 调整好，直接对应表格
+            globalBooks = result.data;
             renderInventory(globalBooks);
-            renderLowStockItems(globalBooks); // SQL里算好了 quantity，这里逻辑依然有效
-            updateDashboardStats(globalBooks, []); 
-        } else {
-            console.error('API Error:', result.message);
+            renderLowStockItems(globalBooks);
+            updateDashboardStats(globalBooks, globalOrders);
         }
     } catch (error) {
-        console.error('Network Error:', error);
+        console.error('Inventory Error:', error);
     }
 }
 
 // B. 获取订单数据的函数
-async function fetchOrders() {
+async function fetchOrders(storeId) {
+    if (!storeId) return;
     try {
-        const response = await fetch('../api/staff/get_orders.php');
+        const response = await fetch(`../api/staff/get_orders.php?store_id=${storeId}`);
         const result = await response.json();
 
         if (result.success) {
-            const orders = result.data; 
-            
-            renderOrders(orders);
-            renderRecentOrders(orders);
-            // 再次更新 Dashboard，这次带上订单数据
-            updateDashboardStats(globalBooks, orders);
+            globalOrders = result.data;
+
+            console.log("Orders Fetched:", globalOrders.length);
+
+            // 渲染表格
+            renderOrders(globalOrders);
+            renderRecentOrders(globalOrders);
+
+            // 再次调用统计更新，把刚才拿到的 Orders 传进去
+            // (注意：这里要传 globalBooks，以防库存数据被覆盖为空)
+            updateDashboardStats(globalBooks, globalOrders);
         }
     } catch (error) {
-        console.error('Fetch Orders Error:', error);
+        console.error('Orders Error:', error);
+    }
+}
+
+// C. 获取进货申请的函数
+async function fetchStockRequests(storeId) {
+    if (!storeId) return;
+    try {
+        const response = await fetch(`../api/staff/get_stock_requests.php?store_id=${storeId}`);
+        const result = await response.json();
+
+        if (result.success) {
+            renderStockRequests(result.data);
+        }
+    } catch (error) {
+        console.error('Requests Error:', error);
     }
 }
 
@@ -266,19 +336,28 @@ function renderRecentOrders(data) {
     if (!recentOrdersList || !data) return;
     recentOrdersList.innerHTML = '';
 
-    // 取传入数据的前 5 笔
-    const recent = data.slice(0, 5);
+    const recent = data.slice(0, 10);
 
     recent.forEach(order => {
         const row = document.createElement('tr');
-        // 兼容后端字段 order_id 或前端模拟字段 id
+
+        // --- 修复重点 START ---
+        // 1. 兼容字段名: 数据库可能是 order_id, 也可能是 id
         const displayId = order.order_id || order.id;
+
+        // 2. 兼容字段名: 数据库可能是 order_date, 也可能是 date
         const displayDate = order.order_date || order.date;
+
+        // 3. 修复报错核心: 获取状态字符串，如果为空则给默认值 'created'
+        // 同时兼容数据库字段 order_status 和前端字段 status
+        const rawStatus = order.order_status || order.status || 'created';
+        const safeStatus = rawStatus.toLowerCase(); // 确保它是小写
+        // --- 修复重点 END ---
 
         row.innerHTML = `
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#${displayId}</td>
             <td class="px-6 py-4 whitespace-nowrap">
-                <span class="status-${order.status.toLowerCase()}">${capitalize(order.status)}</span>
+                <span class="status-${safeStatus}">${capitalize(safeStatus)}</span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(displayDate)}</td>
         `;
@@ -290,20 +369,29 @@ function renderRecentOrders(data) {
     }
 }
 
-// 渲染 Dashboard: 低库存预警板块
+// 渲染 Dashboard: 低库存预警列表
 function renderLowStockItems(inventoryData) {
     const lowStockList = document.getElementById('low-stock-list');
     if (!lowStockList) return;
     lowStockList.innerHTML = '';
 
-    // 严格筛选库存等于 1 的书籍
-    const criticalItems = inventoryData.filter(item => parseInt(item.quantity) === 1);
+    // 修改筛选逻辑：qty ==1
+    const criticalItems = inventoryData.filter(item => {
+        const qty = parseInt(item.quantity || item.stock || 0);
+        return qty === 1
+    });
 
     criticalItems.forEach(item => {
         const row = document.createElement('tr');
+
+        // 兼容字段名
+        const name = item.book_name || item.title || 'Unknown';
+        const cat = item.category || item.binding || 'General';
+
+        // 修复后的 HTML 结构：只有 3 个 td，且结构完整
         row.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.book_name}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.category || item.binding || 'General'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${name}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${cat}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm">
                 <button class="text-primary hover:text-primary/80" onclick="switchPage('inventory')">
                     <i class="fa fa-plus-square mr-1"></i> Restock
@@ -314,7 +402,7 @@ function renderLowStockItems(inventoryData) {
     });
 
     if (criticalItems.length === 0) {
-        lowStockList.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-400">No critical stock items</td></tr>';
+        lowStockList.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-400">No low stock items (1-3)</td></tr>';
     }
 }
 
@@ -385,15 +473,27 @@ function renderInventory(data) {
     bindDynamicEvents();
 }
 
-// 计算首页三数据
+// 计算首页三项统计数据
 function updateDashboardStats(inventoryData = [], ordersData = []) {
-    // 统计总库存件数
-    const totalBooks = inventoryData.reduce((sum, item) => sum + parseInt(item.quantity || 0), 0);
-    // 统计库存严格等于 1 的书籍
-    const lowStockCount = inventoryData.filter(item => parseInt(item.quantity) === 1).length;
-    // 统计本门店订单总数
-    const totalOrders = ordersData.length;
+    console.log("Updating Stats...", { inv: inventoryData.length, ord: ordersData.length });
 
+    // A. 统计总库存
+    const totalBooks = inventoryData.reduce((sum, item) => {
+        const qty = parseInt(item.quantity || item.stock || 0);
+        return sum + qty;
+    }, 0);
+
+    // B. 统计低库存
+    const lowStockCount = inventoryData.filter(item => {
+        const qty = parseInt(item.quantity || item.stock || 0);
+        return qty === 1;
+    }).length;
+
+    // C. 统计总订单数 (增加安全性检查)
+    const totalOrders = Array.isArray(ordersData) ? ordersData.length : 0;
+
+
+    // 4. 更新 DOM
     const totalEl = document.getElementById('total-books');
     const lowStockEl = document.getElementById('low-stock-books');
     const ordersEl = document.getElementById('total-orders-count');
@@ -414,7 +514,7 @@ function renderOrders(data) {
     if (!ordersList) return;
 
     // 1. 数据源：优先使用传入的 data，否则为空数组 (不再使用 mockOrders)
-    const sourceData = data || []; 
+    const sourceData = data || [];
     const pageSize = 10;
 
     // 2. 分页逻辑
@@ -424,7 +524,7 @@ function renderOrders(data) {
     ordersList.innerHTML = paginatedData.map(order => {
         // 数据库返回的 total_amount 可能是字符串，转换成浮点数以防万一
         const total = parseFloat(order.total_amount || 0);
-        
+
         // 状态样式兼容：数据库是 created/paid，CSS 类名是 status-created 等
         const statusClass = `status-${(order.order_status || 'created').toLowerCase()}`;
 
@@ -473,7 +573,6 @@ function renderOrders(data) {
 /**
  * 5.3 Stock Requests 相关渲染函数
  */
-// 渲染 Stock Requests
 // 渲染 Stock Requests (进货申请)
 function renderStockRequests(data) {
     const pendingList = document.getElementById('pending-requests-list');
@@ -485,14 +584,14 @@ function renderStockRequests(data) {
     prevList.innerHTML = '';
 
     // 数据源：如果是从 API 获取的 data 则使用，否则暂时为空 (不再使用 stockRequests mock 数据)
-    const sourceData = data || []; 
+    const sourceData = data || [];
 
     sourceData.forEach(request => {
         const row = document.createElement('tr');
-        
+
         // 数据库状态: pending, approved, rejected, completed
         const isPending = request.status === 'pending';
-        
+
         // 数据库里没有 delivery_date，如果是 completed 我们可以用 update_date (如果有的话)，否则暂无
         // 这里暂时统一显示 purchase_date
         const displayDate = formatDate(request.purchase_date);
@@ -535,7 +634,7 @@ function renderStockRequests(data) {
             prevList.appendChild(row);
         }
     });
-    
+
     // 如果没有数据，显示提示
     if (pendingList.children.length === 0) {
         pendingList.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">No pending requests</td></tr>';
@@ -794,9 +893,9 @@ async function submitStockRequest() {
     rows.forEach(row => {
         // 假设我们在输入框加了 data-sku-id 属性，或者用户直接输入了 SKU ID
         // 为了简化，这里假设输入框 class="item-sku" 填的就是 SKU ID (数字)
-        const skuInput = row.querySelector('.item-sku'); 
+        const skuInput = row.querySelector('.item-sku');
         const qtyInput = row.querySelector('.item-qty');
-        
+
         const skuId = skuInput.value;
         const qty = qtyInput.value;
 
@@ -809,7 +908,7 @@ async function submitStockRequest() {
     });
 
     const notes = document.getElementById('request-notes').value;
-    
+
     if (items.length === 0) {
         alert("Please add items.");
         return;
@@ -821,9 +920,9 @@ async function submitStockRequest() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ items: items, note: notes })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             alert("Stock Request Submitted! ID: " + result.id);
             closeRequestModal();

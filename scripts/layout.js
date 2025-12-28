@@ -271,22 +271,32 @@ function renderAdminHeader(role) {
 
     const roleTitles = {
         finance: 'Finance Staff',
-        manager: 'Store Manager',
+        manager: 'Stores Manager',
         staff: 'Sales Staff'
     };
     const displayRole = roleTitles[role] || 'Staff';
 
+    // 逻辑：只有非 manager 角色才预留显示分店名的位置
+    // 初始内容为空，或者写 (Loading...)，等待 JS 填充
+    const storeNameHtml = (role !== 'manager') 
+        ? `<span id="header-store-name" class="font-normal text-gray-500 text-lg ml-3 border-l border-gray-300 pl-3">Loading...</span>` 
+        : '';
+
     container.innerHTML = `
         <header class="bg-white border-b border-gray-200 shadow-sm z-10 flex-shrink-0">
             <div class="flex items-center justify-between px-4 h-16">
-                <!-- 左侧区域：Toggle + Logo + Title -->
+                <!-- 左侧区域：Toggle + Logo + Title + StoreName -->
                 <div class="flex items-center gap-3">
                     <button id="sidebar-toggle" class=" text-gray-600 hover:text-primary p-2 rounded-md hover:bg-gray-100 transition-colors" onclick="toggleSidebar()">
                         <i class="fa fa-bars text-xl"></i>
                     </button>
-                    <div class="flex items-center gap-3 cursor-pointer" onclick="location.reload()">
+                    <div class="flex items-center gap-2 cursor-pointer" onclick="location.reload()">
                         <img src="../assets/images/logo.png" alt="Bookstore Logo" class="w-10 h-10 object-contain">
-                        <h1 class="text-xl font-serif font-bold text-primary">Diamond Page Store</h1>
+                        <h1 class="text-xl font-serif font-bold text-primary flex items-center">
+                            Diamond Page Store
+                            <!-- 分店名称占位符 -->
+                            ${storeNameHtml}
+                        </h1>
                     </div>
                 </div>
 
@@ -297,9 +307,11 @@ function renderAdminHeader(role) {
                         <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full">2</span>
                     </button>
                     <div class="flex items-center gap-2 cursor-pointer group">
-                        <img src="https://picsum.photos/id/64/40/40" alt="Avatar" class="w-8 h-8 rounded-full object-cover border-2 border-transparent group-hover:border-primary transition-all">
+                        <!-- 头像 (使用 Picsum 随机图或你的 assets) -->
+                        <img src="https://ui-avatars.com/api/?name=User&background=random" alt="Avatar" class="w-8 h-8 rounded-full object-cover border-2 border-transparent group-hover:border-primary transition-all">
                         <div class="hidden md:block text-left">
-                            <p class="text-sm font-medium">CurrentUser</p>
+                            <!-- 这里也可以给个ID，方便后续JS替换成真实人名 -->
+                            <p class="text-sm font-medium" id="header-user-name">CurrentUser</p>
                             <p class="text-xs text-gray-500">${displayRole}</p>
                         </div>
                         <i class="fa fa-chevron-down text-xs text-gray-500 group-hover:text-primary transition-colors"></i>
