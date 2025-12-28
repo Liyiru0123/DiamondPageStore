@@ -52,18 +52,28 @@ let paymentMethodPieChart = null;
 let revenueByDateChart = null;
 let purchaseCostByDateChart = null;
 
-window.financeSwitchPage = function (pageId) {
-    document.querySelectorAll('.page-content').forEach(page => page.classList.add('hidden'));
+// finance.js 中的 financeSwitchPage 函数应该只包含必要的初始化
+window.financeSwitchPage = function(pageId) {
+    console.log('financeSwitchPage called:', pageId);
+    
+    // Hide all pages
+    document.querySelectorAll('.page-content').forEach(page => {
+        page.classList.add('hidden');
+    });
 
+    // Show target page
     const targetPage = document.getElementById(`${pageId}-page`);
     if (targetPage) {
         targetPage.classList.remove('hidden');
-        sessionStorage.setItem('currentPage', pageId);
-
+        
+        // 延迟初始化，确保DOM已更新
         setTimeout(() => {
             switch (pageId) {
                 case 'income-stats':
-                    initIncomeStatsCharts();
+                    if (!window.chartsInitialized) {  // 添加标志防止重复初始化
+                        initIncomeStatsCharts();
+                        window.chartsInitialized = true;
+                    }
                     break;
                 case 'order':
                     initOrderPage();
@@ -437,18 +447,57 @@ async function resetOrderFilters() {
 }
 
 async function loadOrderList(filters = {}) {
+    const container = document.getElementById('order-table-body');
+    if (!container) return;
+    
     try {
+        // 显示加载状态
+        showLoading('order-table-body', 'Loading orders...');
+        
+        // 添加性能监控
+        const startTime = performance.now();
+        
         const orders = await fetchOrderList(filters);
+        
+        const loadTime = performance.now() - startTime;
+        console.log(`Orders loaded in ${loadTime.toFixed(2)}ms, count: ${orders.length}`);
+        
+        // 如果是首次加载且数据量大，可以考虑分页
+        if (!window.orderPageInitialized && orders.length > 50) {
+            console.log(`Large dataset detected: ${orders.length} orders. Consider implementing pagination.`);
+        }
+        
         renderOrderList(orders);
+        window.orderPageInitialized = true;
+        
     } catch (error) {
         console.error('Failed to load orders:', error);
+        container.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                    <div class="flex flex-col items-center justify-center">
+                        <div class="text-red-600 mb-2">
+                            <i class="fa fa-exclamation-circle text-xl"></i>
+                        </div>
+                        <span>Failed to load orders. Please try again.</span>
+                        <button class="btn-secondary mt-3 px-4 py-2" onclick="loadOrderList()">
+                            Retry
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    } finally {
+        hideLoading();
     }
 }
 
+// 优化渲染函数，使用文档片段批量插入
 function renderOrderList(orders) {
     const container = document.getElementById('order-table-body');
     if (!container) return;
 
+    // 清空容器
     container.innerHTML = '';
 
     if (!orders || orders.length === 0) {
@@ -463,6 +512,9 @@ function renderOrderList(orders) {
         return;
     }
 
+    // 使用文档片段提高性能
+    const fragment = document.createDocumentFragment();
+    
     orders.forEach(order => {
         let statusClass = 'bg-gray-100 text-gray-800';
         let statusText = order.orderStatus;
@@ -489,6 +541,7 @@ function renderOrderList(orders) {
         row.className = 'hover:bg-gray-50 transition-colors';
         row.dataset.orderId = order.orderId;
 
+        // 使用innerHTML创建行
         row.innerHTML = `
             <td class="px-4 py-4 text-sm font-medium">${order.orderId}</td>
             <td class="px-4 py-4 text-sm">${order.storeName}</td>
@@ -513,13 +566,106 @@ function renderOrderList(orders) {
                 </div>
             </td>
         `;
-        container.appendChild(row);
+        
+        fragment.appendChild(row);
     });
 
+    // 一次性插入所有行
+    container.appendChild(fragment);
     updateOrderPaginationInfo(orders.length);
-    addOrderEventListeners();
+    
+    // 延迟添加事件监听器，避免阻塞渲染
+    setTimeout(() => {
+        addOrderEventListeners();
+    }, 0);
 }
 
+function renderInvoiceList(invoices) {
+    const container = document.getElementById('invoice-table-body');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (!invoices || invoices.length === 0) {
+        container.innerHTML = `
+            <tr>
+                <td colspan="11" class="px-4 py-8 text-center text-gray-500">
+                    No invoices found matching your criteria.
+                </td>
+            </tr>
+        `;
+        updateInvoicePaginationInfo(0);
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    
+    invoices.forEach(invoice => {
+        let statusClass = 'invoice-unpaid';
+        let statusText = invoice.status;
+        switch (invoice.status) {
+            case 'PAID':
+                statusClass = 'invoice-paid';
+                break;
+            case 'PARTIAL':
+                statusClass = 'invoice-partial';
+                break;
+            case 'OVERDUE':
+                statusClass = 'invoice-overdue';
+                break;
+            case 'VOID':
+                statusClass = 'invoice-void';
+                break;
+        }
+
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50 transition-colors';
+        row.dataset.invoiceId = invoice.invoiceId;
+
+        row.innerHTML = `
+            <td class="px-4 py-4 text-sm font-medium">${invoice.invoiceNumber || invoice.invoiceId}</td>
+            <td class="px-4 py-4 text-sm">${invoice.orderId}</td>
+            <td class="px-4 py-4 text-sm">${invoice.storeName}</td>
+            <td class="px-4 py-4 text-sm">
+                <div class="flex flex-col">
+                    <span class="font-medium">${invoice.memberId}</span>
+                    <span class="text-xs text-gray-500">${invoice.memberName}</span>
+                </div>
+            </td>
+            <td class="px-4 py-4 text-sm">
+                <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${statusText}</span>
+            </td>
+            <td class="px-4 py-4 text-sm">${formatDateTime(invoice.issuedAt || invoice.issueDate)}</td>
+            <td class="px-4 py-4 text-sm">${formatDateTime(invoice.dueDate)}</td>
+            <td class="px-4 py-4 text-sm">${formatCurrency(invoice.invoiceAmount)}</td>
+            <td class="px-4 py-4 text-sm">${formatCurrency(invoice.paidAmount)}</td>
+            <td class="px-4 py-4 text-sm">${formatCurrency(invoice.balanceAmount)}</td>
+            <td class="px-4 py-4 text-sm">
+                <div class="flex gap-2">
+                    <button class="text-[#8B5A2B] hover:text-[#8B5A2B]/80 view-invoice" data-invoice="${invoice.invoiceId}" title="View Details">
+                        <i class="fa fa-eye"></i>
+                    </button>
+                    <button class="text-red-600 hover:text-red-800 void-invoice" data-invoice="${invoice.invoiceId}" data-status="${invoice.status}" title="Void Invoice" ${invoice.status === 'VOID' || invoice.status === 'PAID' ? 'disabled' : ''}>
+                        <i class="fa fa-ban"></i>
+                    </button>
+                    <button class="text-blue-600 hover:text-blue-800 print-invoice" data-invoice="${invoice.invoiceId}" title="Print/Export PDF">
+                        <i class="fa fa-print"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        
+        fragment.appendChild(row);
+    });
+
+    container.appendChild(fragment);
+    updateInvoicePaginationInfo(invoices.length);
+    
+    // 延迟添加事件监听器
+    setTimeout(() => {
+        addInvoiceEventListeners();
+    }, 0);
+}
 function updateOrderPaginationInfo(totalOrders) {
     const paginationInfo = document.getElementById('order-pagination-info');
     if (paginationInfo) {
@@ -811,11 +957,42 @@ async function resetInvoiceFilters() {
 }
 
 async function loadInvoiceList(filters = {}) {
+    const container = document.getElementById('invoice-table-body');
+    if (!container) return;
+    
     try {
+        // 显示加载状态
+        showLoading('invoice-table-body', 'Loading invoices...');
+        
+        // 添加性能监控
+        const startTime = performance.now();
+        
         const invoices = await fetchInvoiceList(filters);
+        
+        const loadTime = performance.now() - startTime;
+        console.log(`Invoices loaded in ${loadTime.toFixed(2)}ms, count: ${invoices.length}`);
+        
         renderInvoiceList(invoices);
+        
     } catch (error) {
         console.error('Failed to load invoices:', error);
+        container.innerHTML = `
+            <tr>
+                <td colspan="11" class="px-4 py-8 text-center text-gray-500">
+                    <div class="flex flex-col items-center justify-center">
+                        <div class="text-red-600 mb-2">
+                            <i class="fa fa-exclamation-circle text-xl"></i>
+                        </div>
+                        <span>Failed to load invoices. Please try again.</span>
+                        <button class="btn-secondary mt-3 px-4 py-2" onclick="loadInvoiceList()">
+                            Retry
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    } finally {
+        hideLoading();
     }
 }
 
