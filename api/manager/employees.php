@@ -356,7 +356,7 @@ function updateEmployee($conn) {
 }
 
 /**
- * 删除员工（调用存储过程）
+ * 删除员工（直接SQL）
  */
 function deleteEmployee($conn) {
     if (!isset($_GET['employee_id'])) {
@@ -370,25 +370,58 @@ function deleteEmployee($conn) {
 
     $employeeId = intval($_GET['employee_id']);
 
-    $sql = "CALL sp_manager_delete_employee(:employee_id, @result_code, @result_message)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bindParam(':employee_id', $employeeId, PDO::PARAM_INT);
-    $stmt->execute();
+    $conn->beginTransaction();
 
-    // 获取存储过程的输出参数
-    $result = $conn->query("SELECT @result_code as code, @result_message as message")->fetch();
+    try {
+        // Check if employee exists
+        $checkSql = "SELECT employee_id, user_id FROM employees WHERE employee_id = :employee_id";
+        $checkStmt = $conn->prepare($checkSql);
+        $checkStmt->bindParam(':employee_id', $employeeId, PDO::PARAM_INT);
+        $checkStmt->execute();
+        $employee = $checkStmt->fetch();
 
-    if ($result['code'] == 1) {
+        if (!$employee) {
+            http_response_code(404);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Employee not found'
+            ]);
+            $conn->rollBack();
+            return;
+        }
+
+        // Check for related records (orders handled by this employee)
+        $relSql = "SELECT COUNT(*) AS order_count FROM orders WHERE employee_id = :employee_id";
+        $relStmt = $conn->prepare($relSql);
+        $relStmt->bindParam(':employee_id', $employeeId, PDO::PARAM_INT);
+        $relStmt->execute();
+        $rel = $relStmt->fetch();
+
+        if ($rel['order_count'] > 0) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Cannot delete employee with linked orders'
+            ]);
+            $conn->rollBack();
+            return;
+        }
+
+        // Delete employee record
+        $sql = "DELETE FROM employees WHERE employee_id = :employee_id";
+        $stmt = $conn->prepare($sql);
+        $stmt->bindParam(':employee_id', $employeeId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $conn->commit();
+
         echo json_encode([
             'success' => true,
-            'message' => $result['message']
+            'message' => 'Employee deleted successfully'
         ]);
-    } else {
-        http_response_code(400);
-        echo json_encode([
-            'success' => false,
-            'message' => $result['message']
-        ]);
+    } catch (Exception $e) {
+        $conn->rollBack();
+        throw $e;
     }
 }
 
@@ -408,14 +441,16 @@ function searchEmployees($conn) {
     }
 
     $sql = "SELECT * FROM vw_manager_employees
-            WHERE full_name LIKE :keyword
-            OR phone LIKE :keyword
-            OR username LIKE :keyword
+            WHERE full_name LIKE :kw1
+            OR phone LIKE :kw2
+            OR username LIKE :kw3
             ORDER BY employee_id";
 
     $searchTerm = "%$keyword%";
     $stmt = $conn->prepare($sql);
-    $stmt->bindParam(':keyword', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw1', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw2', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw3', $searchTerm, PDO::PARAM_STR);
     $stmt->execute();
     $employees = $stmt->fetchAll();
 

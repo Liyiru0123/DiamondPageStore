@@ -161,13 +161,31 @@ window.switchPage = function (pageId) {
         }
     }
 
-    // 7. 移动端适配：切换后自动收起侧边栏
+    // 7. 调用角色特定的页面切换函数（如 managerSwitchPage, financeSwitchPage 等）
+    const roleSwitchFunctions = {
+        'managerSwitchPage': window.managerSwitchPage,
+        'financeSwitchPage': window.financeSwitchPage,
+        'staffSwitchPage': window.staffSwitchPage,
+        'customerSwitchPage': window.customerSwitchPage
+    };
+
+    for (const [name, fn] of Object.entries(roleSwitchFunctions)) {
+        if (typeof fn === 'function') {
+            try {
+                fn(pageId);
+            } catch (e) {
+                console.error(`[Router] Error in ${name}:`, e);
+            }
+        }
+    }
+
+    // 8. 移动端适配：切换后自动收起侧边栏
     const sidebar = document.getElementById('sidebar');
     if (sidebar && window.innerWidth < 768) {
         sidebar.classList.add('-translate-x-full');
     }
 
-    // 8. 交互调优：平滑滚动补偿
+    // 9. 交互调优：平滑滚动补偿
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
