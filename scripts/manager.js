@@ -847,53 +847,48 @@ function updateStaffCount(count) {
     }
 }
 
-// Load pricing data
-function loadPricingData() {
-    // 从 manager-data.js 中获取定价数据
-    const tableContainer = document.getElementById('pricing-table-body');
-    if (tableContainer) {
-        tableContainer.innerHTML = '';
-        pricingData.forEach(book => {
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50 transition-colors';
-            row.dataset.book = JSON.stringify(book);
+// Load pricing data - 使用 API 获取数据库数据
+async function loadPricingData() {
+    const tableBody = document.getElementById('pricing-table-body');
+    if (!tableBody) return;
 
+    showLoading('pricing-table-body');
+    try {
+        const books = await fetchBooksAPI();
+        tableBody.innerHTML = '';
+
+        books.forEach(book => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50';
             row.innerHTML = `
-                <td class="px-4 py-4 text-sm font-medium">${book.title}</td>
-                <td class="px-4 py-4 text-sm text-gray-500">${book.isbn}</td>
-                <td class="px-4 py-4 text-sm">${book.currentPrice}</td>
-                <td class="px-4 py-4 text-sm">
-                    <div class="flex gap-2">
-                        <button class="text-primary hover:text-primary/80 edit-book-btn" title="Edit">
-                            <i class="fa fa-edit"></i>
-                        </button>
-                        <button class="text-blue-600 hover:text-blue-800 refresh-price-btn" title="Refresh Price">
-                            <i class="fa fa-refresh"></i>
-                        </button>
-                    </div>
+                <td class="px-6 py-4">${escapeHtml(book.ISBN)}</td>
+                <td class="px-6 py-4">${escapeHtml(book.name)}</td>
+                <td class="px-6 py-4">${escapeHtml(book.authors || 'Unknown')}</td>
+                <td class="px-6 py-4">${escapeHtml(book.publisher)}</td>
+                <td class="px-6 py-4">${escapeHtml(book.binding)}</td>
+                <td class="px-6 py-4">${MANAGER_CURRENCY_LABEL} ${parseFloat(book.unit_price).toFixed(2)}</td>
+                <td class="px-6 py-4">${escapeHtml(book.total_stock)}</td>
+                <td class="px-6 py-4">
+                    <button onclick="editPricing(${book.sku_id}, '${escapeHtml(book.name)}', ${book.unit_price})"
+                        class="text-primary hover:text-primary-dark">
+                        <i class="fa fa-edit"></i> Edit Price
+                    </button>
                 </td>
             `;
-            tableContainer.appendChild(row);
+            tableBody.appendChild(row);
         });
+
+        // 删除 originalContent，防止 hideLoading 覆盖已渲染的数据
+        delete tableBody.dataset.originalContent;
+    } catch (error) {
+        console.error('Failed to load pricing data:', error);
+        tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-red-600">Failed to load pricing data</td></tr>';
+        if (typeof showMessage === 'function') {
+            showMessage('Failed to load pricing data: ' + error.message, 'error');
+        }
+    } finally {
+        hideLoading('pricing-table-body');
     }
-
-    // Add event listeners to edit book buttons
-    document.querySelectorAll('#pricing-table-body .edit-book-btn').forEach(button => {
-        button.addEventListener('click', function () {
-            const row = this.closest('tr');
-            const bookData = JSON.parse(row.dataset.book);
-            openEditBookModal(bookData);
-        });
-    });
-
-    // Add event listeners to refresh price buttons
-    document.querySelectorAll('#pricing-table-body .refresh-price-btn').forEach(button => {
-        button.addEventListener('click', function () {
-            const row = this.closest('tr');
-            const title = row.cells[0].textContent;
-            alert(`Refreshing price for: ${title}`);
-        });
-    });
 }
 
 // Open edit book modal
