@@ -164,7 +164,17 @@ function getRequestDetail($conn) {
  * 创建补货申请（调用存储过程）
  */
 function createRequest($conn) {
-    $data = json_decode(file_get_contents('php://input'), true);
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid JSON: ' . json_last_error_msg()
+        ]);
+        return;
+    }
 
     if (!$data || !isset($data['store_id']) || !isset($data['sku_id']) || !isset($data['requested_quantity'])) {
         http_response_code(400);
@@ -175,7 +185,28 @@ function createRequest($conn) {
         return;
     }
 
+    // Validate urgency level
     $urgencyLevel = isset($data['urgency_level']) ? $data['urgency_level'] : 'medium';
+    $validUrgencyLevels = ['low', 'medium', 'high'];
+    if (!in_array($urgencyLevel, $validUrgencyLevels)) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid urgency level. Must be one of: low, medium, high'
+        ]);
+        return;
+    }
+
+    // Validate requested quantity
+    if (!is_numeric($data['requested_quantity']) || intval($data['requested_quantity']) <= 0) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Requested quantity must be greater than 0'
+        ]);
+        return;
+    }
+
     $requestedBy = isset($data['requested_by']) ? $data['requested_by'] : null;
     $reason = isset($data['reason']) ? $data['reason'] : null;
 
@@ -215,7 +246,17 @@ function createRequest($conn) {
  * 批准补货申请（调用存储过程）
  */
 function approveRequest($conn) {
-    $data = json_decode(file_get_contents('php://input'), true);
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid JSON: ' . json_last_error_msg()
+        ]);
+        return;
+    }
 
     if (!$data || !isset($data['request_id'])) {
         http_response_code(400);
@@ -261,7 +302,17 @@ function approveRequest($conn) {
  * 拒绝补货申请（调用存储过程）
  */
 function rejectRequest($conn) {
-    $data = json_decode(file_get_contents('php://input'), true);
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid JSON: ' . json_last_error_msg()
+        ]);
+        return;
+    }
 
     if (!$data || !isset($data['request_id']) || !isset($data['rejection_reason'])) {
         http_response_code(400);

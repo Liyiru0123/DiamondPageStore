@@ -16,8 +16,8 @@ CREATE PROCEDURE sp_manager_add_employee(
     IN p_last_name VARCHAR(50),
     IN p_store_id INT,
     IN p_job_title_id INT,
-    IN p_phone INT,
-    IN p_performance INT,
+    IN p_phone VARCHAR(20),
+    IN p_performance DECIMAL(5,2),
     OUT p_result_code INT,
     OUT p_result_message VARCHAR(255),
     OUT p_employee_id INT
@@ -77,8 +77,8 @@ CREATE PROCEDURE sp_manager_update_employee(
     IN p_last_name VARCHAR(50),
     IN p_store_id INT,
     IN p_job_title_id INT,
-    IN p_phone INT,
-    IN p_performance INT,
+    IN p_phone VARCHAR(20),
+    IN p_performance DECIMAL(5,2),
     OUT p_result_code INT,
     OUT p_result_message VARCHAR(255)
 )

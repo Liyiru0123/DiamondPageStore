@@ -3,3 +3,8 @@ staff：
   排序/搜索还在前端实现
   stock变量修改
   
+
+manager:
+  Inventory & Pricing 中价格管理，加的书不会被加到数据库中
+  删除user会报错
+  搜索的实现
