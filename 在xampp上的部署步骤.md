@@ -17,26 +17,31 @@
 - 执行根目录 `modify.sql`
 - 执行后必须**重新创建视图/过程**，否则会失效
 
-## 第五步：执行 Customer 相关 SQL
+## 第五步：执行 Login 相关 SQL
+按顺序执行：
+1. `database/auth_views.sql`
+2. `database/auth_procedures.sql`
+
+## 第六步：执行 Customer 相关 SQL
 按顺序执行：
 1. `database/view.sql`
 2. `database/procedures.sql`
 3. `database/triggers.sql`
 
-## 第六步：执行 Manager 相关 SQL
+## 第七步：执行 Manager 相关 SQL
 按顺序执行：
 1. `database/manager_tables.sql`
 2. `database/manager_views.sql`
 3. `database/manager_procedures.sql`
 
-## 第七步：执行 Finance 相关 SQL
+## 第八步：执行 Finance 相关 SQL
 按顺序执行：
 1. `database/finance_views.sql`
 2. `database/finance_procedures.sql`
 3. `database/finance_triggers.sql`
 4. `database/finance_events.sql`
 
-## 第八步：执行 Staff 相关 SQL
+## 第九步：执行 Staff 相关 SQL
 按顺序执行：
 1. `database/staff_views.sql`
 2. `database/staff_procedures.sql`
@@ -45,10 +50,10 @@
 
 > 如果你打算使用 `book_store_views_finance&manager.sql`，不要和以上文件混用，避免覆盖或重复创建。建议只选一种方案。
 
-## 第九步：清除浏览器缓存
+## 第十步：清除浏览器缓存
 - 按 `Ctrl + Shift + R` 强制刷新
 
-## 第十步：访问页面
+## 第十一步：访问页面
 ```
 http://localhost/DiamondPageStore/pages/customer.html
 http://localhost/DiamondPageStore/pages/manager.html
@@ -56,6 +61,12 @@ http://localhost/DiamondPageStore/pages/finance.html
 http://localhost/DiamondPageStore/pages/staff.html
 ```
 
+## 第十二步：登录账号和密码()
+Head Office：emp001-003     密码：hash_e001-003  staff
+Store Manager：emp004-007   密码：hash_e004-007  manager
+Finance Staff: emp008-013   密码：hash_e008-013  finance
+Sale Staff: emp014-023      密码：hash_e014-023  staff
+Customer: member001-077     密码：hash_m001-077  customer
 ---
 
 ## API 快速检查（可选）

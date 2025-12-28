@@ -1,22 +1,15 @@
 // scripts/login.js
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 在 scripts/login.js 的 DOMContentLoaded 内部开头插入
-    async function hashPassword(password) {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(password);
-        const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        // 转换为十六进制字符串
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-    let isLoginMode = true; // 追踪当前是登录还是注册模式
+    
+    // 1. 【修复】补充定义 currentLoginMode，默认为 customer
+    let currentLoginMode = 'customer';
+    let isLoginMode = true;
 
-    // 1. 获取核心 UI 元素引用
+    // 获取元素
     const identitySection = document.getElementById('identity-section');
     const authSection = document.getElementById('auth-section');
     const backBtn = document.getElementById('back-to-identity');
-    const roleSelect = document.getElementById('role');
     const authSwitchBtn = document.getElementById('auth-switch-btn');
     const switchText = document.getElementById('switch-text');
     const confirmPwdWrapper = document.getElementById('confirm-password-wrapper');
@@ -26,34 +19,50 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('login-submit-btn');
     const spinner = document.getElementById('login-spinner');
 
-    // 健壮的选择器：基于 ID 获取父级容器
-    const roleWrapper = roleSelect ? roleSelect.closest('div') : null;
-    const registerLink = authSwitchBtn ? authSwitchBtn.parentElement : null;
+    // --- 【修复】删除了报错的 roleWrapper 和 redundant 的 registerLink ---
+    // const roleWrapper = roleSelect ? roleSelect.closest('div') : null; // 已删除
+    // const registerLink ... // 下面函数里定义了，这里不需要
 
-    // 2. 身份选择逻辑
+    // 小眼睛逻辑
+    const togglePwdBtn = document.getElementById('toggle-password');
+    const pwdInput = document.getElementById('password');
+    if (togglePwdBtn && pwdInput) {
+        togglePwdBtn.addEventListener('click', () => {
+            const type = pwdInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            pwdInput.setAttribute('type', type);
+            const icon = togglePwdBtn.querySelector('i');
+            if (icon) {
+                icon.className = type === 'text' ? 'fa fa-eye' : 'fa fa-eye-slash';
+            }
+        });
+    }
+
+    // --- 界面逻辑 ---
     const selectStaffBtn = document.getElementById('select-staff');
     const selectUserBtn = document.getElementById('select-user');
 
     if (selectStaffBtn) {
-        selectStaffBtn.addEventListener('click', () => showAuthForm('staff'));
+        selectStaffBtn.addEventListener('click', () => {
+            currentLoginMode = 'staff'; // 标记为员工入口
+            showAuthForm('staff');
+        });
     }
     if (selectUserBtn) {
-        selectUserBtn.addEventListener('click', () => showAuthForm('user'));
+        selectUserBtn.addEventListener('click', () => {
+            currentLoginMode = 'customer'; // 标记为顾客入口
+            showAuthForm('user');
+        });
     }
 
     if (backBtn) {
         backBtn.addEventListener('click', () => {
-            // 在隐藏界面前，重置表单以清除已输入的用户名和密码
-            if (loginForm) {
-                loginForm.reset();
-            }
-
+            if (loginForm) loginForm.reset();
             authSection.classList.add('hidden');
             identitySection.classList.remove('hidden');
         });
     }
 
-    // 3. 登录/注册切换 UI 更新函数
+
     function updateAuthUI() {
         if (isLoginMode) {
             authTitle.innerText = "Welcome Back";
@@ -72,33 +81,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 4. 显示认证表单逻辑
     function showAuthForm(type) {
         if (loginForm) loginForm.reset();
-        isLoginMode = true; // 切换身份时重置为登录模式
+        isLoginMode = true;
         updateAuthUI();
-
         identitySection.classList.add('hidden');
         authSection.classList.remove('hidden');
 
+        // 在这里获取 registerLink 才是安全的，因为 authSwitchBtn 肯定存在
+        const registerLink = authSwitchBtn ? authSwitchBtn.parentElement : null;
+
         if (type === 'staff') {
-            // 员工模式：显示职能角色选项，隐藏注册入口
+            // 员工界面：隐藏注册入口 (员工不能自己注册)
             if (registerLink) registerLink.classList.add('hidden');
-            if (roleWrapper) roleWrapper.classList.remove('hidden');
-            // 过滤 Role 选项，只保留员工相关
-            Array.from(roleSelect.options).forEach(opt => {
-                opt.hidden = (opt.value === 'customer');
-            });
-            roleSelect.value = 'staff';
         } else {
-            // 用户模式：隐藏角色选项（默认为 customer），显示注册入口
+            // 顾客界面：显示注册入口
             if (registerLink) registerLink.classList.remove('hidden');
-            if (roleWrapper) roleWrapper.classList.add('hidden');
-            roleSelect.value = 'customer';
         }
     }
 
-    // 5. 绑定登录/注册切换按钮
     if (authSwitchBtn) {
         authSwitchBtn.addEventListener('click', () => {
             isLoginMode = !isLoginMode;
@@ -106,96 +107,102 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 6. 表单提交处理
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    // --- 核心提交逻辑 ---
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-        const username = document.getElementById('username').value;
-        const plainPassword = document.getElementById('password').value; // 获取明文
-        const role = document.getElementById('role').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value; 
 
-        // UI 反馈：显示加载状态
-        if (btn && spinner) {
-            btn.disabled = true;
-            spinner.classList.remove('hidden');
-        }
-
-        // 核心安全处理：立即将明文转换为哈希
-        const hashedPassword = await hashPassword(plainPassword);
-
-        try {
-            let response;
-            if (isLoginMode) {
-                // --- 登录逻辑 ---
-                // TODO: 待替换为后端接口 POST /api/login
-                const mockLoginAPI = async (data) => {
-                    // 此时 data.password 已经是 SHA-256 字符串
-                    console.log("Transmission check - Hashed Password:", data.password);
-                    return {
-                        success: true,
-                        token: "mock_token_" + Date.now(),
-                        user: { username: data.username, role: data.role }
-                    };
-                };
-                // 传输加密后的密码
-                response = await mockLoginAPI({ username, password: hashedPassword, role });
-            } else {
-                // --- 注册逻辑 ---
-                const plainConfirmPassword = document.getElementById('confirm-password').value;
-
-                // 校验仍使用明文比对，确保用户输入一致
-                if (plainPassword !== plainConfirmPassword) {
-                    alert("Passwords do not match!");
-                    btn.disabled = false;
-                    spinner.classList.add('hidden');
-                    return;
-                }
-
-                // TODO: 待替换为后端注册接口 POST /api/register
-                const mockRegisterAPI = async (data) => {
-                    // 传输至后端存库的必须是哈希值
-                    console.log("Storage check - Hashed Password to DB:", data.password);
-                    return { success: true, message: "Registration successful! Please login." };
-                };
-
-                // 传输加密后的密码
-                response = await mockRegisterAPI({ username, password: hashedPassword, role });
-
-                if (response.success) {
-                    alert(response.message);
-                    authSwitchBtn.click();
-                    btn.disabled = false;
-                    spinner.classList.add('hidden');
-                    return;
-                }
-            }
-            if (response && response.success) {
-                // 存储鉴权信息
-                localStorage.setItem('auth_token', response.token);
-                localStorage.setItem('current_user', JSON.stringify(response.user));
-                localStorage.setItem('user_role', response.user.role);
-
-                // 路由跳转
-                const routes = {
-                    'customer': 'customer.html',
-                    'staff': 'staff.html',
-                    'manager': 'manager.html',
-                    'finance': 'finance.html'
-                };
-                const targetPage = routes[response.user.role] || 'customer.html';
-                window.location.href = targetPage;
-            } else {
-                alert(response.message || "Action failed. Please check your credentials.");
-            }
-        } catch (error) {
-            console.error("Auth Error:", error);
-            alert("An error occurred. Please try again.");
-        } finally {
-            // 最终恢复按钮状态
+            // UI 加载状态
             if (btn && spinner) {
-                btn.disabled = false;
-                spinner.classList.add('hidden');
+                btn.disabled = true;
+                spinner.classList.remove('hidden');
             }
+
+            try {
+                const payload = { 
+                    username: username, 
+                    password: password,
+                    login_mode: currentLoginMode // 发送当前模式
+                };
+
+                let response;
+
+                if (isLoginMode) {
+                    // Login
+                    const res = await fetch('../api/auth/login.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    response = await res.json();
+                } else {
+                    // Register (只能在 customer 模式下触发)
+                    const confirmInput = document.getElementById('confirm-password');
+                    const confirmPwd = confirmInput ? confirmInput.value : '';
+
+                    if (password !== confirmPwd) {
+                        alert("Passwords do not match!");
+                        resetBtnState();
+                        return;
+                    }
+                    if (password.length > 50) {
+                        alert("Password is too long.");
+                        resetBtnState();
+                        return;
+                    }
+
+                    const res = await fetch('../api/auth/register.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    response = await res.json();
+
+                    if (response.success) {
+                        alert("Registration successful! Please login.");
+                        authSwitchBtn.click();
+                        resetBtnState();
+                        return;
+                    }
+                }
+
+                // 处理响应
+                if (response && response.success) {
+                    localStorage.setItem('auth_token', response.token);
+                    const finalRole = response.user.role; 
+                    localStorage.setItem('user_role', finalRole);
+                    localStorage.setItem('current_user', JSON.stringify(response.user));
+
+                    const routes = {
+                        'customer': 'customer.html',
+                        'staff': 'staff.html',
+                        'manager': 'manager.html',
+                        'finance': 'finance.html'
+                    };
+                    
+                    const targetPage = routes[finalRole] || 'customer.html';
+                    console.log(`Auto Redirecting: ${targetPage} (Job: ${response.user.job_title})`);
+                    window.location.href = targetPage;
+                } else {
+                    alert(response.message || "Operation failed.");
+                }
+
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Network error.");
+            } finally {
+                resetBtnState();
+            }
+        });
+    }
+
+    function resetBtnState() {
+        if (btn && spinner) {
+            btn.disabled = false;
+            spinner.classList.add('hidden');
         }
-    });
+    }
 });
