@@ -970,4 +970,7 @@ window.loadBookCategoryTable = loadBookCategoryTable;
 window.performStaffSearch = performStaffSearch;
 window.performUserSearch = performUserSearch;
 
+// 编辑定价函数
+window.editPricing = editPricing;
+
 console.log('Manager API Integration loaded successfully');

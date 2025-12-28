@@ -329,16 +329,20 @@ function searchBooks($conn) {
                 categories,
                 total_stock
             FROM vw_manager_inventory_overview
-            WHERE ISBN LIKE :keyword
-            OR book_name LIKE :keyword
-            OR publisher LIKE :keyword
-            OR authors LIKE :keyword
-            OR categories LIKE :keyword
+            WHERE ISBN LIKE :kw1
+            OR book_name LIKE :kw2
+            OR publisher LIKE :kw3
+            OR authors LIKE :kw4
+            OR categories LIKE :kw5
             ORDER BY book_name";
 
     $searchTerm = "%$keyword%";
     $stmt = $conn->prepare($sql);
-    $stmt->bindParam(':keyword', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindParam(':kw1', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindParam(':kw2', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindParam(':kw3', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindParam(':kw4', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindParam(':kw5', $searchTerm, PDO::PARAM_STR);
     $stmt->execute();
     $books = $stmt->fetchAll();
 
