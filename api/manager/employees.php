@@ -188,7 +188,17 @@ function getEmployeesByStore($conn) {
  * 添加员工（调用存储过程）
  */
 function addEmployee($conn) {
-    $data = json_decode(file_get_contents('php://input'), true);
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid JSON: ' . json_last_error_msg()
+        ]);
+        return;
+    }
 
     if (!$data || !isset($data['user_id']) || !isset($data['first_name']) || !isset($data['last_name']) ||
         !isset($data['store_id']) || !isset($data['job_title_id']) || !isset($data['phone'])) {
@@ -198,6 +208,29 @@ function addEmployee($conn) {
             'message' => 'Missing required fields: user_id, first_name, last_name, store_id, job_title_id, phone'
         ]);
         return;
+    }
+
+    // Validate phone format (basic format: digits, spaces, hyphens, parentheses, plus sign)
+    if (!preg_match('/^[\d\s\-\(\)\+]+$/', $data['phone']) || strlen($data['phone']) < 7 || strlen($data['phone']) > 20) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid phone number format'
+        ]);
+        return;
+    }
+
+    // Validate performance range if provided
+    if (isset($data['performance']) && $data['performance'] !== null) {
+        $performance = floatval($data['performance']);
+        if ($performance < 0 || $performance > 100) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Performance score must be between 0 and 100'
+            ]);
+            return;
+        }
     }
 
     $sql = "CALL sp_manager_add_employee(
@@ -211,10 +244,10 @@ function addEmployee($conn) {
     $stmt->bindParam(':last_name', $data['last_name'], PDO::PARAM_STR);
     $stmt->bindParam(':store_id', $data['store_id'], PDO::PARAM_INT);
     $stmt->bindParam(':job_title_id', $data['job_title_id'], PDO::PARAM_INT);
-    $stmt->bindParam(':phone', $data['phone'], PDO::PARAM_INT);
+    $stmt->bindParam(':phone', $data['phone'], PDO::PARAM_STR);
 
     $performance = isset($data['performance']) ? $data['performance'] : null;
-    $stmt->bindParam(':performance', $performance, PDO::PARAM_INT);
+    $stmt->bindParam(':performance', $performance, PDO::PARAM_STR);
 
     $stmt->execute();
 
@@ -240,7 +273,17 @@ function addEmployee($conn) {
  * 更新员工（调用存储过程）
  */
 function updateEmployee($conn) {
-    $data = json_decode(file_get_contents('php://input'), true);
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid JSON: ' . json_last_error_msg()
+        ]);
+        return;
+    }
 
     if (!$data || !isset($data['employee_id']) || !isset($data['first_name']) || !isset($data['last_name']) ||
         !isset($data['store_id']) || !isset($data['job_title_id']) || !isset($data['phone'])) {
@@ -250,6 +293,29 @@ function updateEmployee($conn) {
             'message' => 'Missing required fields: employee_id, first_name, last_name, store_id, job_title_id, phone'
         ]);
         return;
+    }
+
+    // Validate phone format (basic format: digits, spaces, hyphens, parentheses, plus sign)
+    if (!preg_match('/^[\d\s\-\(\)\+]+$/', $data['phone']) || strlen($data['phone']) < 7 || strlen($data['phone']) > 20) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid phone number format'
+        ]);
+        return;
+    }
+
+    // Validate performance range if provided
+    if (isset($data['performance']) && $data['performance'] !== null) {
+        $performance = floatval($data['performance']);
+        if ($performance < 0 || $performance > 100) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Performance score must be between 0 and 100'
+            ]);
+            return;
+        }
     }
 
     $sql = "CALL sp_manager_update_employee(
@@ -265,10 +331,10 @@ function updateEmployee($conn) {
     $stmt->bindParam(':last_name', $data['last_name'], PDO::PARAM_STR);
     $stmt->bindParam(':store_id', $data['store_id'], PDO::PARAM_INT);
     $stmt->bindParam(':job_title_id', $data['job_title_id'], PDO::PARAM_INT);
-    $stmt->bindParam(':phone', $data['phone'], PDO::PARAM_INT);
+    $stmt->bindParam(':phone', $data['phone'], PDO::PARAM_STR);
 
     $performance = isset($data['performance']) ? $data['performance'] : null;
-    $stmt->bindParam(':performance', $performance, PDO::PARAM_INT);
+    $stmt->bindParam(':performance', $performance, PDO::PARAM_STR);
 
     $stmt->execute();
 

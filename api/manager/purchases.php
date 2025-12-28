@@ -127,7 +127,17 @@ function getPurchaseDetail($conn) {
  * 创建采购单（调用存储过程）
  */
 function createPurchase($conn) {
-    $data = json_decode(file_get_contents('php://input'), true);
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid JSON: ' . json_last_error_msg()
+        ]);
+        return;
+    }
 
     if (!$data || !isset($data['store_id']) || !isset($data['supplier_id']) || !isset($data['purchase_detail']) ||
         !is_array($data['purchase_detail']) || empty($data['purchase_detail'])) {

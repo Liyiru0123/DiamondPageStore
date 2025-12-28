@@ -124,17 +124,17 @@ function getBookDetail($conn) {
                 s.sku_id,
                 s.bingding,
                 s.unit_price,
-                (SELECT JSON_ARRAYAGG(JSON_OBJECT('author_id', a.author_id, 'name', CONCAT(a.first_name, ' ', a.last_name)))
-                 FROM book_authors ba
-                 JOIN authors a ON ba.author_id = a.author_id
-                 WHERE ba.ISBN = b.ISBN) AS authors,
+                JSON_ARRAYAGG(DISTINCT JSON_OBJECT('author_id', a.author_id, 'name', CONCAT(a.first_name, ' ', a.last_name))) AS authors,
                 (SELECT JSON_ARRAYAGG(JSON_OBJECT('category_id', c.category_id, 'name', c.name))
                  FROM book_categories bc
                  JOIN catagories c ON bc.category_id = c.category_id
                  WHERE bc.ISBN = b.ISBN) AS categories
             FROM books b
             JOIN skus s ON b.ISBN = s.ISBN
-            WHERE b.ISBN = :ISBN";
+            LEFT JOIN book_authors ba ON b.ISBN = ba.ISBN
+            LEFT JOIN authors a ON ba.author_id = a.author_id
+            WHERE b.ISBN = :ISBN
+            GROUP BY b.ISBN, s.sku_id, s.bingding, s.unit_price";
 
     $stmt = $conn->prepare($sql);
     $stmt->bindParam(':ISBN', $ISBN, PDO::PARAM_STR);
@@ -161,7 +161,17 @@ function getBookDetail($conn) {
  * 添加书籍（调用存储过程）
  */
 function addBook($conn) {
-    $data = json_decode(file_get_contents('php://input'), true);
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid JSON: ' . json_last_error_msg()
+        ]);
+        return;
+    }
 
     if (!$data || !isset($data['ISBN']) || !isset($data['name']) || !isset($data['publisher']) ||
         !isset($data['binding']) || !isset($data['unit_price'])) {
@@ -169,6 +179,16 @@ function addBook($conn) {
         echo json_encode([
             'success' => false,
             'message' => 'Missing required fields: ISBN, name, publisher, binding, unit_price'
+        ]);
+        return;
+    }
+
+    // Validate unit price
+    if (!is_numeric($data['unit_price']) || floatval($data['unit_price']) <= 0) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Unit price must be greater than 0'
         ]);
         return;
     }
@@ -227,13 +247,33 @@ function addBook($conn) {
  * 更新定价（调用存储过程）
  */
 function updatePricing($conn) {
-    $data = json_decode(file_get_contents('php://input'), true);
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid JSON: ' . json_last_error_msg()
+        ]);
+        return;
+    }
 
     if (!$data || !isset($data['sku_id']) || !isset($data['new_price'])) {
         http_response_code(400);
         echo json_encode([
             'success' => false,
             'message' => 'Missing required fields: sku_id, new_price'
+        ]);
+        return;
+    }
+
+    // Validate new price
+    if (!is_numeric($data['new_price']) || floatval($data['new_price']) <= 0) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'New price must be greater than 0'
         ]);
         return;
     }
