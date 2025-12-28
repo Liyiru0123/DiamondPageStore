@@ -52,43 +52,34 @@ async function initStaffSession() {
         const result = await response.json();
 
         if (result.success) {
-            // 1. 保存到全局变量
+            // 成功逻辑保持不变
             currentStaff = result.data;
-
-            console.log("Staff Verified:", currentStaff.full_name, "@", currentStaff.store_name);
-
-            // 2. 更新 UI 显示店铺名称
             const headerStoreEl = document.getElementById('header-store-name');
-            if (headerStoreEl) {
-                headerStoreEl.textContent = currentStaff.store_name; // 例如 "Downtown Store"
-            }
-
-            // 顺便把 Header 里的 "CurrentUser" 也替换成真名 (可选)
+            if (headerStoreEl) headerStoreEl.textContent = currentStaff.store_name;
             const headerUserEl = document.getElementById('header-user-name');
-            if (headerUserEl) {
-                headerUserEl.textContent = currentStaff.full_name;
-            }
+            if (headerUserEl) headerUserEl.textContent = currentStaff.full_name;
 
-            // 3. 拿到 Store ID 后，再去获取业务数据 (链式调用)
-            // 传递 store_id 给后续函数
             fetchInventory(currentStaff.store_id);
             fetchOrders(currentStaff.store_id);
             fetchStockRequests(currentStaff.store_id);
 
-            // 还可以更新 Dashboard 的统计
-            // fetchDashboardStats(currentStaff.store_id); // 稍后实现
-
         } else {
-            alert("Session Error: " + result.message);
-            window.location.href = '../index.html'; // 或 login.html
+            // --- 核心修复 ---
+            // 如果后端返回 success: false (说明 Session 过期或无效)
+            console.warn("Session expired or invalid:", result.message);
+            
+            // 1. 清除前端残留的“假”登录状态
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('current_user');
+            localStorage.removeItem('user_role');
+            
+            // 2. 强制跳回登录页
+            alert("Session expired. Please login again.");
+            window.location.href = 'login.html';
         }
     } catch (error) {
         console.error('Session Init Failed:', error);
-        const headerStoreEl = document.getElementById('header-store-name');
-        if (headerStoreEl) {
-            headerStoreEl.textContent = '(Error)';
-            headerStoreEl.classList.add('text-red-500');
-        }
+        // 如果是网络错误，可以保留在页面但显示断网提示
     }
 }
 
@@ -508,7 +499,6 @@ function updateDashboardStats(inventoryData = [], ordersData = []) {
  */
 
 // 渲染 Orders: 订单列表
-// 渲染 Orders: 订单列表
 function renderOrders(data) {
     const ordersList = document.getElementById('orders-list');
     if (!ordersList) return;
@@ -867,7 +857,6 @@ window.closeRequestModal = function () {
 };
 
 // 动态添加一行请求项
-// 1. 修正：动态添加行时包含所有 4 个字段
 window.addRequestRow = function () {
     const tbody = document.getElementById('request-items-body');
     const tr = document.createElement('tr');
@@ -883,9 +872,7 @@ window.addRequestRow = function () {
     tbody.appendChild(tr);
 };
 
-// 2. 修正：提交时收集 Request ID, Date, Title, ISBN, SKU, Qty
-// scripts/staff.js
-
+// 提交库存请求
 async function submitStockRequest() {
     const rows = document.querySelectorAll('#request-items-body tr');
     const items = [];
