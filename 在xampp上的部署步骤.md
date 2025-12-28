@@ -36,16 +36,24 @@
 3. `database/finance_triggers.sql`
 4. `database/finance_events.sql`
 
+## 第八步：执行 Staff 相关 SQL
+按顺序执行：
+1. `database/staff_views.sql`
+2. `database/staff_procedures.sql`
+3. `database/finance_triggers.sql`
+4. `database/finance_events.sql`
+
 > 如果你打算使用 `book_store_views_finance&manager.sql`，不要和以上文件混用，避免覆盖或重复创建。建议只选一种方案。
 
-## 第八步：清除浏览器缓存
+## 第九步：清除浏览器缓存
 - 按 `Ctrl + Shift + R` 强制刷新
 
-## 第九步：访问页面
+## 第十步：访问页面
 ```
 http://localhost/DiamondPageStore/pages/customer.html
 http://localhost/DiamondPageStore/pages/manager.html
 http://localhost/DiamondPageStore/pages/finance.html
+http://localhost/DiamondPageStore/pages/staff.html
 ```
 
 ---

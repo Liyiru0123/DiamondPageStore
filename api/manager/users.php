@@ -145,7 +145,17 @@ function getUserDetail($conn) {
 }
 
 function updateUser($conn) {
-    $data = json_decode(file_get_contents('php://input'), true);
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid JSON: ' . json_last_error_msg()
+        ]);
+        return;
+    }
 
     if (!$data || !isset($data['user_id'])) {
         http_response_code(400);
@@ -154,6 +164,19 @@ function updateUser($conn) {
             'message' => 'user_id is required'
         ]);
         return;
+    }
+
+    // Validate user_types if provided
+    if (isset($data['user_types'])) {
+        $validUserTypes = ['customer', 'employee', 'manager'];
+        if (!in_array($data['user_types'], $validUserTypes)) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Invalid user type. Must be one of: customer, employee, manager'
+            ]);
+            return;
+        }
     }
 
     $conn->beginTransaction();
@@ -224,17 +247,27 @@ function deleteUser($conn) {
 
         $relSql = "SELECT
                         (SELECT COUNT(*) FROM members WHERE user_id = :user_id) AS member_count,
-                        (SELECT COUNT(*) FROM employees WHERE user_id = :user_id) AS employee_count";
+                        (SELECT COUNT(*) FROM employees WHERE user_id = :user_id) AS employee_count,
+                        (SELECT COUNT(*) FROM orders WHERE user_id = :user_id) AS order_count,
+                        (SELECT COUNT(*) FROM invoices WHERE user_id = :user_id) AS invoice_count,
+                        (SELECT COUNT(*) FROM announcements WHERE created_by = :user_id) AS announcement_count";
         $relStmt = $conn->prepare($relSql);
         $relStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
         $relStmt->execute();
         $rel = $relStmt->fetch();
 
-        if ($rel['member_count'] > 0 || $rel['employee_count'] > 0) {
+        $violations = [];
+        if ($rel['member_count'] > 0) $violations[] = 'member record';
+        if ($rel['employee_count'] > 0) $violations[] = 'employee record';
+        if ($rel['order_count'] > 0) $violations[] = 'orders';
+        if ($rel['invoice_count'] > 0) $violations[] = 'invoices';
+        if ($rel['announcement_count'] > 0) $violations[] = 'announcements';
+
+        if (!empty($violations)) {
             http_response_code(400);
             echo json_encode([
                 'success' => false,
-                'message' => 'Cannot delete user with linked member or employee record'
+                'message' => 'Cannot delete user with linked: ' . implode(', ', $violations)
             ]);
             $conn->rollBack();
             return;

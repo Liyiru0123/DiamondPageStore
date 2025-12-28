@@ -1,8 +1,9 @@
 staff：
-  左侧边栏切换没有高亮
+  库存管理对于0库存的处理有待优化
+  订单页面details看不了
   排序/搜索还在前端实现
-  stock变量修改
-  
+  stock依旧没连接（顺着修呢😁）
+
 customer:
   需要连接后端接口
   购物车?前缀问题
@@ -15,3 +16,8 @@ database:
 
 在xampp上的部署步骤：
   我这看是乱码
+
+manager:
+  Inventory & Pricing 中价格管理，加的书不会被加到数据库中
+  删除user会报错
+  搜索的实现
