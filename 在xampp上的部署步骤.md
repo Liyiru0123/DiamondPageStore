@@ -1,47 +1,47 @@
-# DiamondPageStore XAMPP ²¿Êğ²½Öè£¨Customer + Manager + Finance£©
+# DiamondPageStore XAMPP éƒ¨ç½²æ­¥éª¤ï¼ˆCustomer + Manager + Financeï¼‰
 
-## µÚÒ»²½£ºÆô¶¯ XAMPP
-- ´ò¿ª XAMPP Control Panel
-- Æô¶¯ Apache ºÍ MySQL
+## ç¬¬ä¸€æ­¥ï¼šå¯åŠ¨ XAMPP
+- æ‰“å¼€ XAMPP Control Panel
+- å¯åŠ¨ Apache å’Œ MySQL
 
-## µÚ¶ş²½£º´´½¨Êı¾İ¿â
-1. ·ÃÎÊ `http://localhost/phpmyadmin`
-2. ´´½¨Êı¾İ¿â£º`book_store`
-3. ÅÅĞò¹æÔò£º`utf8mb4_general_ci`
+## ç¬¬äºŒæ­¥ï¼šåˆ›å»ºæ•°æ®åº“
+1. è®¿é—® `http://localhost/phpmyadmin`
+2. åˆ›å»ºæ•°æ®åº“ï¼š`book_store`
+3. æ’åºè§„åˆ™ï¼š`utf8mb4_general_ci`
 
-## µÚÈı²½£ºµ¼Èë»ù´¡Êı¾İ
-- Ñ¡ÔñÊı¾İ¿â `book_store`
-- µ¼Èë£º`new_data_book_store.sql`
+## ç¬¬ä¸‰æ­¥ï¼šå¯¼å…¥åŸºç¡€æ•°æ®
+- é€‰æ‹©æ•°æ®åº“ `book_store`
+- å¯¼å…¥ï¼š`new_data_book_store.sql`
 
-## µÚËÄ²½£ºÖ´ĞĞ½á¹¹±ä¸ü£¨Èç¹ûÄãÓÃ¹ı modify.sql£©
-- Ö´ĞĞ¸ùÄ¿Â¼ `modify.sql`
-- Ö´ĞĞºó±ØĞë**ÖØĞÂ´´½¨ÊÓÍ¼/¹ı³Ì**£¬·ñÔò»áÊ§Ğ§
+## ç¬¬å››æ­¥ï¼šæ‰§è¡Œç»“æ„å˜æ›´ï¼ˆå¦‚æœä½ ç”¨è¿‡ modify.sqlï¼‰
+- æ‰§è¡Œæ ¹ç›®å½• `modify.sql`
+- æ‰§è¡Œåå¿…é¡»**é‡æ–°åˆ›å»ºè§†å›¾/è¿‡ç¨‹**ï¼Œå¦åˆ™ä¼šå¤±æ•ˆ
 
-## µÚÎå²½£ºÖ´ĞĞ Customer Ïà¹Ø SQL
-°´Ë³ĞòÖ´ĞĞ£º
-1. `database/view.sql`
+## ç¬¬äº”æ­¥ï¼šæ‰§è¡Œ Customer ç›¸å…³ SQL
+æŒ‰é¡ºåºæ‰§è¡Œï¼š
+1. `database/deploy_all.sql`
 2. `database/procedures.sql`
 3. `database/triggers.sql`
 
-## µÚÁù²½£ºÖ´ĞĞ Manager Ïà¹Ø SQL
-°´Ë³ĞòÖ´ĞĞ£º
+## ç¬¬å…­æ­¥ï¼šæ‰§è¡Œ Manager ç›¸å…³ SQL
+æŒ‰é¡ºåºæ‰§è¡Œï¼š
 1. `database/manager_tables.sql`
 2. `database/manager_views.sql`
 3. `database/manager_procedures.sql`
 
-## µÚÆß²½£ºÖ´ĞĞ Finance Ïà¹Ø SQL
-°´Ë³ĞòÖ´ĞĞ£º
+## ç¬¬ä¸ƒæ­¥ï¼šæ‰§è¡Œ Finance ç›¸å…³ SQL
+æŒ‰é¡ºåºæ‰§è¡Œï¼š
 1. `database/finance_views.sql`
 2. `database/finance_procedures.sql`
 3. `database/finance_triggers.sql`
 4. `database/finance_events.sql`
 
-> Èç¹ûÄã´òËãÊ¹ÓÃ `book_store_views_finance&manager.sql`£¬²»ÒªºÍÒÔÉÏÎÄ¼ş»ìÓÃ£¬±ÜÃâ¸²¸Ç»òÖØ¸´´´½¨¡£½¨ÒéÖ»Ñ¡Ò»ÖÖ·½°¸¡£
+> å¦‚æœä½ æ‰“ç®—ä½¿ç”¨ `book_store_views_finance&manager.sql`ï¼Œä¸è¦å’Œä»¥ä¸Šæ–‡ä»¶æ··ç”¨ï¼Œé¿å…è¦†ç›–æˆ–é‡å¤åˆ›å»ºã€‚å»ºè®®åªé€‰ä¸€ç§æ–¹æ¡ˆã€‚
 
-## µÚ°Ë²½£ºÇå³ıä¯ÀÀÆ÷»º´æ
-- °´ `Ctrl + Shift + R` Ç¿ÖÆË¢ĞÂ
+## ç¬¬å…«æ­¥ï¼šæ¸…é™¤æµè§ˆå™¨ç¼“å­˜
+- æŒ‰ `Ctrl + Shift + R` å¼ºåˆ¶åˆ·æ–°
 
-## µÚ¾Å²½£º·ÃÎÊÒ³Ãæ
+## ç¬¬ä¹æ­¥ï¼šè®¿é—®é¡µé¢
 ```
 http://localhost/DiamondPageStore/pages/customer.html
 http://localhost/DiamondPageStore/pages/manager.html
@@ -50,39 +50,39 @@ http://localhost/DiamondPageStore/pages/finance.html
 
 ---
 
-## API ¿ìËÙ¼ì²é£¨¿ÉÑ¡£©
-Customer£º
+## API å¿«é€Ÿæ£€æŸ¥ï¼ˆå¯é€‰ï¼‰
+Customerï¼š
 - `http://localhost/DiamondPageStore/api/customer/books.php?action=list`
 
-Manager£º
+Managerï¼š
 - `http://localhost/DiamondPageStore/api/manager/reports.php?action=overview`
 
-Finance£º
+Financeï¼š
 - `http://localhost/DiamondPageStore/api/finance/reports.php?action=overview`
 
 ---
 
-## ÑéÖ¤Çåµ¥£¨Customer£©
-- [ ] ÊÓÍ¼Õı³££¨`vw_customer_` ¿ªÍ·£©
-- [ ] ´æ´¢¹ı³Ì¿ÉÖ´ĞĞ£¨`sp_customer_` ¿ªÍ·£©
-- [ ] Ò³Ãæ¿É´ò¿ª
-- [ ] Êé¼®ÁĞ±í/ËÑË÷/·ÖÀàÕı³£
-- [ ] ¹ºÎï³µ½ğ¶îÏÔÊ¾Õı³£
-- [ ] ¿É´´½¨²¢Ö§¸¶¶©µ¥
+## éªŒè¯æ¸…å•ï¼ˆCustomerï¼‰
+- [ ] è§†å›¾æ­£å¸¸ï¼ˆ`vw_customer_` å¼€å¤´ï¼‰
+- [ ] å­˜å‚¨è¿‡ç¨‹å¯æ‰§è¡Œï¼ˆ`sp_customer_` å¼€å¤´ï¼‰
+- [ ] é¡µé¢å¯æ‰“å¼€
+- [ ] ä¹¦ç±åˆ—è¡¨/æœç´¢/åˆ†ç±»æ­£å¸¸
+- [ ] è´­ç‰©è½¦é‡‘é¢æ˜¾ç¤ºæ­£å¸¸
+- [ ] å¯åˆ›å»ºå¹¶æ”¯ä»˜è®¢å•
 
-## ÑéÖ¤Çåµ¥£¨Manager£©
-- [ ] ÊÓÍ¼Õı³££¨`vw_manager_` ¿ªÍ·£©
-- [ ] ´æ´¢¹ı³Ì¿ÉÖ´ĞĞ£¨`sp_manager_` ¿ªÍ·£©
-- [ ] Ò³Ãæ¿É´ò¿ª
-- [ ] ¸ÅÀÀÍ³¼ÆÓĞÊı¾İ
-- [ ] ¿â´æ°´ÃÅµê/SKU¿ÉÏÔÊ¾
-- [ ] Ô±¹¤/ÓÃ»§/²¹»õ/Í¨ÖªÄ£¿é¿ÉÓÃ
+## éªŒè¯æ¸…å•ï¼ˆManagerï¼‰
+- [ ] è§†å›¾æ­£å¸¸ï¼ˆ`vw_manager_` å¼€å¤´ï¼‰
+- [ ] å­˜å‚¨è¿‡ç¨‹å¯æ‰§è¡Œï¼ˆ`sp_manager_` å¼€å¤´ï¼‰
+- [ ] é¡µé¢å¯æ‰“å¼€
+- [ ] æ¦‚è§ˆç»Ÿè®¡æœ‰æ•°æ®
+- [ ] åº“å­˜æŒ‰é—¨åº—/SKUå¯æ˜¾ç¤º
+- [ ] å‘˜å·¥/ç”¨æˆ·/è¡¥è´§/é€šçŸ¥æ¨¡å—å¯ç”¨
 
-## ÑéÖ¤Çåµ¥£¨Finance£©
-- [ ] ÊÓÍ¼Õı³££¨`vw_finance_`/`vm_finance_` ¿ªÍ·£©
-- [ ] ´æ´¢¹ı³Ì¿ÉÖ´ĞĞ£¨`sp_finance_` ¿ªÍ·£©
-- [ ] Ò³Ãæ¿É´ò¿ª
-- [ ] ¶©µ¥/·¢Æ±ÁĞ±íÕı³£
-- [ ] Ö§¸¶·½Ê½Í³¼ÆÓĞÊı¾İ£¨ĞèÒªÊÕ¿îºó£©
+## éªŒè¯æ¸…å•ï¼ˆFinanceï¼‰
+- [ ] è§†å›¾æ­£å¸¸ï¼ˆ`vw_finance_`/`vm_finance_` å¼€å¤´ï¼‰
+- [ ] å­˜å‚¨è¿‡ç¨‹å¯æ‰§è¡Œï¼ˆ`sp_finance_` å¼€å¤´ï¼‰
+- [ ] é¡µé¢å¯æ‰“å¼€
+- [ ] è®¢å•/å‘ç¥¨åˆ—è¡¨æ­£å¸¸
+- [ ] æ”¯ä»˜æ–¹å¼ç»Ÿè®¡æœ‰æ•°æ®ï¼ˆéœ€è¦æ”¶æ¬¾åï¼‰
 
-Íê³É
+å®Œæˆ

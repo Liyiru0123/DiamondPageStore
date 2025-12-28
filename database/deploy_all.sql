@@ -55,7 +55,7 @@ SELECT
     ib.batch_code,
     s.sku_id,
     s.unit_price,
-    s.bingding,
+    s.binding,
     b.ISBN,
     b.name AS book_name,
     b.publisher,
@@ -70,13 +70,13 @@ SELECT
     s.sku_id,
     b.ISBN,
     b.name AS book_name,
-    s.bingding,
+    s.binding,
     ib.store_id,
     COALESCE(SUM(ib.quantity), 0) AS total_stock
 FROM skus s
 JOIN books b ON s.ISBN = b.ISBN
 LEFT JOIN inventory_batches ib ON s.sku_id = ib.sku_id
-GROUP BY s.sku_id, b.ISBN, b.name, s.bingding, ib.store_id;
+GROUP BY s.sku_id, b.ISBN, b.name, s.binding, ib.store_id;
 
 -- 3. 员工订单列表视图
 CREATE OR REPLACE VIEW vw_staff_order_summary AS
@@ -105,7 +105,7 @@ SELECT
     b.introduction AS description,
     s.sku_id,
     s.unit_price AS price,
-    s.bingding AS binding,
+    s.binding AS binding,
     COALESCE(SUM(ib.quantity), 0) AS stock,
     st.store_id,
     st.name AS store_name,
@@ -125,7 +125,7 @@ JOIN skus s ON b.ISBN = s.ISBN
 LEFT JOIN inventory_batches ib ON s.sku_id = ib.sku_id
 LEFT JOIN stores st ON ib.store_id = st.store_id
 GROUP BY b.ISBN, b.name, b.language, b.publisher, b.introduction,
-         s.sku_id, s.unit_price, s.bingding, st.store_id, st.name;
+         s.sku_id, s.unit_price, s.binding, st.store_id, st.name;
 
 -- 5. 顾客书籍详情视图
 CREATE OR REPLACE VIEW vw_customer_book_detail AS
@@ -137,7 +137,7 @@ SELECT
     b.introduction AS description,
     s.sku_id,
     s.unit_price AS price,
-    s.bingding AS binding,
+    s.binding AS binding,
     COALESCE(SUM(ib.quantity), 0) AS stock,
     st.store_id,
     st.name AS store_name,
@@ -161,7 +161,7 @@ JOIN skus s ON b.ISBN = s.ISBN
 LEFT JOIN inventory_batches ib ON s.sku_id = ib.sku_id
 LEFT JOIN stores st ON ib.store_id = st.store_id
 GROUP BY b.ISBN, b.name, b.language, b.publisher, b.introduction,
-         s.sku_id, s.unit_price, s.bingding, st.store_id, st.name;
+         s.sku_id, s.unit_price, s.binding, st.store_id, st.name;
 
 -- 6. 顾客收藏列表视图
 CREATE OR REPLACE VIEW vw_customer_favorites AS
@@ -175,7 +175,7 @@ SELECT
     b.introduction AS description,
     s.sku_id,
     s.unit_price AS price,
-    s.bingding AS binding,
+    s.binding AS binding,
     (SELECT GROUP_CONCAT(CONCAT(a.first_name, ' ', a.last_name) SEPARATOR ', ')
      FROM book_authors ba
      JOIN authors a ON ba.author_id = a.author_id
@@ -192,7 +192,7 @@ JOIN skus s ON b.ISBN = s.ISBN
 LEFT JOIN inventory_batches ib ON s.sku_id = ib.sku_id
 LEFT JOIN stores st ON ib.store_id = st.store_id
 GROUP BY f.member_id, f.ISBN, f.create_date, b.name, b.language, b.publisher,
-         b.introduction, s.sku_id, s.unit_price, s.bingding, st.name;
+         b.introduction, s.sku_id, s.unit_price, s.binding, st.name;
 
 -- 7. 顾客订单列表视图
 CREATE OR REPLACE VIEW vw_customer_orders AS
@@ -225,7 +225,7 @@ SELECT
     b.publisher,
     b.language,
     s.unit_price AS price,
-    s.bingding AS binding,
+    s.binding AS binding,
     (oi.quantity * s.unit_price) AS subtotal,
     (SELECT GROUP_CONCAT(CONCAT(a.first_name, ' ', a.last_name) SEPARATOR ', ')
      FROM book_authors ba
