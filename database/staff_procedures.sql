@@ -4,29 +4,30 @@ DELIMITER //
 -- 1. 获取指定门店的库存列表 (包含低库存逻辑)
 -- =============================================
 DROP PROCEDURE IF EXISTS sp_staff_get_inventory //
-CREATE PROCEDURE sp_staff_get_inventory(
+CREATE OR REPLACE PROCEDURE sp_staff_get_inventory(
     IN p_store_id INT
 )
 BEGIN
+    -- 关联 books, skus 和 inventory_batches 表
+    -- 计算该门店每本书的当前库存总量
     SELECT 
-        b.name AS title,
-        GROUP_CONCAT(DISTINCT a.last_name SEPARATOR ', ') AS author, -- 聚合作者名
-        s.ISBN,
-        s.binding AS category, -- 使用 binding 作为分类展示
-        s.unit_price AS price,
+        b.ISBN,
+        b.name AS book_name,
+        b.publisher,
+        s.binding AS category, -- 暂时用 binding 代替 category
+        s.unit_price,
         s.sku_id,
-        COALESCE(SUM(ib.quantity), 0) AS stock, -- 计算该 SKU 在该店的总库存
-        CASE 
-            WHEN COALESCE(SUM(ib.quantity), 0) <= 5 THEN 'low'
-            WHEN COALESCE(SUM(ib.quantity), 0) <= 20 THEN 'medium'
-            ELSE 'high'
-        END AS stock_status
-    FROM skus s
-    JOIN books b ON s.ISBN = b.ISBN
-    LEFT JOIN book_authors ba ON b.ISBN = ba.ISBN
-    LEFT JOIN authors a ON ba.author_id = a.author_id
-    LEFT JOIN inventory_batches ib ON s.sku_id = ib.sku_id AND ib.store_id = p_store_id
-    GROUP BY s.sku_id, b.name, s.ISBN, s.binding, s.unit_price;
+        COALESCE(SUM(ib.quantity), 0) AS quantity
+    FROM 
+        books b
+    JOIN 
+        skus s ON b.ISBN = s.ISBN
+    LEFT JOIN 
+        inventory_batches ib ON s.sku_id = ib.sku_id AND ib.store_id = p_store_id
+    GROUP BY 
+        s.sku_id
+    ORDER BY 
+        b.name ASC;
 END //
 
 -- =============================================

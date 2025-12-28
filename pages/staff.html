@@ -42,10 +42,7 @@
         })();
     </script>
 
-    <!-- 2. 引入布局脚本 -->
-    <script src="../scripts/layout.js"></script>
-
-    <!-- 3. 自定义样式补充 -->
+    <!-- 2. 自定义样式补充 -->
     <link rel="stylesheet" href="../styles/staff.css">
 
 </head>
@@ -67,7 +64,10 @@
             <!-- A. Dashboard Page -->
             <div id="dashboard-page" class="page-content">
                 <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-2xl font-bold">Branch Dashboard</h1>
+                    <div class="flex justify-between items-center mb-6">
+                        <h1 class="text-2xl font-bold">Branch Dashboard</h1>
+                    </div>
+
                     <div id="current-date" class="text-gray-600"></div>
                 </div>
 
@@ -84,7 +84,7 @@
                         <p class="text-sm text-gray-500 mb-1">Low Stock Items</p>
                         <p class="text-2xl font-bold text-red-600" id="low-stock-books">0</p>
                         <p class="text-sm text-red-600 mt-1 flex items-center">
-                            <i class="fa fa-exclamation-triangle mr-1"></i> Stock equals to 1
+                            <i class="fa fa-exclamation-triangle mr-1"></i> Only 1 stock left
                         </p>
                     </div>
 
@@ -121,7 +121,7 @@
                     </div>
 
                     <div class="card">
-                        <h3 class="text-lg font-semibold mb-4">Low Stock Items (Stock = 1)</h3>
+                        <h3 class="text-lg font-semibold mb-4">Low Stock Items </h3>
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">

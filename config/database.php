@@ -85,4 +85,12 @@ function getDB() {
     $database = new DatabaseLocal();
     return $database->getConnection();
 }
+
+// 1. 实例化本地数据库类
+$database = new DatabaseLocal();
+
+// 2. 获取连接并赋值给 $pdo 变量
+// 这样，只要引用了这个文件的 PHP 脚本，都可以直接使用 $pdo
+$pdo = $database->getConnection();
+
 ?>
