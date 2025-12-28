@@ -52,13 +52,13 @@ const MENU_CONFIG = {
         { id: 'invoice', icon: 'fa-file-text', text: 'Invoice Management', type: 'admin' }
     ],
 
-    // === 店长/经理 (Manager) - 拥有最高权限 ===
+    // === 店长/经理 (Manager)  ===
     manager: [
         { id: 'overview', icon: 'fa-tachometer', text: 'Dashboard', type: 'admin' },
-        { id: 'books', icon: 'fa-book', text: 'Book Management', type: 'admin' },
+        { id: 'inventory', icon: 'fa-cubes', text: 'Inventory Management', type: 'admin' },
         { id: 'staff', icon: 'fa-users', text: 'Staff Management', type: 'admin' },
-        { id: 'orders', icon: 'fa-list', text: 'Order Management', type: 'admin' },
-        { id: 'finance-report', icon: 'fa-line-chart', text: 'Financial Reports', type: 'admin' }
+        { id: 'user-management', icon: 'fa-user-cog', text: 'User Management', type: 'admin' },
+        { id: 'notifications', icon: 'fa-bell', text: 'Notifications', type: 'admin' }
     ],
 
     // === 普通店员 (Staff) - 主要是销售和库存 ===
@@ -73,13 +73,13 @@ const MENU_CONFIG = {
 // window.switchPage = function(pageId) {
 //     console.log('Switching to:', pageId);
 //     sessionStorage.setItem('currentPage', pageId);
-    
+
 //     // 1. 更新所有具有 data-page 属性的元素高亮
 //     document.querySelectorAll('[data-page]').forEach(el => {
 //         const isMatch = el.getAttribute('data-page') === pageId;
 //         // 清除所有高亮类 (兼容前后台两种风格)
 //         el.classList.remove('sidebar-item-active', 'bg-accent/30', 'text-primary', 'font-medium', 'bg-brown-dark', 'border-l-4', 'border-white');
-        
+
 //         if (isMatch) {
 //             if (el.closest('.bg-gradient-to-b')) {
 //                 el.classList.add('bg-brown-dark', 'border-l-4', 'border-white');
@@ -101,21 +101,21 @@ const MENU_CONFIG = {
 //     if (typeof window.managerSwitchPage === 'function') window.managerSwitchPage(pageId);
 // };
 
-window.switchPage = function(pageId) {
+window.switchPage = function (pageId) {
     // 1. 记录状态 (Session)
     sessionStorage.setItem('currentPage', pageId);
-    
+
     // 2. 更新侧边栏高亮 (同时兼容前台和后台的样式类名)
     document.querySelectorAll('[data-page]').forEach(el => {
         // 移除所有可能的高亮类
         el.classList.remove('sidebar-item-active', 'bg-accent/30', 'text-primary', 'font-medium', 'bg-brown-dark', 'border-l-4', 'border-white');
-        
+
         // 如果匹配，添加高亮
         if (el.getAttribute('data-page') === pageId) {
             // 判断是后台(有bg-accent) 还是前台(bg-gradient)
             if (document.getElementById('sidebar').classList.contains('bg-gradient-to-b')) {
                 // Customer 样式
-                el.classList.add('sidebar-item-active'); 
+                el.classList.add('sidebar-item-active');
             } else {
                 // Admin/Staff 样式
                 el.classList.add('bg-accent/30', 'text-primary', 'font-medium');
@@ -155,7 +155,7 @@ window.toggleSidebar = function () {
     }
 };
 
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
     if (e.target.closest('#logout-btn')) {
         sessionStorage.removeItem('currentPage'); // 登出时清除页面记忆
     }
@@ -278,8 +278,8 @@ function renderAdminHeader(role) {
 
     // 逻辑：只有非 manager 角色才预留显示分店名的位置
     // 初始内容为空，或者写 (Loading...)，等待 JS 填充
-    const storeNameHtml = (role !== 'manager') 
-        ? `<span id="header-store-name" class="font-normal text-gray-500 text-lg ml-3 border-l border-gray-300 pl-3">Loading...</span>` 
+    const storeNameHtml = (role !== 'manager')
+        ? `<span id="header-store-name" class="font-normal text-gray-500 text-lg ml-3 border-l border-gray-300 pl-3">Loading...</span>`
         : '';
 
     container.innerHTML = `
