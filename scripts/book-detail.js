@@ -113,17 +113,18 @@ function handleAddToCart() {
 }
 
 function handleAddToFavorite() {
-  if (!currentBook) return;
+  if (!currentBook || !currentBook.isbn) return; // 使用 ISBN 对齐后端
+  
   if (typeof toggleFavorite === 'function') {
-    toggleFavorite(currentBook.id);
+    // 路径：用户点击详情窗收藏 -> 调用 toggleFavorite(isbn) -> 内部调用 removeFavoriteAPI(isbn)
+    toggleFavorite(currentBook.isbn); 
     
-    // 同步弹窗内的图标和收藏数值
+    // UI 实时响应逻辑
     const favBtnIcon = elements.addToFavoriteBtn.querySelector('i');
     if (favBtnIcon) {
-        const isFavorited = favorites.some(f => f.id === currentBook.id);
+        const isFavorited = favorites.some(f => f.isbn === currentBook.isbn);
         favBtnIcon.className = isFavorited ? 'fa fa-heart text-red-500' : 'fa fa-heart-o';
     }
-    // 弹窗内的数值也同步
     elements.favCount.textContent = currentBook.favCount.toLocaleString();
   }
 }

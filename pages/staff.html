@@ -35,9 +35,12 @@
             };
 
             // 如果当前文件名不是该角色应属的页面，且不是 login.html，则强制纠正
-            if (roleRouteMap[role] && currentPage !== roleRouteMap[role] && currentPage !== 'login.html') {
-                console.warn("Access denied: Redirecting to authorized page.");
-                window.location.href = roleRouteMap[role];
+            if (role !== 'staff') {
+                console.warn("Role mismatch. Clearing session...");
+                localStorage.removeItem('user_role');
+                localStorage.removeItem('auth_token');
+                sessionStorage.removeItem('currentPage'); // 清除残留的页面ID
+                window.location.href = 'login.html';
             }
         })();
     </script>
