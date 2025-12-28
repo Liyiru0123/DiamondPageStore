@@ -93,71 +93,38 @@
                 justify-content: center;
             }
             
-            /* 订单和发票筛选器统一网格布局 */
-            .filter-grid {
-                display: grid;
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-            }
-            
-            @media (min-width: 768px) {
-                .filter-grid {
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 1.5rem;
-                }
-                
-                .filter-grid .col-span-2 {
-                    grid-column: span 2;
-                }
-            }
-            
-            /* 发票筛选网格 - 保持5列布局的兼容性 */
-            .invoice-filter-grid {
-                display: grid;
-                grid-template-columns: repeat(1, 1fr);
-                gap: 1.5rem;
-            }
-            
-            @media (min-width: 768px) {
-                .invoice-filter-grid {
-                    grid-template-columns: repeat(2, 1fr);
-                }
-            }
-            
             @media (min-width: 1024px) {
-                .invoice-filter-grid {
-                    grid-template-columns: repeat(5, 1fr);
+                .chart-responsive {
+                    height: 340px !important;
+                }
+                .pie-chart-wrapper {
+                    height: 450px !important;
                 }
             }
             
-            /* 状态样式 */
+            @media (max-width: 768px) {
+                .chart-responsive {
+                    height: 280px !important;
+                }
+                .pie-chart-wrapper {
+                    height: 350px !important;
+                }
+            }
+            
+            /* 发票状态样式 */
             .invoice-unpaid { background-color: #fee2e2; color: #dc2626; }
             .invoice-partial { background-color: #fef3c7; color: #d97706; }
             .invoice-paid { background-color: #d1fae5; color: #059669; }
             .invoice-overdue { background-color: #ffedd5; color: #ea580c; }
             .invoice-void { background-color: #f3f4f6; color: #6b7280; }
+            
+            /* 订单状态样式 */
             .order-created { background-color: #dbeafe; color: #1e40af; }
             .order-processing { background-color: #fef3c7; color: #d97706; }
             .order-paid { background-color: #d1fae5; color: #059669; }
             .order-completed { background-color: #f3e8ff; color: #7c3aed; }
             
-            /* 侧边栏激活状态 */
-            .sidebar-link.active {
-                background-color: rgba(210, 180, 140, 0.3) !important;
-                color: #8B5A2B !important;
-                font-weight: 500 !important;
-            }
-            
-            /* 弹窗动画 */
-            .modal {
-                animation: fadeIn 0.3s ease-in-out;
-            }
-            @keyframes fadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
-            }
-            
-            /* 总收入卡片 */
+            /* 总收入卡片样式 */
             .total-revenue-card {
                 background: linear-gradient(135deg, #8B5A2B 0%, #D2B48C 100%);
                 color: white;
@@ -166,130 +133,47 @@
                 box-shadow: 0 10px 20px rgba(139, 90, 43, 0.2);
                 transition: all 0.3s ease;
             }
+            
             .total-revenue-card:hover {
                 transform: translateY(-2px);
                 box-shadow: 0 15px 30px rgba(139, 90, 43, 0.3);
             }
-            .revenue-trend-up { color: #10B981; }
-            .revenue-trend-down { color: #EF4444; }
             
-            /* 图表基础样式 */
-            canvas { display: block; max-width: 100%; height: auto !important; }
+            .revenue-trend-up {
+                color: #10B981;
+            }
+            
+            .revenue-trend-down {
+                color: #EF4444;
+            }
+            
+            /* 紧凑日期选择器 */
+            .compact-date-selector {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 6px;
+            }
+            
+            .compact-date-input {
+                padding: 6px 10px;
+                border: 1px solid #e5e7eb;
+                border-radius: 4px;
+                font-size: 13px;
+                max-width: 120px;
+            }
+            
+            /* 确保图表响应式 */
+            canvas {
+                display: block;
+                max-width: 100%;
+                height: auto !important;
+            }
             
             /* 打印样式 */
-            @media print { .no-print { display: none !important; } }
-            
-            /* 移动端优化 */
-            @media (max-width: 768px) {
-                .chart-responsive {
-                    height: 280px !important;
-                }
-                .pie-chart-wrapper {
-                    height: 350px !important;
-                }
-                
-                /* 紧凑日期选择器 */
-                .compact-date-selector {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 0.5rem;
-                    align-items: center;
-                }
-                .compact-date-input {
-                    min-width: 120px;
-                }
-                
-                /* 移动端表格容器 */
-                .table-container {
-                    overflow-x: auto;
-                    -webkit-overflow-scrolling: touch;
-                }
-                
-                /* 移动端按钮组 */
-                .mobile-btn-group {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 0.75rem;
-                }
-                .mobile-btn-group button {
-                    flex: 1;
-                    min-width: 140px;
-                }
-                
-                /* 移动端筛选器调整 */
-                .filter-grid .col-span-2,
-                .invoice-filter-grid .col-span-2 {
-                    grid-column: span 1;
-                }
-                
-                /* 按钮容器在移动端居中 */
-                .filter-grid > div:last-child,
-                .invoice-filter-grid > div:last-child {
-                    justify-content: center !important;
-                }
-            }
-            
-            /* 小屏幕进一步优化 */
-            @media (max-width: 640px) {
-                .filter-grid {
-                    gap: 1rem;
-                }
-                .invoice-filter-grid {
-                    grid-template-columns: 1fr;
-                }
-                
-                .mobile-btn-group {
-                    gap: 0.5rem;
-                }
-                .mobile-btn-group button {
-                    min-width: 120px;
-                }
-                
-                /* 确保所有输入框在移动端一致 */
-                .form-input, select.form-input, input[type="date"].form-input {
-                    height: 44px;
-                }
-            }
-            
-            /* 确保按钮和输入框高度一致 */
-            .form-input, select.form-input, input[type="date"].form-input {
-                min-height: 42px;
-            }
-            
-            .btn-primary, .btn-secondary {
-                min-height: 42px;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-            }
-            
-            /* 筛选器按钮容器 */
-            .filter-buttons-container {
-                display: flex;
-                justify-content: flex-end;
-                gap: 1rem;
-                margin-top: 0.5rem;
-            }
-            .filter-buttons-container button {
-                min-width: 120px;
-            }
-            
-            /* 日期范围容器内的间距优化 */
-            .date-range-container {
-                display: flex;
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-            @media (min-width: 640px) {
-                .date-range-container {
-                    flex-direction: row;
-                    align-items: center;
-                }
-                .date-range-container input {
-                    flex: 1;
-                }
-                .date-range-container span {
-                    padding: 0 0.5rem;
+            @media print {
+                .no-print {
+                    display: none !important;
                 }
             }
         }
@@ -297,62 +181,14 @@
 </head>
 
 <body class="bg-gray-50 font-sans text-gray-800 min-h-screen">
-    <!-- 布局容器 -->
+    <!-- 使用 layout.js 的布局结构 -->
     <div id="main-system" class="flex flex-col min-h-screen">
-        <!-- 自定义Header -->
-        <header class="bg-white shadow-sm border-b border-gray-200">
-            <div class="px-4 py-4 lg:px-6">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <span class="text-2xl font-serif font-bold text-[#8B5A2B]">Diamond Page Store</span>
-                        </div>
-                        <nav class="ml-8 hidden md:flex space-x-4">
-                            <span class="text-sm font-medium text-gray-900">Finance System</span>
-                        </nav>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <div class="relative">
-                            <button class="flex items-center text-sm focus:outline-none">
-                                <span class="ml-2 text-gray-700">Finance User</span>
-                                <i class="fa fa-user ml-2 text-gray-600"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </header>
+        <!-- Header 由 layout.js 渲染 -->
+        <div id="layout-header"></div>
 
         <div class="flex flex-1">
-            <!-- 自定义Sidebar -->
-            <div class="hidden md:flex md:flex-shrink-0">
-                <div class="w-64 bg-white border-r border-gray-200">
-                    <nav class="mt-6 px-4">
-                        <div class="mb-8">
-                            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
-                                Finance Dashboard
-                            </h3>
-                            <div class="space-y-1">
-                                <a href="#" data-page="income-stats"
-                                    class="sidebar-link flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-900 bg-gray-50 hover:bg-gray-100 transition-colors active">
-                                    <i class="fa fa-bar-chart mr-3 text-[#8B5A2B]"></i>
-                                    Financial Overview
-                                </a>
-                                <a href="#" data-page="invoice"
-                                    class="sidebar-link flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors">
-                                    <i class="fa fa-file-text mr-3 text-gray-500"></i>
-                                    Invoice Management
-                                </a>
-                                <a href="#" data-page="order"
-                                    class="sidebar-link flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors">
-                                    <i class="fa fa-shopping-cart mr-3 text-gray-500"></i>
-                                    Order Management
-                                </a>
-                            </div>
-                        </div>
-                    </nav>
-                </div>
-            </div>
+            <!-- Sidebar 由 layout.js 渲染 -->
+            <div id="layout-sidebar"></div>
 
             <!-- Main Content Area -->
             <main class="flex-1 overflow-y-auto bg-gray-50 p-4 lg:p-6">
@@ -364,7 +200,7 @@
                                 Overview Dashboard</h2>
                             <p class="text-gray-500">Analyze total financial condition</p>
                         </div>
-                        <div class="mt-4 md:mt-0 flex gap-3 mobile-btn-group">
+                        <div class="mt-4 md:mt-0 flex gap-3">
                             <button class="btn-secondary flex items-center gap-2">
                                 <i class="fa fa-calendar"></i> Export Report
                             </button>
@@ -400,7 +236,7 @@
                     </div>
                 </div>
 
-                <!-- Invoice Management Page -->
+                <!-- 发票管理页面 -->
                 <div id="invoice-page" class="page-content hidden">
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
                         <div>
@@ -408,66 +244,81 @@
                                 Management</h2>
                             <p class="text-gray-500">Manage and track all invoices</p>
                         </div>
-                        <div class="mt-4 md:mt-0 flex gap-3 mobile-btn-group">
-                            <div class="relative w-full md:w-auto">
+                        <div class="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
+                            <div class="relative w-full sm:w-auto">
                                 <input type="text" placeholder="Search invoices..." id="invoice-search"
-                                    class="w-full px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B5A2B]/30 focus:border-[#8B5A2B] outline-none transition-all">
+                                    class="w-full sm:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B5A2B]/30 focus:border-[#8B5A2B] outline-none transition-all">
                                 <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
                                     <i class="fa fa-search"></i>
                                 </span>
                             </div>
-                            <button class="btn-primary flex items-center gap-2" id="create-invoice-btn">
+                            <button class="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
+                                id="create-invoice-btn">
                                 <i class="fa fa-plus"></i> Create Invoice
                             </button>
                         </div>
                     </div>
 
+                    <!-- 修复的发票筛选区域 -->
                     <div class="card mb-6">
                         <h3 class="font-semibold text-lg mb-4">Filter Criteria</h3>
-                        <div class="filter-grid gap-4">
-                            <!-- 第一行：日期范围 -->
-                            <div class="col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
-                                <div class="flex flex-col sm:flex-row gap-2">
-                                    <input type="date" class="form-input flex-1" id="invoice-start-date" lang="en">
-                                    <span
-                                        class="flex items-center justify-center text-gray-500 sm:justify-start sm:px-2">to</span>
-                                    <input type="date" class="form-input flex-1" id="invoice-end-date" lang="en">
+                        <div class="space-y-4">
+                            <!-- 第一行：日期范围和状态筛选 -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+                                    <div class="flex gap-2 items-center">
+                                        <input type="date" class="form-input flex-1" id="invoice-start-date" lang="en">
+                                        <span class="text-gray-500 text-sm whitespace-nowrap">to</span>
+                                        <input type="date" class="form-input flex-1" id="invoice-end-date" lang="en">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Invoice Status</label>
+                                    <select class="form-input w-full" id="invoice-status-filter">
+                                        <option value="">All Statuses</option>
+                                        <option value="UNPAID">Unpaid</option>
+                                        <option value="PARTIAL">Partial</option>
+                                        <option value="PAID">Paid</option>
+                                        <option value="OVERDUE">Overdue</option>
+                                        <option value="VOID">Void</option>
+                                    </select>
                                 </div>
                             </div>
 
-                            <!-- 第二行：发票状态 -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Invoice Status</label>
-                                <select class="form-input" id="invoice-status-filter">
-                                    <option value="">All Statuses</option>
-                                    <option value="UNPAID">Unpaid</option>
-                                    <option value="PARTIAL">Partial</option>
-                                    <option value="PAID">Paid</option>
-                                    <option value="OVERDUE">Overdue</option>
-                                    <option value="VOID">Void</option>
-                                </select>
-                            </div>
-
-                            <!-- 第二行：订单/发票ID搜索 -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Search Order/Invoice
-                                    ID</label>
-                                <input type="text" placeholder="Order ID or Invoice ID" id="invoice-order-filter"
-                                    class="form-input">
-                            </div>
-
-                            <!-- 第三行：操作按钮 -->
-                            <div class="col-span-2 flex justify-end gap-3 pt-2">
-                                <button class="btn-primary px-6 py-2" id="invoice-search-btn">Search</button>
-                                <button class="btn-secondary px-6 py-2" id="invoice-reset-btn">Reset</button>
+                            <!-- 第二行：员工、订单ID和操作按钮 -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Staff</label>
+                                    <select class="form-input w-full" id="invoice-staff-filter">
+                                        <option value="">All Staff</option>
+                                        <option value="EMP001">John Accountant</option>
+                                        <option value="EMP002">Sarah Manager</option>
+                                        <option value="EMP003">Mike Clerk</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Order ID</label>
+                                    <input type="text" placeholder="Order ID" id="invoice-order-filter"
+                                        class="form-input w-full">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Actions</label>
+                                    <div class="flex gap-2">
+                                        <button class="btn-primary flex-1 py-2" id="invoice-search-btn">
+                                            <i class="fa fa-search mr-2"></i>Search
+                                        </button>
+                                        <button class="btn-secondary flex-1 py-2" id="invoice-reset-btn">
+                                            <i class="fa fa-refresh mr-2"></i>Reset
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 表格部分保持不变 -->
                     <div class="card">
-                        <div class="table-container">
+                        <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead>
                                     <tr>
@@ -526,59 +377,76 @@
                                 Management</h2>
                             <p class="text-gray-500">Manage and track all customer orders</p>
                         </div>
-                        <div class="mt-4 md:mt-0 flex gap-3 mobile-btn-group">
-                            <div class="relative w-full md:w-auto">
+                        <div class="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
+                            <div class="relative w-full sm:w-auto">
                                 <input type="text" placeholder="Search orders..." id="order-search"
-                                    class="w-full px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B5A2B]/30 focus:border-[#8B5A2B] outline-none transition-all">
+                                    class="w-full sm:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B5A2B]/30 focus:border-[#8B5A2B] outline-none transition-all">
                                 <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
                                     <i class="fa fa-search"></i>
                                 </span>
                             </div>
-                            <button class="btn-primary flex items-center gap-2" id="refresh-orders-btn">
+                            <button class="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
+                                id="refresh-orders-btn">
                                 <i class="fa fa-refresh"></i> Refresh
                             </button>
                         </div>
                     </div>
 
+                    <!-- 修复的筛选区域 -->
                     <div class="card mb-6">
                         <h3 class="font-semibold text-lg mb-4">Filter Criteria</h3>
-                        <div class="filter-grid gap-4">
-                            <!-- 第一行：日期范围 -->
-                            <div class="col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
-                                <div class="flex flex-col sm:flex-row gap-2">
-                                    <input type="date" class="form-input flex-1" id="order-date-from" lang="en">
-                                    <span
-                                        class="flex items-center justify-center text-gray-500 sm:justify-start sm:px-2">to</span>
-                                    <input type="date" class="form-input flex-1" id="order-date-to" lang="en">
+                        <div class="space-y-4">
+                            <!-- 第一行：日期范围和状态筛选 -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+                                    <div class="flex gap-2 items-center">
+                                        <input type="date" class="form-input flex-1" id="order-date-from" lang="en">
+                                        <span class="text-gray-500 text-sm whitespace-nowrap">to</span>
+                                        <input type="date" class="form-input flex-1" id="order-date-to" lang="en">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Order Status</label>
+                                    <select class="form-input w-full" id="order-status-filter">
+                                        <option value="">All Statuses</option>
+                                        <option value="created">Created</option>
+                                        <option value="processing">Processing</option>
+                                        <option value="paid">Paid</option>
+                                        <option value="completed">Completed</option>
+                                    </select>
                                 </div>
                             </div>
 
-                            <!-- 第二行：订单状态 -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Order Status</label>
-                                <select class="form-input" id="order-status-filter">
-                                    <option value="">All Statuses</option>
-                                    <option value="created">Created</option>
-                                    <option value="processing">Processing</option>
-                                    <option value="paid">Paid</option>
-                                    <option value="completed">Completed</option>
-                                </select>
-                            </div>
-
-                            <!-- 第二行：空列保持对齐 -->
-                            <div></div>
-
-                            <!-- 第三行：操作按钮 -->
-                            <div class="col-span-2 flex justify-end gap-3 pt-2">
-                                <button class="btn-primary px-6 py-2" id="order-search-btn">Search</button>
-                                <button class="btn-secondary px-6 py-2" id="order-reset-btn">Reset</button>
+                            <!-- 第二行：门店筛选和操作按钮 -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Store</label>
+                                    <select class="form-input w-full" id="order-store-filter">
+                                        <option value="">All Stores</option>
+                                        <option value="STORE-001">New York Store</option>
+                                        <option value="STORE-002">Boston Store</option>
+                                        <option value="STORE-003">Chicago Store</option>
+                                    </select>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Actions</label>
+                                    <div class="flex gap-2">
+                                        <button class="btn-primary flex-1 py-2" id="order-search-btn">
+                                            <i class="fa fa-search mr-2"></i>Search
+                                        </button>
+                                        <button class="btn-secondary flex-1 py-2" id="order-reset-btn">
+                                            <i class="fa fa-refresh mr-2"></i>Reset
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- 表格部分保持不变 -->
                     <div class="card">
-                        <div class="table-container">
+                        <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead>
                                     <tr>
@@ -597,6 +465,7 @@
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Order Date</th>
+                                        <!-- 注意：这里缺少了"Payable Amount"列，需要根据实际需求添加 -->
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Notes</th>
@@ -620,42 +489,56 @@
         </div>
     </div>
 
-    <!-- 只引用外部JS文件 -->
-    <!-- 根据你的目录结构调整路径 -->
+    <!-- 引用 layout.js -->
+    <script src="../scripts/layout.js"></script>
+
+    <!-- 引用财务数据文件 -->
     <script src="../scripts/finance-data.js"></script>
+
+    <!-- 引用财务API文件 -->
     <script src="../scripts/finance-api.js"></script>
+
+    <!-- 引用财务主脚本文件 -->
     <script src="../scripts/finance.js"></script>
 
+    <!-- 页面初始化脚本 -->
     <script>
-        // 简单的初始化脚本
+        // 页面初始化
+        function initFinancePage() {
+            console.log('Finance page initialized');
+
+            // 初始化 layout.js 的布局
+            window.initLayout('finance', 'income-stats');
+
+            // 尝试从sessionStorage获取最后访问的页面
+            const lastPage = sessionStorage.getItem('currentPage') || 'income-stats';
+
+            // 初始化默认页面
+            setTimeout(() => {
+                switch (lastPage) {
+                    case 'income-stats':
+                        if (typeof initIncomeStatsCharts === 'function') {
+                            initIncomeStatsCharts();
+                        }
+                        break;
+                    case 'order':
+                        if (typeof initOrderPage === 'function') {
+                            initOrderPage();
+                        }
+                        break;
+                    case 'invoice':
+                        if (typeof initInvoicePage === 'function') {
+                            initInvoicePage();
+                        }
+                        break;
+                }
+            }, 200);
+        }
+
+        // 当DOM加载完成后初始化财务页面
         document.addEventListener('DOMContentLoaded', function () {
-            // 绑定侧边栏点击事件
-            document.querySelectorAll('.sidebar-link[data-page]').forEach(link => {
-                link.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    const pageId = this.getAttribute('data-page');
-
-                    // 移除所有active类
-                    document.querySelectorAll('.sidebar-link').forEach(l => {
-                        l.classList.remove('active');
-                    });
-
-                    // 添加active类到当前链接
-                    this.classList.add('active');
-
-                    // 调用全局页面切换函数
-                    if (typeof window.financeSwitchPage === 'function') {
-                        window.financeSwitchPage(pageId);
-                    } else {
-                        console.error('financeSwitchPage function not found');
-                    }
-                });
-            });
-
-            // 初始化第一个页面
-            if (typeof window.financeSwitchPage === 'function') {
-                window.financeSwitchPage('income-stats');
-            }
+            console.log('DOM loaded, initializing finance page...');
+            initFinancePage();
         });
     </script>
 </body>
