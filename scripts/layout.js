@@ -211,9 +211,26 @@ window.toggleSidebar = function () {
     }
 };
 
+/**
+ * 全局点击事件监听 (处理动态生成的元素)
+ */
 document.addEventListener('click', function (e) {
+    // 监听所有 ID 为 logout-btn 的元素点击事件 (侧边栏登出按钮)
     if (e.target.closest('#logout-btn')) {
-        sessionStorage.removeItem('currentPage'); // 登出时清除页面记忆
+        e.preventDefault(); // 阻止 <a href="#"> 的默认跳转行为
+        
+        console.log("[Layout] Logout clicked");
+
+        // 调用 common.js 中定义的 logout() 函数
+        if (typeof logout === 'function') {
+            logout();
+        } else {
+            // 兜底逻辑：万一 common.js 没加载
+            console.warn("logout() function not found, forcing clear.");
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.href = 'login.html';
+        }
     }
 });
 

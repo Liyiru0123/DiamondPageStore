@@ -1656,6 +1656,30 @@ function initFinancePage() {
         });
     });
 
+    document.body.addEventListener('click', function(e) {
+        // 查找是否点击了 ID 为 logout-btn 的元素（或其子元素）
+        const logoutBtn = e.target.closest('#logout-btn');
+        
+        if (logoutBtn) {
+            e.preventDefault(); // 阻止 <a href="#"> 的默认跳转
+            console.log("[Finance] Force Logout triggered");
+            
+            // 调用 common.js 中的 logout 函数 (它负责清除 localStorage/sessionStorage)
+            if (typeof logout === 'function') {
+                logout(); 
+            } else {
+                // 兜底逻辑：如果 common.js 没加载到，手动清除并跳转
+                console.warn("logout() function not found, executing manual cleanup.");
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user_role');
+                localStorage.removeItem('current_user');
+                sessionStorage.clear();
+                window.location.href = 'login.html';
+            }
+        }
+    });
+
+    // 恢复之前的页面状态
     const lastPage = sessionStorage.getItem('currentPage') || 'income-stats';
     financeSwitchPage(lastPage);
 }
