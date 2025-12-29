@@ -43,6 +43,14 @@ try {
             getInventoryBySKU($conn);
             break;
 
+        case 'search_by_store':
+            searchInventoryByStore($conn);
+            break;
+
+        case 'search_by_sku':
+            searchInventoryBySKU($conn);
+            break;
+
         case 'transfer':
             transferInventory($conn);
             break;
@@ -51,7 +59,7 @@ try {
             http_response_code(400);
             echo json_encode([
                 'success' => false,
-                'message' => 'Invalid action. Valid actions: overview, by_store, by_sku, transfer'
+                'message' => 'Invalid action. Valid actions: overview, by_store, by_sku, search_by_store, search_by_sku, transfer'
             ]);
     }
 } catch (Exception $e) {
@@ -126,6 +134,100 @@ function getInventoryBySKU($conn) {
     echo json_encode([
         'success' => true,
         'message' => 'Inventory by SKU retrieved successfully',
+        'data' => $inventory,
+        'count' => count($inventory)
+    ]);
+}
+
+/**
+ * Search inventory by store
+ */
+function searchInventoryByStore($conn) {
+    $keyword = isset($_GET['keyword']) ? trim($_GET['keyword']) : '';
+
+    if ($keyword === '') {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'keyword is required'
+        ]);
+        return;
+    }
+
+    $params = [];
+    $sql = "SELECT v.*,
+                MATCH(b.name, b.publisher, b.introduction, b.language) AGAINST (:kw1 IN NATURAL LANGUAGE MODE) AS relevance_score
+            FROM vw_manager_inventory_by_store v
+            JOIN books b ON v.ISBN = b.ISBN
+            WHERE (
+                MATCH(b.name, b.publisher, b.introduction, b.language) AGAINST (:kw2 IN NATURAL LANGUAGE MODE)
+                OR v.ISBN LIKE :kw_like1
+                OR v.sku_id LIKE :kw_like2
+            )";
+
+    if (isset($_GET['store_id']) && $_GET['store_id'] !== '') {
+        $sql .= " AND v.store_id = :store_id";
+        $params[':store_id'] = intval($_GET['store_id']);
+    }
+
+    $sql .= " ORDER BY relevance_score DESC, v.store_id, v.total_quantity DESC";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue(':kw1', $keyword, PDO::PARAM_STR);
+    $stmt->bindValue(':kw2', $keyword, PDO::PARAM_STR);
+    $stmt->bindValue(':kw_like1', "%$keyword%", PDO::PARAM_STR);
+    $stmt->bindValue(':kw_like2', "%$keyword%", PDO::PARAM_STR);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->execute();
+    $inventory = $stmt->fetchAll();
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Inventory search completed successfully',
+        'data' => $inventory,
+        'count' => count($inventory)
+    ]);
+}
+
+/**
+ * Search inventory by SKU
+ */
+function searchInventoryBySKU($conn) {
+    $keyword = isset($_GET['keyword']) ? trim($_GET['keyword']) : '';
+
+    if ($keyword === '') {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'keyword is required'
+        ]);
+        return;
+    }
+
+    $sql = "SELECT v.*,
+                MATCH(b.name, b.publisher, b.introduction, b.language) AGAINST (:kw1 IN NATURAL LANGUAGE MODE) AS relevance_score
+            FROM vw_manager_inventory_by_sku v
+            JOIN books b ON v.ISBN = b.ISBN
+            WHERE (
+                MATCH(b.name, b.publisher, b.introduction, b.language) AGAINST (:kw2 IN NATURAL LANGUAGE MODE)
+                OR v.ISBN LIKE :kw_like1
+                OR v.sku_id LIKE :kw_like2
+            )
+            ORDER BY relevance_score DESC, v.sku_id, v.store_stock DESC";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue(':kw1', $keyword, PDO::PARAM_STR);
+    $stmt->bindValue(':kw2', $keyword, PDO::PARAM_STR);
+    $stmt->bindValue(':kw_like1', "%$keyword%", PDO::PARAM_STR);
+    $stmt->bindValue(':kw_like2', "%$keyword%", PDO::PARAM_STR);
+    $stmt->execute();
+    $inventory = $stmt->fetchAll();
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Inventory search completed successfully',
         'data' => $inventory,
         'count' => count($inventory)
     ]);

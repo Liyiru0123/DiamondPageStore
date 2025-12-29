@@ -57,10 +57,9 @@ SELECT
     s.name AS store_name,
     s.status AS store_status,
     COUNT(DISTINCT e.employee_id) AS total_employees,
-    SUM(CASE WHEN jt.name = 'Store Manager' THEN 1 ELSE 0 END) AS managers_count,
+    SUM(CASE WHEN jt.name = 'General Manager' THEN 1 ELSE 0 END) AS managers_count,
     SUM(CASE WHEN jt.name = 'Finance' THEN 1 ELSE 0 END) AS finance_count,
     SUM(CASE WHEN jt.name = 'Staff' THEN 1 ELSE 0 END) AS staff_count,
-    SUM(CASE WHEN jt.name = 'Head Office' THEN 1 ELSE 0 END) AS head_office_count,
     ROUND(AVG(e.performance), 2) AS avg_performance,
     SUM(jt.base_salary) AS total_salary_cost
 FROM stores s
@@ -277,11 +276,11 @@ SELECT
     st.name AS store_name,
     st.status AS store_status,
     COUNT(DISTINCT o.order_id) AS total_orders,
-    COUNT(DISTINCT CASE WHEN o.order_status = 'paid' THEN o.order_id END) AS paid_orders,
+    COUNT(DISTINCT CASE WHEN o.order_status IN ('paid', 'finished') THEN o.order_id END) AS paid_orders,
     COUNT(DISTINCT o.member_id) AS unique_customers,
-    COALESCE(SUM(CASE WHEN o.order_status = 'paid' THEN oi.quantity * s.unit_price ELSE 0 END), 0) AS total_revenue,
-    AVG(CASE WHEN o.order_status = 'paid' THEN oi.quantity * s.unit_price END) AS avg_order_value,
-    COALESCE(SUM(CASE WHEN o.order_status = 'paid' THEN oi.quantity ELSE 0 END), 0) AS total_items_sold,
+    COALESCE(SUM(CASE WHEN o.order_status IN ('paid', 'finished') THEN oi.quantity * s.unit_price ELSE 0 END), 0) AS total_revenue,
+    AVG(CASE WHEN o.order_status IN ('paid', 'finished') THEN oi.quantity * s.unit_price END) AS avg_order_value,
+    COALESCE(SUM(CASE WHEN o.order_status IN ('paid', 'finished') THEN oi.quantity ELSE 0 END), 0) AS total_items_sold,
     DATE(MAX(o.order_date)) AS last_order_date
 FROM stores st
 LEFT JOIN orders o ON st.store_id = o.store_id
@@ -296,23 +295,29 @@ SELECT
     c.name AS category_name,
     COUNT(DISTINCT o.order_id) AS orders_count,
     COALESCE(SUM(oi.quantity), 0) AS total_quantity_sold,
-    COALESCE(SUM(oi.quantity * s.unit_price), 0) AS total_sales,
+    COALESCE(SUM(
+        (oi.quantity * s.unit_price) /
+        NULLIF((SELECT COUNT(*) FROM book_categories bc2 WHERE bc2.ISBN = b.ISBN), 0)
+    ), 0) AS total_sales,
     AVG(s.unit_price) AS avg_price,
     COUNT(DISTINCT b.ISBN) AS books_in_category,
     ROUND(
-        COALESCE(SUM(oi.quantity * s.unit_price), 0) /
+        COALESCE(SUM(
+            (oi.quantity * s.unit_price) /
+            NULLIF((SELECT COUNT(*) FROM book_categories bc2 WHERE bc2.ISBN = b.ISBN), 0)
+        ), 0) /
         NULLIF((SELECT SUM(oi2.quantity * s2.unit_price)
                 FROM order_items oi2
                 JOIN skus s2 ON oi2.sku_id = s2.sku_id
                 JOIN orders o2 ON oi2.order_id = o2.order_id
-                WHERE o2.order_status = 'paid'), 0) * 100, 2
+                WHERE o2.order_status IN ('paid', 'finished')), 0) * 100, 2
     ) AS revenue_percentage
 FROM catagories c
 JOIN book_categories bc ON c.category_id = bc.category_id
 JOIN books b ON bc.ISBN = b.ISBN
 JOIN skus s ON b.ISBN = s.ISBN
 LEFT JOIN order_items oi ON s.sku_id = oi.sku_id
-LEFT JOIN orders o ON oi.order_id = o.order_id AND o.order_status = 'paid'
+LEFT JOIN orders o ON oi.order_id = o.order_id AND o.order_status IN ('paid', 'finished')
 GROUP BY c.category_id, c.name
 ORDER BY total_sales DESC;
 
@@ -322,24 +327,26 @@ ORDER BY total_sales DESC;
 
 CREATE OR REPLACE VIEW vw_manager_payment_analysis AS
 SELECT
-    p.payment_method,
-    COUNT(DISTINCT p.payment_id) AS payment_count,
-    COALESCE(SUM(p.amount), 0) AS total_amount,
-    AVG(p.amount) AS avg_amount,
-    MIN(p.amount) AS min_amount,
-    MAX(p.amount) AS max_amount,
-    COUNT(DISTINCT o.store_id) AS stores_count,
-    DATE(MIN(p.create_date)) AS first_payment_date,
-    DATE(MAX(p.create_date)) AS last_payment_date,
+    payment_method,
+    COUNT(*) AS payment_count,
+    COALESCE(SUM(amount), 0) AS total_amount,
+    ROUND(AVG(amount), 2) AS avg_amount,
+    MIN(amount) AS min_amount,
+    MAX(amount) AS max_amount,
+    (SELECT COUNT(DISTINCT o.store_id)
+     FROM payment_allocations pa
+     JOIN invoices inv ON pa.invoice_id = inv.invoice_id
+     JOIN orders o ON inv.order_id = o.order_id
+     WHERE pa.payment_id IN (SELECT payment_id FROM payments p2 WHERE p2.payment_method = p.payment_method)
+    ) AS stores_count,
+    DATE(MIN(create_date)) AS first_payment_date,
+    DATE(MAX(create_date)) AS last_payment_date,
     ROUND(
-        COALESCE(SUM(p.amount), 0) /
+        COALESCE(SUM(amount), 0) /
         NULLIF((SELECT SUM(amount) FROM payments), 0) * 100, 2
     ) AS percentage_of_total
 FROM payments p
-LEFT JOIN payment_allocations pa ON p.payment_id = pa.payment_id
-LEFT JOIN invoices inv ON pa.invoice_id = inv.invoice_id
-LEFT JOIN orders o ON inv.order_id = o.order_id
-GROUP BY p.payment_method
+GROUP BY payment_method
 ORDER BY total_amount DESC;
 
 CREATE OR REPLACE VIEW vw_manager_bestsellers AS
@@ -362,7 +369,7 @@ SELECT
 FROM books b
 JOIN skus s ON b.ISBN = s.ISBN
 JOIN order_items oi ON s.sku_id = oi.sku_id
-JOIN orders o ON oi.order_id = o.order_id AND o.order_status = 'paid'
+JOIN orders o ON oi.order_id = o.order_id AND o.order_status IN ('paid', 'finished')
 GROUP BY b.ISBN, b.name, b.publisher, b.language
 ORDER BY total_sold DESC
 LIMIT 50;
@@ -374,23 +381,21 @@ SELECT
     st.status,
     st.telephone,
     COUNT(DISTINCT o.order_id) AS total_orders,
-    COALESCE(SUM(CASE WHEN o.order_status = 'paid' THEN oi.quantity * s.unit_price ELSE 0 END), 0) AS revenue,
+    COALESCE(SUM(CASE WHEN o.order_status IN ('paid', 'finished') THEN oi.quantity * s.unit_price ELSE 0 END), 0) AS revenue,
     COUNT(DISTINCT o.member_id) AS unique_customers,
-    COUNT(DISTINCT e.employee_id) AS staff_count,
-    ROUND(AVG(e.performance), 2) AS avg_employee_performance,
-    COALESCE(SUM(ib.quantity * ib.unit_cost), 0) AS inventory_value,
-    COALESCE(SUM(ib.quantity), 0) AS total_inventory,
+    (SELECT COUNT(*) FROM employees e WHERE e.store_id = st.store_id) AS staff_count,
+    (SELECT ROUND(AVG(performance), 2) FROM employees e WHERE e.store_id = st.store_id) AS avg_employee_performance,
+    (SELECT COALESCE(SUM(quantity * unit_cost), 0) FROM inventory_batches ib WHERE ib.store_id = st.store_id) AS inventory_value,
+    (SELECT COALESCE(SUM(quantity), 0) FROM inventory_batches ib WHERE ib.store_id = st.store_id) AS total_inventory,
     ROUND(
-        COALESCE(SUM(CASE WHEN o.order_status = 'paid' THEN oi.quantity * s.unit_price ELSE 0 END), 0) /
-        NULLIF(COUNT(DISTINCT e.employee_id), 0), 2
+        COALESCE(SUM(CASE WHEN o.order_status IN ('paid', 'finished') THEN oi.quantity * s.unit_price ELSE 0 END), 0) /
+        NULLIF((SELECT COUNT(*) FROM employees e WHERE e.store_id = st.store_id), 0), 2
     ) AS revenue_per_employee,
-    RANK() OVER (ORDER BY SUM(CASE WHEN o.order_status = 'paid' THEN oi.quantity * s.unit_price ELSE 0 END) DESC) AS revenue_rank
+    RANK() OVER (ORDER BY SUM(CASE WHEN o.order_status IN ('paid', 'finished') THEN oi.quantity * s.unit_price ELSE 0 END) DESC) AS revenue_rank
 FROM stores st
 LEFT JOIN orders o ON st.store_id = o.store_id
 LEFT JOIN order_items oi ON o.order_id = oi.order_id
 LEFT JOIN skus s ON oi.sku_id = s.sku_id
-LEFT JOIN employees e ON st.store_id = e.store_id
-LEFT JOIN inventory_batches ib ON st.store_id = ib.store_id
 GROUP BY st.store_id, st.name, st.status, st.telephone
 ORDER BY revenue DESC;
 

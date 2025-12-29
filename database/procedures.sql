@@ -1,6 +1,6 @@
 -- procedures.sql
 -- 基于书店数据库的存储过程
--- 用于封装业务逻辑和事务处�?
+-- 用于封装业务逻辑和事务处�?
 -- Customer 端功能的存储过程
 
 USE book_store;
@@ -9,7 +9,7 @@ DELIMITER $$
 
 -- =========================================================================
 -- CUSTOMER STORED PROCEDURES
--- 以下存储过程用于 Customer 端功能，包含事务处理确保数据一致�?
+-- 以下存储过程用于 Customer 端功能，包含事务处理确保数据一致�?
 -- =========================================================================
 
 -- 1. 添加收藏
@@ -66,7 +66,7 @@ BEGIN
 
     START TRANSACTION;
 
-    -- 检查收藏是否存�?
+    -- 检查收藏是否存�?
     IF NOT EXISTS (SELECT 1 FROM favorites WHERE member_id = p_member_id AND ISBN = p_isbn) THEN
         SET p_result_code = 0;
         SET p_result_message = 'Favorite not found';
@@ -84,7 +84,7 @@ END$$
 
 -- 3. 创建订单
 -- 功能：从购物车数据创建订单（包含多个订单项）
--- 输入格式：p_cart_items �?JSON 格式，例如：[{"sku_id": 1, "quantity": 2}, {"sku_id": 3, "quantity": 1}]
+-- 输入格式：p_cart_items �?JSON 格式，例如：[{"sku_id": 1, "quantity": 2}, {"sku_id": 3, "quantity": 1}]
 DROP PROCEDURE IF EXISTS sp_customer_create_order$$
 CREATE PROCEDURE sp_customer_create_order(
     IN p_member_id INT,
@@ -113,7 +113,7 @@ BEGIN
 
     START TRANSACTION;
 
-    -- 创建订单主记�?
+    -- 创建订单主记�?
     INSERT INTO orders (store_id, member_id, order_status, order_date, note)
     VALUES (p_store_id, p_member_id, 'created', NOW(), p_note);
 
@@ -124,11 +124,11 @@ BEGIN
 
     -- 循环处理每个购物车项
     item_loop: WHILE v_index < v_items_count DO
-        -- 提取 sku_id �?quantity
+        -- 提取 sku_id �?quantity
         SET v_sku_id = JSON_UNQUOTE(JSON_EXTRACT(p_cart_items, CONCAT('$[', v_index, '].sku_id')));
         SET v_quantity = JSON_UNQUOTE(JSON_EXTRACT(p_cart_items, CONCAT('$[', v_index, '].quantity')));
 
-        -- 检查库�?
+        -- 检查库�?
         SELECT COALESCE(SUM(quantity), 0) INTO v_stock
         FROM inventory_batches
         WHERE sku_id = v_sku_id AND store_id = p_store_id;
@@ -141,7 +141,7 @@ BEGIN
             LEAVE item_loop;
         END IF;
 
-        -- 添加订单�?
+        -- 添加订单�?
         INSERT INTO order_items (sku_id, order_id, quantity)
         VALUES (v_sku_id, p_order_id, v_quantity);
 
@@ -215,7 +215,7 @@ BEGIN
         SET p_result_message = CONCAT('Order cannot be paid, status is: ', v_order_status);
         ROLLBACK;
     ELSE
-        -- 计算订单总金�?
+        -- 计算订单总金�?
         SELECT COALESCE(SUM(oi.quantity * s.unit_price), 0) INTO v_total_amount
         FROM order_items oi
         JOIN skus s ON oi.sku_id = s.sku_id
@@ -238,11 +238,11 @@ BEGIN
 
         SET v_invoice_id = LAST_INSERT_ID();
 
-        -- 关联支付和发�?
+        -- 关联支付和发�?
         INSERT INTO payment_allocations (invoice_id, payment_id, create_date, allocated_amount, note)
         VALUES (v_invoice_id, v_payment_id, NOW(), v_total_amount, NULL);
 
-        -- 打开游标，扣减库�?
+        -- 打开游标，扣减库�?
         OPEN cur_order_items;
 
         read_loop: LOOP
@@ -252,7 +252,7 @@ BEGIN
                 LEAVE read_loop;
             END IF;
 
-            -- 检查库存是否足�?
+            -- 检查库存是否足�?
             SELECT COALESCE(SUM(quantity), 0) INTO v_stock
             FROM inventory_batches
             WHERE sku_id = v_sku_id AND store_id = v_store_id;
@@ -264,7 +264,7 @@ BEGIN
                 LEAVE read_loop;
             END IF;
 
-            -- 扣减库存（FIFO - 先进先出原则�?
+            -- 扣减库存（FIFO - 先进先出原则�?
             IF v_failed = 1 THEN
                 LEAVE read_loop;
             END IF;
@@ -276,7 +276,7 @@ BEGIN
             ROLLBACK;
         ELSE
 
-        -- 更新订单状态为已支�?
+        -- 更新订单状态为已支�?
         UPDATE orders
         SET order_status = 'paid'
         WHERE order_id = p_order_id;
@@ -290,7 +290,7 @@ BEGIN
 END$$
 
 -- 5. 合并支付多个订单
--- 功能：一次性支付多个订�?
+-- 功能：一次性支付多个订�?
 DROP PROCEDURE IF EXISTS sp_customer_pay_orders$$
 CREATE PROCEDURE sp_customer_pay_orders(
     IN p_order_ids JSON,
@@ -344,7 +344,7 @@ BEGIN
 END$$
 
 -- 6. 取消订单
--- 功能：取消未支付的订�?
+-- 功能：取消未支付的订�?
 DROP PROCEDURE IF EXISTS sp_customer_cancel_order$$
 CREATE PROCEDURE sp_customer_cancel_order(
     IN p_order_id INT,
@@ -364,7 +364,7 @@ BEGIN
 
     START TRANSACTION;
 
-    -- 检查订单状�?
+    -- 检查订单状�?
     SELECT order_status INTO v_order_status
     FROM orders
     WHERE order_id = p_order_id;
@@ -378,7 +378,7 @@ BEGIN
         SET p_result_message = 'Only unpaid orders can be cancelled';
         ROLLBACK;
     ELSE
-        -- 更新订单状�?
+        -- 更新订单状�?
         UPDATE orders
         SET order_status = 'cancelled',
             note = CONCAT(COALESCE(note, ''), ' | Cancelled: ', p_cancel_reason)
@@ -391,7 +391,7 @@ BEGIN
 END$$
 
 -- 7. 更新用户资料
--- 功能：更新会员个人信�?
+-- 功能：更新会员个人信�?
 DROP PROCEDURE IF EXISTS sp_customer_update_profile$$
 CREATE PROCEDURE sp_customer_update_profile(
     IN p_member_id INT,
@@ -475,14 +475,14 @@ BEGIN
     WHERE o.member_id = p_member_id
     AND o.order_status = 'paid';
 
-    -- 根据消费金额确定新等�?
+    -- 根据消费金额确定新等�?
     SELECT member_tier_id INTO v_new_tier_id
     FROM member_tiers
     WHERE v_total_spent >= min_lifetime_spend
     ORDER BY min_lifetime_spend DESC
     LIMIT 1;
 
-    -- 如果等级有变化，则更�?
+    -- 如果等级有变化，则更�?
     IF v_new_tier_id != v_current_tier_id THEN
         UPDATE members
         SET member_tier_id = v_new_tier_id
@@ -500,12 +500,12 @@ END$$
 
 DELIMITER ;
 
--- 说明�?
--- 1. 所有存储过程都包含事务处理（START TRANSACTION, COMMIT, ROLLBACK�?
--- 2. 所有存储过程都包含错误处理（DECLARE EXIT HANDLER FOR SQLEXCEPTION�?
--- 3. 输出参数统一使用 p_result_code �?p_result_message
+-- 说明�?
+-- 1. 所有存储过程都包含事务处理（START TRANSACTION, COMMIT, ROLLBACK�?
+-- 2. 所有存储过程都包含错误处理（DECLARE EXIT HANDLER FOR SQLEXCEPTION�?
+-- 3. 输出参数统一使用 p_result_code �?p_result_message
 --    - p_result_code: 1=成功, 0=业务逻辑失败, -1=系统错误
---    - p_result_message: 详细的结果信�?
+--    - p_result_message: 详细的结果信�?
 -- 4. 订单支付时自动扣减库存，使用FIFO原则
--- 5. 支付成功后自动增加会员积分并记录到积分账�?
+-- 5. 支付成功后自动增加会员积分并记录到积分账�?
 -- 6. 支持合并支付多个订单

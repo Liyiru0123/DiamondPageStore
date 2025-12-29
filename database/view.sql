@@ -1,5 +1,5 @@
 -- view.sql
--- 基于 new_data_book_store.sql 结构生成的视图文�?
+-- 基于 new_data_book_store.sql 结构生成的视图文�?
 -- 用于 Staff 页面 PHP 后端安全调用
 
 USE book_store;
@@ -25,8 +25,8 @@ FROM inventory_batches ib
 JOIN skus s ON ib.sku_id = s.sku_id
 JOIN books b ON s.ISBN = b.ISBN;
 
--- 2. 员工低库存预警视�?
--- 用于 Dashboard �?Low Stock Alerts
+-- 2. 员工低库存预警视�?
+-- 用于 Dashboard �?Low Stock Alerts
 CREATE OR REPLACE VIEW vw_staff_low_stock AS
 SELECT 
     s.sku_id,
@@ -60,11 +60,11 @@ GROUP BY o.order_id, o.store_id, o.order_status, o.order_date, o.note, m.first_n
 
 -- =========================================================================
 -- CUSTOMER VIEWS
--- 以下视图用于 Customer 端功�?
+-- 以下视图用于 Customer 端功�?
 -- =========================================================================
 
--- 4. 顾客书籍列表视图（带库存和收藏数�?
--- 用于浏览、搜索、分类筛选书�?
+-- 4. 顾客书籍列表视图（带库存和收藏数�?
+-- 用于浏览、搜索、分类筛选书�?
 CREATE OR REPLACE VIEW vw_customer_books AS
 SELECT
     b.ISBN,
@@ -83,12 +83,12 @@ SELECT
      FROM book_authors ba
      JOIN authors a ON ba.author_id = a.author_id
      WHERE ba.ISBN = b.ISBN) AS author,
-    -- 获取书籍分类（连接字符串�?
+    -- 获取书籍分类（连接字符串�?
     (SELECT GROUP_CONCAT(c.name SEPARATOR ', ')
      FROM book_categories bc
      JOIN catagories c ON bc.category_id = c.category_id
      WHERE bc.ISBN = b.ISBN) AS category,
-    -- 计算收藏�?
+    -- 计算收藏�?
     (SELECT COUNT(*)
      FROM favorites f
      WHERE f.ISBN = b.ISBN) AS fav_count
@@ -114,12 +114,12 @@ SELECT
     COALESCE(SUM(ib.quantity), 0) AS stock,
     st.store_id,
     st.name AS store_name,
-    -- 获取书籍作者详�?
+    -- 获取书籍作者详�?
     (SELECT GROUP_CONCAT(CONCAT(a.first_name, ' ', a.last_name) SEPARATOR ', ')
      FROM book_authors ba
      JOIN authors a ON ba.author_id = a.author_id
      WHERE ba.ISBN = b.ISBN) AS author,
-    -- 获取作者国�?
+    -- 获取作者国�?
     (SELECT GROUP_CONCAT(DISTINCT a.country SEPARATOR ', ')
      FROM book_authors ba
      JOIN authors a ON ba.author_id = a.author_id
@@ -129,7 +129,7 @@ SELECT
      FROM book_categories bc
      JOIN catagories c ON bc.category_id = c.category_id
      WHERE bc.ISBN = b.ISBN) AS category,
-    -- 计算收藏�?
+    -- 计算收藏�?
     (SELECT COUNT(*)
      FROM favorites f
      WHERE f.ISBN = b.ISBN) AS fav_count
@@ -141,7 +141,7 @@ GROUP BY b.ISBN, b.name, b.language, b.publisher, b.introduction,
          s.sku_id, s.unit_price, s.binding, st.store_id, st.name;
 
 -- 6. 顾客收藏列表视图
--- 用于查看用户的收藏书籍列�?
+-- 用于查看用户的收藏书籍列�?
 CREATE OR REPLACE VIEW vw_customer_favorites AS
 SELECT
     f.member_id,
@@ -218,7 +218,7 @@ JOIN skus s ON oi.sku_id = s.sku_id
 JOIN books b ON s.ISBN = b.ISBN;
 
 -- 9. 顾客会员信息视图
--- 用于会员中心显示会员等级和积�?
+-- 用于会员中心显示会员等级和积�?
 CREATE OR REPLACE VIEW vw_customer_member_info AS
 SELECT
     m.member_id,
@@ -246,7 +246,7 @@ JOIN member_tiers mt ON m.member_tier_id = mt.member_tier_id
 JOIN users u ON m.user_id = u.user_id;
 
 -- 10. 公告视图
--- 用于显示有效的公�?
+-- 用于显示有效的公�?
 CREATE OR REPLACE VIEW vw_customer_announcements AS
 SELECT
     announcement_id,
@@ -260,11 +260,11 @@ ORDER BY publish_at DESC;
 
 -- =========================================================================
 -- POINT LEDGERS VIEWS (积分记录视图)
--- 用于会员积分历史查询和统�?
+-- 用于会员积分历史查询和统�?
 -- =========================================================================
 
 -- 11. 会员积分历史视图
--- 用于查看会员的积分变动明�?
+-- 用于查看会员的积分变动明�?
 CREATE OR REPLACE VIEW vw_customer_point_history AS
 SELECT
     pl.point_ledger_id,
@@ -284,8 +284,8 @@ FROM point_ledgers pl
 JOIN members m ON pl.member_id = m.member_id
 ORDER BY pl.change_date DESC;
 
--- 12. 会员积分汇总视�?
--- 用于查看会员的积分统计数�?
+-- 12. 会员积分汇总视�?
+-- 用于查看会员的积分统计数�?
 CREATE OR REPLACE VIEW vw_customer_point_summary AS
 SELECT
     m.member_id,

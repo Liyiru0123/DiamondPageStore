@@ -244,7 +244,7 @@ function addBook($conn) {
 }
 
 /**
- * 更新定价（调用存储过程）
+ * 更新定价（使用直接 SQL）
  */
 function updatePricing($conn) {
     $input = file_get_contents('php://input');
@@ -278,28 +278,38 @@ function updatePricing($conn) {
         return;
     }
 
-    $sql = "CALL sp_manager_update_pricing(:sku_id, :new_price, @result_code, @result_message)";
+    // 检查 SKU 是否存在
+    $checkSql = "SELECT sku_id, unit_price FROM skus WHERE sku_id = :sku_id";
+    $checkStmt = $conn->prepare($checkSql);
+    $checkStmt->bindParam(':sku_id', $data['sku_id'], PDO::PARAM_INT);
+    $checkStmt->execute();
+    $sku = $checkStmt->fetch();
 
-    $stmt = $conn->prepare($sql);
-    $stmt->bindParam(':sku_id', $data['sku_id'], PDO::PARAM_INT);
-    $stmt->bindParam(':new_price', $data['new_price'], PDO::PARAM_STR);
-    $stmt->execute();
-
-    // 获取存储过程的输出参数
-    $result = $conn->query("SELECT @result_code as code, @result_message as message")->fetch();
-
-    if ($result['code'] == 1) {
-        echo json_encode([
-            'success' => true,
-            'message' => $result['message']
-        ]);
-    } else {
-        http_response_code(400);
+    if (!$sku) {
+        http_response_code(404);
         echo json_encode([
             'success' => false,
-            'message' => $result['message']
+            'message' => 'SKU not found'
         ]);
+        return;
     }
+
+    // 更新价格
+    $updateSql = "UPDATE skus SET unit_price = :new_price WHERE sku_id = :sku_id";
+    $updateStmt = $conn->prepare($updateSql);
+    $updateStmt->bindParam(':new_price', $data['new_price'], PDO::PARAM_STR);
+    $updateStmt->bindParam(':sku_id', $data['sku_id'], PDO::PARAM_INT);
+    $updateStmt->execute();
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Price updated successfully',
+        'data' => [
+            'sku_id' => $data['sku_id'],
+            'old_price' => $sku['unit_price'],
+            'new_price' => $data['new_price']
+        ]
+    ]);
 }
 
 /**
@@ -318,31 +328,48 @@ function searchBooks($conn) {
     }
 
     $sql = "SELECT
-                ISBN,
-                book_name AS name,
-                publisher,
-                language,
-                sku_id,
-                binding,
-                unit_price,
-                authors,
-                categories,
-                total_stock
-            FROM vw_manager_inventory_overview
-            WHERE ISBN LIKE :kw1
-            OR book_name LIKE :kw2
-            OR publisher LIKE :kw3
-            OR authors LIKE :kw4
-            OR categories LIKE :kw5
-            ORDER BY book_name";
+                v.ISBN,
+                v.book_name AS name,
+                v.publisher,
+                v.language,
+                v.sku_id,
+                v.binding,
+                v.unit_price,
+                v.authors,
+                v.categories,
+                v.total_stock,
+                MATCH(b.name, b.publisher, b.introduction, b.language) AGAINST (:kw1 IN NATURAL LANGUAGE MODE) AS relevance_score
+            FROM vw_manager_inventory_overview v
+            JOIN books b ON v.ISBN = b.ISBN
+            WHERE (
+                MATCH(b.name, b.publisher, b.introduction, b.language) AGAINST (:kw4 IN NATURAL LANGUAGE MODE)
+                OR EXISTS (
+                    SELECT 1
+                    FROM book_authors ba
+                    JOIN authors a ON ba.author_id = a.author_id
+                    WHERE ba.ISBN = b.ISBN
+                    AND MATCH(a.first_name, a.last_name) AGAINST (:kw2 IN NATURAL LANGUAGE MODE)
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM book_categories bc
+                    JOIN catagories c ON bc.category_id = c.category_id
+                    WHERE bc.ISBN = b.ISBN
+                    AND MATCH(c.name) AGAINST (:kw3 IN NATURAL LANGUAGE MODE)
+                )
+                OR v.ISBN LIKE :kw_like1
+                OR v.sku_id LIKE :kw_like2
+            )
+            ORDER BY relevance_score DESC, v.book_name";
 
     $searchTerm = "%$keyword%";
     $stmt = $conn->prepare($sql);
-    $stmt->bindParam(':kw1', $searchTerm, PDO::PARAM_STR);
-    $stmt->bindParam(':kw2', $searchTerm, PDO::PARAM_STR);
-    $stmt->bindParam(':kw3', $searchTerm, PDO::PARAM_STR);
-    $stmt->bindParam(':kw4', $searchTerm, PDO::PARAM_STR);
-    $stmt->bindParam(':kw5', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw1', $keyword, PDO::PARAM_STR);
+    $stmt->bindValue(':kw2', $keyword, PDO::PARAM_STR);
+    $stmt->bindValue(':kw3', $keyword, PDO::PARAM_STR);
+    $stmt->bindValue(':kw4', $keyword, PDO::PARAM_STR);
+    $stmt->bindValue(':kw_like1', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw_like2', $searchTerm, PDO::PARAM_STR);
     $stmt->execute();
     $books = $stmt->fetchAll();
 
