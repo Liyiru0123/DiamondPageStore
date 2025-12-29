@@ -390,28 +390,31 @@ function deleteEmployee($conn) {
             return;
         }
 
-        // Check for related records (orders handled by this employee)
-        $relSql = "SELECT COUNT(*) AS order_count FROM orders WHERE employee_id = :employee_id";
-        $relStmt = $conn->prepare($relSql);
-        $relStmt->bindParam(':employee_id', $employeeId, PDO::PARAM_INT);
-        $relStmt->execute();
-        $rel = $relStmt->fetch();
-
-        if ($rel['order_count'] > 0) {
-            http_response_code(400);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Cannot delete employee with linked orders'
-            ]);
-            $conn->rollBack();
-            return;
-        }
-
         // Delete employee record
         $sql = "DELETE FROM employees WHERE employee_id = :employee_id";
         $stmt = $conn->prepare($sql);
         $stmt->bindParam(':employee_id', $employeeId, PDO::PARAM_INT);
         $stmt->execute();
+
+        // Delete linked user if no member record exists
+        if (!empty($employee['user_id'])) {
+            $memberStmt = $conn->prepare("SELECT member_id FROM members WHERE user_id = :user_id");
+            $memberStmt->bindParam(':user_id', $employee['user_id'], PDO::PARAM_INT);
+            $memberStmt->execute();
+            if ($memberStmt->fetch()) {
+                $conn->rollBack();
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Cannot delete linked user because member record exists'
+                ]);
+                return;
+            }
+
+            $userStmt = $conn->prepare("DELETE FROM users WHERE user_id = :user_id");
+            $userStmt->bindParam(':user_id', $employee['user_id'], PDO::PARAM_INT);
+            $userStmt->execute();
+        }
 
         $conn->commit();
 
@@ -440,17 +443,30 @@ function searchEmployees($conn) {
         return;
     }
 
-    $sql = "SELECT * FROM vw_manager_employees
-            WHERE full_name LIKE :kw1
-            OR phone LIKE :kw2
-            OR username LIKE :kw3
-            ORDER BY employee_id";
+    $sql = "SELECT v.*,
+                (MATCH(e.first_name, e.last_name) AGAINST (:kw1a IN NATURAL LANGUAGE MODE) +
+                 MATCH(u.username) AGAINST (:kw2a IN NATURAL LANGUAGE MODE)) AS relevance_score
+            FROM vw_manager_employees v
+            JOIN employees e ON v.employee_id = e.employee_id
+            JOIN users u ON v.user_id = u.user_id
+            WHERE (
+                MATCH(e.first_name, e.last_name) AGAINST (:kw1b IN NATURAL LANGUAGE MODE)
+                OR MATCH(u.username) AGAINST (:kw2b IN NATURAL LANGUAGE MODE)
+                OR CAST(e.phone AS CHAR) LIKE :kw_like1
+                OR CAST(v.employee_id AS CHAR) LIKE :kw_like2
+                OR CAST(v.user_id AS CHAR) LIKE :kw_like3
+            )
+            ORDER BY relevance_score DESC, v.employee_id";
 
     $searchTerm = "%$keyword%";
     $stmt = $conn->prepare($sql);
-    $stmt->bindValue(':kw1', $searchTerm, PDO::PARAM_STR);
-    $stmt->bindValue(':kw2', $searchTerm, PDO::PARAM_STR);
-    $stmt->bindValue(':kw3', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw1a', $keyword, PDO::PARAM_STR);
+    $stmt->bindValue(':kw2a', $keyword, PDO::PARAM_STR);
+    $stmt->bindValue(':kw1b', $keyword, PDO::PARAM_STR);
+    $stmt->bindValue(':kw2b', $keyword, PDO::PARAM_STR);
+    $stmt->bindValue(':kw_like1', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw_like2', $searchTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw_like3', $searchTerm, PDO::PARAM_STR);
     $stmt->execute();
     $employees = $stmt->fetchAll();
 

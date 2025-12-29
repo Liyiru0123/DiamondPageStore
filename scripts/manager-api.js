@@ -33,10 +33,12 @@ const MANAGER_API_CONFIG = {
         users: {
             list: '/users.php?action=list',
             detail: '/users.php?action=detail',
+            add: '/users.php?action=add',
             update: '/users.php?action=update',
             delete: '/users.php?action=delete',
             toggleStatus: '/users.php?action=toggle_status',
-            search: '/users.php?action=search'
+            search: '/users.php?action=search',
+            resetPassword: '/users.php?action=reset_password'
         },
         notifications: {
             list: '/notifications.php?action=list',
@@ -49,6 +51,8 @@ const MANAGER_API_CONFIG = {
             overview: '/inventory.php?action=overview',
             byStore: '/inventory.php?action=by_store',
             bySKU: '/inventory.php?action=by_sku',
+            searchByStore: '/inventory.php?action=search_by_store',
+            searchBySKU: '/inventory.php?action=search_by_sku',
             transfer: '/inventory.php?action=transfer'
         },
         replenishment: {
@@ -69,7 +73,8 @@ const MANAGER_API_CONFIG = {
             detail: '/suppliers.php?action=detail',
             add: '/suppliers.php?action=add',
             update: '/suppliers.php?action=update',
-            delete: '/suppliers.php?action=delete'
+            delete: '/suppliers.php?action=delete',
+            search: '/suppliers.php?action=search'
         },
         reports: {
             overview: '/reports.php?action=overview',
@@ -242,6 +247,13 @@ async function fetchUsersAPI() {
     return response.data;
 }
 
+async function addEmployeeUserAPI(userData) {
+    return await managerApiRequest(MANAGER_API_CONFIG.endpoints.users.add, {
+        method: 'POST',
+        body: JSON.stringify(userData)
+    });
+}
+
 async function updateUserAPI(userData) {
     return await managerApiRequest(MANAGER_API_CONFIG.endpoints.users.update, {
         method: 'POST',
@@ -268,6 +280,13 @@ async function searchUsersAPI(keyword) {
         `${MANAGER_API_CONFIG.endpoints.users.search}&keyword=${encodeURIComponent(keyword)}`
     );
     return response.data;
+}
+
+async function resetUserPasswordAPI(userId) {
+    return await managerApiRequest(MANAGER_API_CONFIG.endpoints.users.resetPassword, {
+        method: 'POST',
+        body: JSON.stringify({ user_id: userId })
+    });
 }
 
 // =============================================================================
@@ -317,6 +336,14 @@ async function fetchInventoryByStoreAPI(storeId = null) {
     return response.data;
 }
 
+async function searchInventoryByStoreAPI(keyword, storeId = null) {
+    let url = `${MANAGER_API_CONFIG.endpoints.inventory.searchByStore}&keyword=${encodeURIComponent(keyword)}`;
+    if (storeId) url += `&store_id=${storeId}`;
+
+    const response = await managerApiRequest(url);
+    return response.data;
+}
+
 async function fetchInventoryBySKUAPI(skuId = null) {
     let url = MANAGER_API_CONFIG.endpoints.inventory.bySKU;
     if (skuId) url += `&sku_id=${skuId}`;
@@ -325,6 +352,12 @@ async function fetchInventoryBySKUAPI(skuId = null) {
     return response.data;
 }
 
+async function searchInventoryBySKUAPI(keyword) {
+    const response = await managerApiRequest(
+        `${MANAGER_API_CONFIG.endpoints.inventory.searchBySKU}&keyword=${encodeURIComponent(keyword)}`
+    );
+    return response.data;
+}
 async function transferInventoryAPI(transferData) {
     return await managerApiRequest(MANAGER_API_CONFIG.endpoints.inventory.transfer, {
         method: 'POST',
@@ -428,6 +461,13 @@ async function deleteSupplierAPI(supplierId) {
         `${MANAGER_API_CONFIG.endpoints.suppliers.delete}&supplier_id=${supplierId}`,
         { method: 'GET' }
     );
+}
+
+async function searchSuppliersAPI(keyword) {
+    const response = await managerApiRequest(
+        `${MANAGER_API_CONFIG.endpoints.suppliers.search}&keyword=${encodeURIComponent(keyword)}`
+    );
+    return response.data;
 }
 
 // =============================================================================

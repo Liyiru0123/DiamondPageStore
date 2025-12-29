@@ -66,6 +66,90 @@ function hideLoading(targetId) {
 // Staff Management
 // =============================================================================
 
+function renderStaffTable(employees) {
+    const tableBody = document.getElementById('staff-table-body');
+    if (!tableBody) return;
+
+    const staffCount = document.getElementById('staff-count');
+    tableBody.innerHTML = '';
+
+    if (!employees || employees.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                    <div class="flex flex-col items-center">
+                        <i class="fa fa-user-times text-3xl text-gray-300 mb-2"></i>
+                        <p>No staff found.</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        if (staffCount) staffCount.textContent = '0';
+        return;
+    }
+
+    employees.forEach(employee => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50 transition-colors';
+        row.dataset.staffId = employee.employee_id;
+        row.dataset.employeeid = employee.employee_id;
+        row.dataset.userid = employee.user_id;
+        row.dataset.branchname = employee.store_name;
+        row.dataset.name = employee.full_name;
+        row.dataset.phone = employee.phone;
+        row.dataset.storeID = employee.store_id;
+
+        let positionClass = 'role-staff';
+        let positionName = 'Staff';
+        let normalizedPosition = 'staff';
+
+        if (employee.job_title) {
+            const jobTitleLower = employee.job_title.toLowerCase();
+            if (jobTitleLower.includes('manager')) {
+                positionClass = 'role-manager';
+                positionName = 'Manager';
+                normalizedPosition = 'manager';
+            } else if (jobTitleLower.includes('finance')) {
+                positionClass = 'role-finance';
+                positionName = 'Finance';
+                normalizedPosition = 'finance';
+            }
+        }
+
+        row.dataset.position = normalizedPosition;
+
+        row.innerHTML = `
+            <td class="px-4 py-4 text-sm font-medium">${escapeHtml(employee.employee_id)}</td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(employee.user_id)}</td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(employee.store_name)}</td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(employee.full_name)}</td>
+            <td class="px-4 py-4 text-sm">
+                <span class="px-2 py-1 text-xs ${positionClass} rounded-full">
+                    ${escapeHtml(positionName)}
+                </span>
+            </td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(employee.phone)}</td>
+            <td class="px-4 py-4 text-sm">
+                <div class="flex gap-2">
+                    <button class="text-primary hover:text-primary/80 edit-staff-btn" title="Edit">
+                        <i class="fa fa-edit"></i> Edit
+                    </button>
+                    <button class="text-red-600 hover:text-red-800 delete-staff" title="Delete">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+
+    if (staffCount) {
+        staffCount.textContent = String(employees.length);
+    }
+
+    setupStaffActionListeners();
+}
+
 async function loadStaffData() {
     const tableBody = document.getElementById('staff-table-body');
     if (!tableBody) return;
@@ -85,22 +169,26 @@ async function loadStaffData() {
             row.dataset.userid = employee.user_id;
             row.dataset.branchname = employee.store_name;
             row.dataset.name = employee.full_name;
-            row.dataset.position = employee.job_title || 'staff';
             row.dataset.phone = employee.phone;
-            row.dataset.storeid = employee.store_id;
+            row.dataset.storeID = employee.store_id; // Fixed: Capital ID for filter compatibility
 
             let positionClass = 'role-staff';
             let positionName = 'Staff';
+            let normalizedPosition = 'staff'; // For filter compatibility
 
             if (employee.job_title) {
                 if (employee.job_title.toLowerCase().includes('manager')) {
                     positionClass = 'role-manager';
                     positionName = 'Manager';
+                    normalizedPosition = 'manager';
                 } else if (employee.job_title.toLowerCase().includes('finance')) {
                     positionClass = 'role-finance';
                     positionName = 'Finance';
+                    normalizedPosition = 'finance';
                 }
             }
+
+            row.dataset.position = normalizedPosition; // Lowercase normalized value for filter
 
             row.innerHTML = `
                 <td class="px-4 py-4 text-sm font-medium">${escapeHtml(employee.employee_id)}</td>
@@ -189,17 +277,6 @@ function setupStaffActionListeners() {
             }
         });
     });
-
-     // 编辑用户表单提交
-    document.getElementById('edit-user-form')?.addEventListener('submit', (e) => {
-        e.preventDefault();
-        updateUser();
-    });
-    
-    // 取消编辑用户
-    document.getElementById('cancel-edit-user')?.addEventListener('click', () => {
-        closeEditUserModal();
-    });
 }
 
 // =============================================================================
@@ -221,11 +298,7 @@ async function loadPricingData() {
             row.innerHTML = `
                 <td class="px-6 py-4">${escapeHtml(book.ISBN)}</td>
                 <td class="px-6 py-4">${escapeHtml(book.name)}</td>
-                <td class="px-6 py-4">${escapeHtml(book.authors || 'Unknown')}</td>
-                <td class="px-6 py-4">${escapeHtml(book.publisher)}</td>
-                <td class="px-6 py-4">${escapeHtml(book.binding)}</td>
                 <td class="px-6 py-4">${MANAGER_CURRENCY_LABEL} ${parseFloat(book.unit_price).toFixed(2)}</td>
-                <td class="px-6 py-4">${escapeHtml(book.total_stock)}</td>
                 <td class="px-6 py-4">
                     <button onclick="editPricing(${book.sku_id}, '${escapeHtml(book.name)}', ${book.unit_price})"
                         class="text-primary hover:text-primary-dark">
@@ -240,7 +313,7 @@ async function loadPricingData() {
         delete tableBody.dataset.originalContent;
     } catch (error) {
         console.error('Failed to load pricing data:', error);
-        tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-red-600">Failed to load pricing data</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-600">Failed to load pricing data</td></tr>';
         showMessage('Failed to load pricing data: ' + error.message, 'error');
     } finally {
         hideLoading('pricing-table-body');
@@ -352,6 +425,26 @@ async function deleteNotification(announcementId) {
 // User Management
 // =============================================================================
 
+function getUserTypeBadge(userType) {
+    const normalized = String(userType || '').toLowerCase();
+    if (normalized === 'manager') {
+        return { label: 'manager', className: 'bg-primary text-white' };
+    }
+    if (normalized === 'finance') {
+        return { label: 'finance', className: 'bg-yellow-100 text-yellow-800' };
+    }
+    if (normalized === 'staff') {
+        return { label: 'staff', className: 'bg-blue-100 text-blue-800' };
+    }
+    if (normalized === 'employee') {
+        return { label: 'employee', className: 'bg-blue-100 text-blue-800' };
+    }
+    if (normalized === 'member' || normalized === 'customer') {
+        return { label: 'customer', className: 'bg-green-100 text-green-800' };
+    }
+    return { label: normalized || 'unknown', className: 'bg-gray-100 text-gray-800' };
+}
+
 async function loadUserManagementData() {
     const tableBody = document.getElementById('user-management-table-body');
     if (!tableBody) return;
@@ -382,22 +475,13 @@ async function loadUserManagementData() {
             }
 
             // 用户类型样式
-            let typeClass = '';
-            if (user.user_type === 'manager') {
-                typeClass = 'bg-primary text-white';
-            } else if (user.user_type === 'finance') {
-                typeClass = 'bg-yellow-100 text-yellow-800';
-            } else if (user.user_type === 'staff') {
-                typeClass = 'bg-blue-100 text-blue-800';
-            } else {
-                typeClass = 'bg-gray-100 text-gray-800';
-            }
+            const typeBadge = getUserTypeBadge(user.user_type);
 
             row.innerHTML = `
                 <td class="px-4 py-4 text-sm font-medium">${escapeHtml(user.user_id)}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(user.username)}</td>
                 <td class="px-4 py-4 text-sm">
-                    <span class="px-2 py-1 text-xs ${typeClass} rounded-full">${escapeHtml(user.user_type)}</span>
+                    <span class="px-2 py-1 text-xs ${typeBadge.className} rounded-full">${escapeHtml(typeBadge.label)}</span>
                 </td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(user.full_name || 'N/A')}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(user.phone || 'N/A')}</td>
@@ -467,12 +551,16 @@ function addUserActionButtonListeners() {
 // 打开编辑用户模态框
 function openEditUserModal(userData) {
     const modal = document.getElementById('edit-user-modal');
-    
+
     // 填充表单数据
     document.getElementById('edit-user-id').value = userData.user_id;
     document.getElementById('edit-user-userid').value = userData.user_id;
     document.getElementById('edit-username').value = userData.username;
     document.getElementById('edit-user-type').value = userData.user_type;
+    // 设置 User Type 显示字段
+    const userTypeDisplay = userData.user_type === 'member' ? 'Member (Customer)' :
+                           userData.user_type === 'employee' ? 'Employee (Staff)' : userData.user_type;
+    document.getElementById('edit-user-type-display').value = userTypeDisplay;
     document.getElementById('edit-full-name').value = userData.full_name || '';
     
     // 设置账户状态
@@ -500,17 +588,17 @@ function closeEditUserModal() {
 // 更新用户信息
 async function updateUser() {
     const userId = document.getElementById('edit-user-id').value;
-    
+
     const formData = {
         user_id: userId,
         username: document.getElementById('edit-username').value.trim(),
-        user_type: document.getElementById('edit-user-type').value,
+        // user_type 不再允许修改，不发送给后端
         full_name: document.getElementById('edit-full-name').value.trim(),
         account_status: document.getElementById('edit-account-status').value
     };
-    
+
     // 验证必填字段
-    if (!formData.username || !formData.user_type || !formData.full_name) {
+    if (!formData.username || !formData.full_name) {
         alert('Please fill in all required fields');
         return;
     }
@@ -528,16 +616,17 @@ async function updateUser() {
 
 // 重置用户密码
 async function resetUserPassword(userId, username) {
-    if (!confirm(`Reset password for user "${username}"?\nA password reset link will be sent to their email.`)) {
+    if (!confirm(`确定要重置用户 "${username}" 的密码吗？\n密码将被重置为默认密码: Password@123`)) {
         return;
     }
-    
+
     try {
-        await resetPasswordAPI(userId);
-        showMessage(`Password reset link sent for user "${username}"`, 'success');
+        const response = await resetUserPasswordAPI(userId);
+        alert(`用户 "${username}" 的密码已重置成功！\n\n默认密码: ${response.default_password}\n\n请通知用户尽快修改密码。`);
+        showMessage(`用户 "${username}" 的密码已重置为默认密码`, 'success');
     } catch (error) {
         console.error('Failed to reset password:', error);
-        showMessage('Failed to reset password: ' + error.message, 'error');
+        showMessage('重置密码失败: ' + error.message, 'error');
     }
 }
 
@@ -584,10 +673,28 @@ async function loadReplenishmentRequests() {
         managerReplenishmentCache = requests;
         tableBody.innerHTML = '';
 
+        if (!requests || requests.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="px-4 py-6 text-center text-gray-500">
+                        No replenishment requests found.
+                    </td>
+                </tr>
+            `;
+            updateReplenishmentPagination(0);
+            delete tableBody.dataset.originalContent;
+            return;
+        }
+
         requests.forEach(request => {
             const row = document.createElement('tr');
             row.className = 'hover:bg-gray-50';
             row.dataset.requestId = request.request_id;
+
+            const requestDate = request.request_date ? new Date(request.request_date) : null;
+            const requestDateText = requestDate && !Number.isNaN(requestDate.getTime())
+                ? requestDate.toLocaleString()
+                : (request.request_date || 'N/A');
 
             const statusClass = request.status === 'approved'
                 ? 'bg-green-100 text-green-800'
@@ -600,7 +707,7 @@ async function loadReplenishmentRequests() {
             row.innerHTML = `
                 <td class="px-4 py-4 text-sm font-medium">${escapeHtml(request.request_id)}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(request.store_name)}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(new Date(request.request_date).toLocaleString())}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(requestDateText)}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(request.sku_count)}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(request.total_quantity)}</td>
                 <td class="px-4 py-4 text-sm">
@@ -631,6 +738,9 @@ async function loadReplenishmentRequests() {
         });
 
         wireRequestActionButtons();
+
+        // 更新分页信息
+        updateReplenishmentPagination(requests.length);
 
         // 删除 originalContent，防止 hideLoading 覆盖已渲染的数据
         delete tableBody.dataset.originalContent;
@@ -675,6 +785,17 @@ function wireRequestActionButtons() {
             completeRequest(requestId);
         });
     });
+}
+
+function updateReplenishmentPagination(totalRequests) {
+    const paginationControls = document.getElementById('replenishment-pagination-controls');
+    if (!paginationControls) return;
+
+    const paginationText = paginationControls.querySelector('p');
+    if (paginationText) {
+        const displayCount = Math.min(totalRequests, 10);
+        paginationText.textContent = `Showing 1 to ${displayCount} of ${totalRequests} requests`;
+    }
 }
 
 function viewRequestDetail(requestId) {
@@ -1082,12 +1203,15 @@ async function performUserSearch(searchTerm) {
         }
 
         users.forEach(user => {
+            const typeBadge = getUserTypeBadge(user.user_type);
             const row = document.createElement('tr');
             row.className = 'hover:bg-gray-50 transition-colors';
             row.innerHTML = `
                 <td class="px-4 py-4 text-sm font-medium">${escapeHtml(user.user_id)}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(user.username)}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(user.user_type)}</td>
+                <td class="px-4 py-4 text-sm">
+                    <span class="px-2 py-1 text-xs ${typeBadge.className} rounded-full">${escapeHtml(typeBadge.label)}</span>
+                </td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(user.full_name || 'N/A')}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(user.phone || 'N/A')}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(new Date(user.create_date).toLocaleDateString())}</td>
@@ -1116,8 +1240,402 @@ async function performUserSearch(searchTerm) {
 }
 
 // =============================================================================
+// Dashboard / Overview - 使用 API 数据
+// =============================================================================
+
+/**
+ * 初始化图表 - 使用 API 数据
+ */
+async function initCharts() {
+    // 1. 订单数对比图表 - 从 API 获取店铺订单汇总数据
+    const orderComparisonCtx = document.getElementById('order-comparison-chart');
+    if (orderComparisonCtx) {
+        try {
+            // 销毁已存在的图表实例，避免 "Canvas is already in use" 错误
+            const existingChart = Chart.getChart(orderComparisonCtx);
+            if (existingChart) {
+                existingChart.destroy();
+            }
+
+            const storePerformance = await fetchStorePerformanceAPI();
+
+            // 提取店铺名称和订单数
+            const labels = storePerformance.map(store => store.store_name);
+            const orderCounts = storePerformance.map(store => parseInt(store.total_orders) || 0);
+
+            new Chart(orderComparisonCtx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Orders',
+                        data: orderCounts,
+                        backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                        borderColor: 'rgba(99, 102, 241, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Failed to load order comparison chart:', error);
+        }
+    }
+}
+
+/**
+ * 加载汇总统计卡片 - 使用 API 数据
+ */
+async function loadSummaryStatistics() {
+    try {
+        // 获取店铺绩效数据
+        const storePerformance = await fetchStorePerformanceAPI();
+
+        // 获取支付方式分析数据
+        const paymentAnalysis = await fetchPaymentAnalysisAPI();
+
+        // 获取分类销售数据
+        const categoryData = await fetchSalesByCategoryAPI();
+
+        // 1. Top Performing Branch
+        if (storePerformance.length > 0) {
+            const topStore = storePerformance.sort((a, b) => parseFloat(b.revenue) - parseFloat(a.revenue))[0];
+            const topBranchCard = document.querySelector('.bg-primary\\/10 p.text-2xl');
+            const topBranchDetails = document.querySelector('.bg-primary\\/10 p.text-sm');
+
+            if (topBranchCard && topBranchDetails) {
+                topBranchCard.textContent = topStore.store_name;
+                topBranchDetails.textContent = `${topStore.total_orders} orders | ${MANAGER_CURRENCY_LABEL} ${parseFloat(topStore.revenue).toFixed(0)} revenue`;
+            }
+        }
+
+        // 2. Most Popular Payment
+        if (paymentAnalysis.length > 0) {
+            const topPayment = paymentAnalysis.sort((a, b) => parseInt(b.payment_count) - parseInt(a.payment_count))[0];
+            const totalPayments = paymentAnalysis.reduce((sum, p) => sum + parseInt(p.payment_count), 0);
+            const percentage = totalPayments > 0 ? ((parseInt(topPayment.payment_count) / totalPayments) * 100).toFixed(0) : 0;
+
+            const paymentCard = document.querySelector('.bg-blue-50 p.text-2xl');
+            const paymentDetails = document.querySelector('.bg-blue-50 p.text-sm');
+
+            if (paymentCard && paymentDetails) {
+                paymentCard.textContent = topPayment.payment_method;
+                paymentDetails.textContent = `${percentage}% of all transactions`;
+            }
+        }
+
+        // 3. Top Category
+        if (categoryData.length > 0) {
+            const topCategory = categoryData.sort((a, b) => parseFloat(b.total_sales) - parseFloat(a.total_sales))[0];
+
+            const categoryCard = document.querySelector('.bg-green-50 p.text-2xl');
+            const categoryDetails = document.querySelector('.bg-green-50 p.text-sm');
+
+            if (categoryCard && categoryDetails) {
+                categoryCard.textContent = topCategory.category_name;
+                categoryDetails.textContent = `${parseFloat(topCategory.revenue_percentage).toFixed(0)}% of total book sales`;
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load summary statistics:', error);
+    }
+}
+
+// =============================================================================
 // 显式覆盖 manager.js 中的同名函数，确保使用 API 版本
 // =============================================================================
+function renderUserManagementRows(users) {
+    const tableBody = document.getElementById('user-management-table-body');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = '';
+
+    if (!users || users.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                    <div class="flex flex-col items-center">
+                        <i class="fa fa-user-times text-3xl text-gray-300 mb-2"></i>
+                        <p>No users found.</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    users.forEach(user => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50 transition-colors';
+        row.dataset.userId = user.user_id;
+        row.dataset.userData = JSON.stringify(user);
+
+        const typeBadge = getUserTypeBadge(user.user_type);
+        const createdAt = user.create_date ? new Date(user.create_date).toLocaleDateString() : 'N/A';
+        const lastLogin = user.last_log_date ? new Date(user.last_log_date).toLocaleDateString() : 'Never';
+
+        row.innerHTML = `
+            <td class="px-4 py-4 text-sm font-medium">${escapeHtml(user.user_id)}</td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(user.username)}</td>
+            <td class="px-4 py-4 text-sm">
+                <span class="px-2 py-1 text-xs ${typeBadge.className} rounded-full">${escapeHtml(typeBadge.label)}</span>
+            </td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(user.full_name || 'N/A')}</td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(user.phone || 'N/A')}</td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(createdAt)}</td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(lastLogin)}</td>
+            <td class="px-4 py-4 text-sm">
+                <div class="flex gap-2">
+                    <button class="text-primary hover:text-primary/80 edit-user-btn" title="Edit User">
+                        <i class="fa fa-edit"></i> Edit
+                    </button>
+                    <button class="text-red-600 hover:text-red-800 delete-user-btn" title="Delete User">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                    <button class="text-blue-600 hover:text-blue-800 reset-password-btn" title="Reset Password">
+                        <i class="fa fa-key"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+
+    addUserActionButtonListeners();
+}
+
+function renderPricingRows(books) {
+    const tableBody = document.getElementById('pricing-table-body');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = '';
+
+    if (!books || books.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="4" class="px-4 py-8 text-center text-gray-500">No books found.</td>
+            </tr>
+        `;
+        return;
+    }
+
+    books.forEach(book => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50';
+        row.innerHTML = `
+            <td class="px-6 py-4">${escapeHtml(book.ISBN)}</td>
+            <td class="px-6 py-4">${escapeHtml(book.name)}</td>
+            <td class="px-6 py-4">${MANAGER_CURRENCY_LABEL} ${parseFloat(book.unit_price).toFixed(2)}</td>
+            <td class="px-6 py-4">
+                <button onclick="editPricing(${book.sku_id}, '${escapeHtml(book.name)}', ${book.unit_price})"
+                    class="text-primary hover:text-primary-dark">
+                    <i class="fa fa-edit"></i> Edit Price
+                </button>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+function renderStockByBranchRows(inventory) {
+    const tableBody = document.getElementById('stock-branch-table-body');
+    const totalCount = document.getElementById('branch-total-count');
+    const branchCount = document.getElementById('branch-stock-count');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = '';
+
+    if (!inventory || inventory.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="px-4 py-8 text-center text-gray-500">No inventory found.</td>
+            </tr>
+        `;
+        if (totalCount) totalCount.textContent = '0';
+        if (branchCount) branchCount.textContent = '0';
+        return;
+    }
+
+    inventory.forEach(item => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50';
+        row.innerHTML = `
+            <td class="px-4 py-4 text-sm font-medium">${escapeHtml(item.sku_id)}</td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(item.book_name)}</td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(item.store_name)}</td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(item.total_quantity)}</td>
+            <td class="px-4 py-4 text-sm">${item.last_inbound_date ? escapeHtml(new Date(item.last_inbound_date).toLocaleDateString()) : 'N/A'}</td>
+            <td class="px-4 py-4 text-sm">
+                <span class="px-2 py-1 text-xs rounded-full ${item.stock_status === 'High' ? 'stock-high' :
+                item.stock_status === 'Medium' ? 'stock-medium' : 'stock-low'
+            }">${escapeHtml(item.stock_status)}</span>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+
+    if (totalCount) totalCount.textContent = String(inventory.length);
+    if (branchCount) branchCount.textContent = String(inventory.length);
+}
+
+function renderStockBySkuRows(inventory, stores) {
+    const tableBody = document.getElementById('stock-sku-table-body');
+    if (!tableBody) return;
+
+    const sortedStores = [...stores].sort((a, b) => a.store_id - b.store_id);
+    const skuMap = new Map();
+
+    inventory.forEach(item => {
+        if (!item.sku_id) return;
+        if (!skuMap.has(item.sku_id)) {
+            skuMap.set(item.sku_id, {
+                sku_id: item.sku_id,
+                book_name: item.book_name,
+                store_stock: {}
+            });
+        }
+        const entry = skuMap.get(item.sku_id);
+        if (item.store_id) {
+            entry.store_stock[item.store_id] = item.store_stock;
+        }
+    });
+
+    tableBody.innerHTML = '';
+
+    if (skuMap.size === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="${2 + sortedStores.length}" class="px-4 py-8 text-center text-gray-500">No inventory found.</td>
+            </tr>
+        `;
+        return;
+    }
+
+    Array.from(skuMap.values()).forEach(item => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50';
+
+        const storeCells = sortedStores.map(store => {
+            const qty = item.store_stock[store.store_id] || 0;
+            return `<td class="px-4 py-4 text-sm">${escapeHtml(qty)}</td>`;
+        }).join('');
+
+        row.innerHTML = `
+            <td class="px-4 py-4 text-sm font-medium">${escapeHtml(item.sku_id)}</td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(item.book_name)}</td>
+            ${storeCells}
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+async function performStaffSearch(searchTerm) {
+    if (!searchTerm || searchTerm.trim() === '') {
+        loadStaffData();
+        return;
+    }
+
+    try {
+        const employees = await searchEmployeesAPI(searchTerm);
+        renderStaffTable(employees);
+    } catch (error) {
+        console.error('Failed to search staff:', error);
+        showMessage('Failed to search staff: ' + error.message, 'error');
+    }
+}
+
+async function performUserSearch(searchTerm) {
+    if (!searchTerm || searchTerm.trim() === '') {
+        loadUserManagementData();
+        return;
+    }
+
+    try {
+        const users = await searchUsersAPI(searchTerm);
+        renderUserManagementRows(users);
+    } catch (error) {
+        console.error('Failed to search users:', error);
+        showMessage('Failed to search users: ' + error.message, 'error');
+    }
+}
+
+async function performPricingSearch(searchTerm) {
+    if (!searchTerm || searchTerm.trim() === '') {
+        loadPricingData();
+        return;
+    }
+
+    try {
+        const books = await searchBooksAPI(searchTerm);
+        renderPricingRows(books);
+    } catch (error) {
+        console.error('Failed to search pricing data:', error);
+        showMessage('Failed to search pricing data: ' + error.message, 'error');
+    }
+}
+
+function performBookSearch(searchTerm) {
+    performPricingSearch(searchTerm);
+}
+
+async function performBranchStockSearch(searchTerm) {
+    if (!searchTerm || searchTerm.trim() === '') {
+        const branchFilter = document.getElementById('branch-stock-filter');
+        const selectedBranch = branchFilter ? branchFilter.value : 'all';
+        loadStockOverviewByBranch(selectedBranch);
+        return;
+    }
+
+    const branchFilter = document.getElementById('branch-stock-filter');
+    const selectedBranch = branchFilter ? branchFilter.value : 'all';
+    const storeId = selectedBranch === 'all' ? null : selectedBranch;
+
+    try {
+        const inventory = await searchInventoryByStoreAPI(searchTerm, storeId);
+        renderStockByBranchRows(inventory);
+    } catch (error) {
+        console.error('Failed to search inventory by branch:', error);
+        showMessage('Failed to search inventory: ' + error.message, 'error');
+    }
+}
+
+async function performSKUSearch(searchTerm) {
+    if (!searchTerm || searchTerm.trim() === '') {
+        loadStockOverviewBySKU();
+        return;
+    }
+
+    try {
+        const [inventory, stores] = await Promise.all([
+            searchInventoryBySKUAPI(searchTerm),
+            fetchStoresAPI()
+        ]);
+        renderStockBySkuRows(inventory, stores);
+    } catch (error) {
+        console.error('Failed to search inventory by SKU:', error);
+        showMessage('Failed to search inventory: ' + error.message, 'error');
+    }
+}
+
 window.loadStaffData = loadStaffData;
 window.loadUserManagementData = loadUserManagementData;
 window.loadNotifications = loadNotifications;
@@ -1128,15 +1646,60 @@ window.loadStockOverviewBySKU = loadStockOverviewBySKU;
 window.loadPaymentComparisonTable = loadPaymentComparisonTable;
 window.loadBookCategoryTable = loadBookCategoryTable;
 
+// Dashboard 函数
+window.initCharts = initCharts;
+window.loadSummaryStatistics = loadSummaryStatistics;
+
 // 搜索函数覆盖
 window.performStaffSearch = performStaffSearch;
 window.performUserSearch = performUserSearch;
+window.performPricingSearch = performPricingSearch;
+window.performBranchStockSearch = performBranchStockSearch;
+window.performSKUSearch = performSKUSearch;
+window.performBookSearch = performBookSearch;
 
 // 编辑定价函数
 window.editPricing = editPricing;
 
 console.log('Manager API Integration loaded successfully');
 
-document.addEventListener('DOMContentLoaded', function() {
-    setupUserManagementEventListeners();
+// =============================================================================
+// User Management Modal Event Listeners Initialization
+// =============================================================================
+
+/**
+ * 初始化用户编辑模态框事件监听器
+ * 使用 cloneNode 技术避免重复绑定
+ */
+function setupUserModalListeners() {
+    // 编辑用户表单提交
+    const editUserForm = document.getElementById('edit-user-form');
+    if (editUserForm) {
+        const newForm = editUserForm.cloneNode(true);
+        editUserForm.parentNode.replaceChild(newForm, editUserForm);
+        newForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            updateUser();
+        });
+    }
+
+    // 取消编辑用户按钮
+    const cancelBtn = document.getElementById('cancel-edit-user');
+    if (cancelBtn) {
+        const newCancelBtn = cancelBtn.cloneNode(true);
+        cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+        newCancelBtn.addEventListener('click', () => {
+            closeEditUserModal();
+        });
+    }
+}
+
+// 页面加载完成后初始化用户模态框事件监听器
+document.addEventListener('DOMContentLoaded', () => {
+    setupUserModalListeners();
 });
+
+// 如果 DOM 已经加载完成，立即初始化
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setupUserModalListeners();
+}

@@ -80,7 +80,7 @@ window.managerSwitchPage = function (pageId) {
             loadUserManagementData();
         }
     } else if (pageId === 'overview') {
-        // 确保图表和表格已初始化
+        // 确保图表和表格已初始化 - 使用 API 版本
         if (typeof initCharts === 'function') {
             setTimeout(initCharts, 100);
         }
@@ -91,10 +91,15 @@ window.managerSwitchPage = function (pageId) {
         if (typeof loadBookCategoryTable === 'function') {
             setTimeout(loadBookCategoryTable, 200);
         }
+        // 加载汇总统计卡片
+        if (typeof loadSummaryStatistics === 'function') {
+            setTimeout(loadSummaryStatistics, 250);
+        }
     } else if (pageId === 'supplier-management') {
-        // 使用 API 版本或加载模拟数据
-        if (typeof loadSupplierData === 'function') {
-            // 加载供应商数据
+        // Prefer API-backed supplier loader when available.
+        if (typeof window.loadSupplierData === 'function') {
+            window.loadSupplierData();
+        } else if (typeof loadSupplierData === 'function') {
             loadSupplierData();
         }
     }
@@ -133,8 +138,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize date display
     initDateDisplay();
 
-    // Initialize charts
-    initCharts();
+    // Initialize charts - 使用 API 版本
+    if (typeof initCharts === 'function') {
+        initCharts();
+    }
 
     // 使用 API 版本的表格加载函数
     if (typeof loadPaymentComparisonTable === 'function') {
@@ -144,11 +151,13 @@ document.addEventListener('DOMContentLoaded', function () {
         setTimeout(loadBookCategoryTable, 200);
     }
 
+    // 加载汇总统计卡片 - 使用 API 版本
+    if (typeof loadSummaryStatistics === 'function') {
+        setTimeout(loadSummaryStatistics, 250);
+    }
+
     // Initialize event listeners
     initEventListeners();
-
-    // Load initial data
-    loadInitialData();
 
     // 初始布局修复
     setTimeout(() => {
@@ -172,35 +181,7 @@ function initDateDisplay() {
     if (dateElem) dateElem.textContent = now.toLocaleDateString('en-US', options);
 }
 
-// Initialize charts (只保留订单数对比图表，移除热销图书分类图表)
-function initCharts() {
-    // 1. 订单数对比图表
-    const orderComparisonCtx = document.getElementById('order-comparison-chart');
-    if (orderComparisonCtx) {
-        // 这部分可能也需要使用 API 数据，暂时保留
-        const orderData = overviewData.branchOrderComparison;
-
-        new Chart(orderComparisonCtx.getContext('2d'), {
-            // ... 图表配置 ...
-        });
-    }
-
-    // 4. Sales Trend Chart (保留原有图表)
-    const salesTrendCtx = document.getElementById('sales-trend-chart');
-    if (salesTrendCtx) {
-        new Chart(salesTrendCtx.getContext('2d'), {
-            // ... 图表配置 ...
-        });
-    }
-
-    // 5. Category Sales Chart (保留原有图表)
-    const categorySalesCtx = document.getElementById('category-sales-chart');
-    if (categorySalesCtx) {
-        new Chart(categorySalesCtx.getContext('2d'), {
-            // ... 图表配置 ...
-        });
-    }
-}
+// initCharts 函数已移至 manager-api-integration.js，使用 API 数据
 
 // 保留基本的工具函数
 function formatDate(dateString) {
@@ -210,45 +191,8 @@ function formatDate(dateString) {
     return `${month} ${day}`;
 }
 
-// Load initial data
-function loadInitialData() {
-    // Overview页面数据会在图表初始化时自动加载
-    loadBranchPerformance();
-}
-
-// Load branch performance data
-function loadBranchPerformance() {
-    const container = document.getElementById('branch-performance');
-    if (container) {
-        container.innerHTML = '';
-        const branchPerformance = [
-            { name: 'Central Plaza', sales: '¥42,000', performance: 'Excellent', status: 'Active' },
-            { name: 'Riverside', sales: '¥35,000', performance: 'Good', status: 'Active' },
-            { name: 'Westside', sales: '¥28,000', performance: 'Average', status: 'Active' }
-        ];
-
-        branchPerformance.forEach(branch => {
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50 transition-colors';
-
-            let performanceClass = 'bg-green-100 text-green-800';
-            if (branch.performance === 'Good') performanceClass = 'bg-blue-100 text-blue-800';
-            if (branch.performance === 'Average') performanceClass = 'bg-yellow-100 text-yellow-800';
-
-            row.innerHTML = `
-                <td class="px-4 py-4 text-sm font-medium">${branch.name}</td>
-                <td class="px-4 py-4 text-sm">${branch.sales}</td>
-                <td class="px-4 py-4 text-sm">
-                    <span class="px-2 py-1 text-xs ${performanceClass} rounded-full">${branch.performance}</span>
-                </td>
-                <td class="px-4 py-4 text-sm">
-                    <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">${branch.status}</span>
-                </td>
-            `;
-            container.appendChild(row);
-        });
-    }
-}
+// loadBranchPerformance 函数已删除（已从 HTML 中移除）
+// loadInitialData 函数不再需要
 
 // 分支库存搜索功能
 function initBranchStockSearch() {
@@ -411,10 +355,12 @@ function initEventListeners() {
         openAddSupplierModal();
     });
 
-    // 添加供应商表单提交
+    // 添加供应商表单提交 - 使用 window 版本确保调用 API
     document.getElementById('add-supplier-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
-        addNewSupplier();
+        if (typeof window.addNewSupplier === 'function') {
+            window.addNewSupplier();
+        }
     });
 
     // 取消添加供应商
@@ -427,10 +373,12 @@ function initEventListeners() {
         closeEditSupplierModal();
     });
 
-    // 编辑供应商表单提交
+    // 编辑供应商表单提交 - 使用 window 版本确保调用 API
     document.getElementById('edit-supplier-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
-        updateSupplier();
+        if (typeof window.updateSupplier === 'function') {
+            window.updateSupplier();
+        }
     });
 
     // 供应商搜索框
@@ -438,10 +386,8 @@ function initEventListeners() {
     if (supplierSearch) {
         const debouncedSearch = debounce(function (e) {
             const searchTerm = e.target.value;
-            if (searchTerm.length >= 2 || searchTerm.length === 0) {
-                if (typeof performSupplierSearch === 'function') {
-                    performSupplierSearch(searchTerm);
-                }
+            if (typeof performSupplierSearch === 'function') {
+                performSupplierSearch(searchTerm);
             }
         }, 300);
 
@@ -786,9 +732,6 @@ function openAddStaffModal() {
     document.getElementById('add-staff-modal').classList.remove('hidden');
     // 重置表单
     document.getElementById('add-staff-form').reset();
-    // 隐藏 Store ID 字段
-    document.getElementById('store-id-container').classList.add('hidden');
-    document.getElementById('store-id').required = false;
 }
 
 // 关闭添加员工模态框
@@ -800,6 +743,7 @@ function closeAddStaffModal() {
 function toggleStoreIdField(accountType) {
     const storeIdContainer = document.getElementById('store-id-container');
     const storeIdSelect = document.getElementById('store-id');
+    if (!storeIdContainer || !storeIdSelect) return;
 
     if (accountType === 'staff' || accountType === 'finance') {
         storeIdContainer.classList.remove('hidden');
@@ -813,113 +757,88 @@ function toggleStoreIdField(accountType) {
 
 // 添加新员工
 async function addNewStaff() {
+    let createdUserId = null;
     try {
-        // 收集表单数据
         const formData = {
-            name: document.getElementById('staff-name').value.trim(),
-            employeeID: document.getElementById('employee-id').value.trim(),
-            userID: document.getElementById('user-id').value.trim(),
-            username: document.getElementById('username').value.trim(),
-            password: document.getElementById('initial-password').value,
+            username: document.getElementById('staff-username').value.trim(),
+            password: document.getElementById('staff-password').value,
+            firstName: document.getElementById('staff-first-name').value.trim(),
+            lastName: document.getElementById('staff-last-name').value.trim(),
             phone: document.getElementById('phone-number').value.trim(),
-            position: document.getElementById('account-type').value,
-            storeID: document.getElementById('store-id').value || null
+            storeID: document.getElementById('store-id').value,
+            jobTitleID: document.getElementById('job-title-id').value,
+            performance: document.getElementById('staff-performance').value.trim()
         };
 
-        // 验证必填字段
-        if (!formData.name || !formData.employeeID || !formData.userID || !formData.username ||
-            !formData.password || !formData.phone || !formData.position) {
+        if (!formData.username || !formData.password || !formData.firstName || !formData.lastName ||
+            !formData.phone || !formData.storeID || !formData.jobTitleID) {
             alert('Please fill in all required fields');
             return;
         }
 
-        // 验证员工ID格式
-        if (!/^EMP\d{5}$/.test(formData.employeeID)) {
-            alert('Employee ID should be in format EMP00000');
+        const normalizedUsername = formData.username.toLowerCase();
+        if (!/^emp\d{3}$/.test(normalizedUsername)) {
+            alert('Username must be in format emp001');
             return;
         }
 
-        // 验证手机号格式
-        if (!/^\d{10,15}$/.test(formData.phone)) {
-            alert('Please enter a valid phone number (10-15 digits)');
+        if (!/^[\d\s\-\(\)\+]+$/.test(formData.phone) || formData.phone.length < 7 || formData.phone.length > 20) {
+            alert('Please enter a valid phone number');
             return;
         }
 
-        // 如果是 staff 或 finance，需要 storeID
-        if ((formData.position === 'staff' || formData.position === 'finance') && !formData.storeID) {
-            alert('Store ID is required for staff and finance roles');
+        let performanceValue = null;
+        if (formData.performance !== '') {
+            const perfNum = Number(formData.performance);
+            if (Number.isNaN(perfNum) || perfNum < 0 || perfNum > 100) {
+                alert('Performance must be between 0 and 100');
+                return;
+            }
+            performanceValue = perfNum;
+        }
+
+        if (typeof addEmployeeUserAPI !== 'function') {
+            alert('Add user API is not available. Please ensure manager-api.js is loaded.');
             return;
         }
 
-        // 获取分店名称
-        let branchName = 'Central Office';
-        if (formData.storeID) {
-            const branchMap = {
-                'ST001': 'Central Plaza',
-                'ST002': 'Riverside',
-                'ST003': 'Westside',
-                'ST004': 'Northgate',
-                'ST005': 'Southpoint',
-                'ST006': 'Eastview',
-                'ST007': 'Downtown'
-            };
-            branchName = branchMap[formData.storeID] || formData.storeID;
-        }
+        const userResponse = await addEmployeeUserAPI({
+            username: normalizedUsername,
+            password: formData.password
+        });
+        createdUserId = userResponse.data.user_id;
 
-        // 检查员工ID是否已存在
-        const existingStaff = staffData.find(staff => staff.employeeID === formData.employeeID);
-        if (existingStaff) {
-            alert('Employee ID already exists. Please use a different ID.');
-            return;
-        }
-
-        // 检查用户名是否已存在
-        const existingUser = staffData.find(staff => staff.userID === formData.userID);
-        if (existingUser) {
-            alert('User ID already exists. Please use a different ID.');
-            return;
-        }
-
-        // 创建新员工对象
-        const newStaff = {
-            id: staffData.length > 0 ? Math.max(...staffData.map(s => s.id)) + 1 : 1,
-            employeeID: formData.employeeID,
-            userID: formData.userID,
-            branchName: branchName,
-            name: formData.name,
-            position: formData.position,
+        const employeeData = {
+            user_id: parseInt(createdUserId, 10),
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            store_id: parseInt(formData.storeID, 10),
+            job_title_id: parseInt(formData.jobTitleID, 10),
             phone: formData.phone,
-            storeID: formData.storeID || '',
-            username: formData.username,
-            status: 'active',
-            createdDate: new Date().toISOString().split('T')[0]
+            performance: performanceValue
         };
 
-        // 在实际应用中，这里会调用 API 来保存数据
-        // 临时添加到 mock 数据中
-        staffData.unshift(newStaff);
+        await addEmployeeAPI(employeeData);
 
-        // 更新表格显示
         if (typeof loadStaffData === 'function') {
             loadStaffData();
         }
 
-        // 关闭模态框
         closeAddStaffModal();
-
-        // 显示成功消息
-        alert(`Staff member "${formData.name}" has been added successfully!\n\nLogin credentials:\nUsername: ${formData.username}\nPassword: ${formData.password}`);
-
-        // 重置表单
+        alert(`Staff member "${formData.firstName} ${formData.lastName}" has been added successfully!`);
         document.getElementById('add-staff-form').reset();
-
     } catch (error) {
+        if (createdUserId && typeof deleteUserAPI === 'function') {
+            try {
+                await deleteUserAPI(createdUserId);
+            } catch (cleanupError) {
+                console.error('Failed to rollback user creation:', cleanupError);
+            }
+        }
         console.error('Error adding staff:', error);
-        alert('Failed to add staff. Please try again.');
+        alert('Failed to add staff: ' + (error.message || 'Please try again.'));
     }
 }
-
-// 打开编辑员工模态框
 function openEditStaffModal(staffData) {
     const modal = document.getElementById('edit-staff-modal');
 
@@ -927,7 +846,7 @@ function openEditStaffModal(staffData) {
     document.getElementById('edit-staff-id').value = staffData.id;
     document.getElementById('edit-original-employee-id').value = staffData.employeeID;
     document.getElementById('edit-employee-id').value = staffData.employeeID;
-    document.getElementById('edit-user-id').value = staffData.userID;
+    document.getElementById('edit-staff-user-id').value = staffData.userID;
     document.getElementById('edit-branch').value = staffData.branchName;
     document.getElementById('edit-name').value = staffData.name;
     document.getElementById('edit-position').value = staffData.position;
@@ -945,81 +864,75 @@ function closeEditStaffModal() {
 // 更新员工信息
 async function updateStaff() {
     try {
-        // 收集表单数据
         const formData = {
-            id: parseInt(document.getElementById('edit-staff-id').value),
-            originalEmployeeID: document.getElementById('edit-original-employee-id').value,
             employeeID: document.getElementById('edit-employee-id').value.trim(),
-            userID: document.getElementById('edit-user-id').value.trim(),
+            userID: document.getElementById('edit-staff-user-id').value.trim(),
             branchName: document.getElementById('edit-branch').value,
             name: document.getElementById('edit-name').value.trim(),
             position: document.getElementById('edit-position').value,
             phone: document.getElementById('edit-phone').value.trim()
         };
 
-        // 验证必填字段
         if (!formData.employeeID || !formData.userID || !formData.branchName ||
             !formData.name || !formData.position || !formData.phone) {
             alert('Please fill in all required fields');
             return;
         }
 
-        // 验证员工ID格式
-        if (!/^EMP\d{5}$/.test(formData.employeeID)) {
-            alert('Employee ID should be in format EMP00000');
+        if (!/^[\d\s\-\(\)\+]+$/.test(formData.phone) || formData.phone.length < 7 || formData.phone.length > 20) {
+            alert('Please enter a valid phone number');
             return;
         }
 
-        // 验证手机号格式
-        if (!/^\d{10,15}$/.test(formData.phone)) {
-            alert('Please enter a valid phone number (10-15 digits)');
+        const branchMap = {
+            'Downtown Store': 1,
+            'University Store': 2,
+            'Community Store': 3,
+            'Suburban Store': 4,
+            'Airport Store': 5
+        };
+        const storeId = branchMap[formData.branchName];
+        if (!storeId) {
+            alert('Please select a valid branch');
             return;
         }
 
-        // 检查员工ID是否已被其他员工使用（如果修改了ID）
-        if (formData.employeeID !== formData.originalEmployeeID) {
-            const existingStaff = staffData.find(staff =>
-                staff.employeeID === formData.employeeID && staff.id !== formData.id
-            );
-            if (existingStaff) {
-                alert('Employee ID already exists. Please use a different ID.');
-                return;
-            }
+        const positionMap = {
+            'staff': 1,
+            'finance': 2,
+            'manager': 3,
+            'head office': 4
+        };
+        const jobTitleId = positionMap[String(formData.position || '').toLowerCase()];
+        if (!jobTitleId) {
+            alert('Please select a valid position');
+            return;
         }
 
-        // 查找并更新员工数据
-        const staffIndex = staffData.findIndex(staff => staff.id === formData.id);
-        if (staffIndex !== -1) {
-            // 保留原始数据中不需要修改的字段
-            const originalStaff = staffData[staffIndex];
+        const nameParts = formData.name.split(' ');
+        const firstName = nameParts[0];
+        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : nameParts[0];
 
-            // 更新员工数据
-            staffData[staffIndex] = {
-                ...originalStaff,
-                employeeID: formData.employeeID,
-                userID: formData.userID,
-                branchName: formData.branchName,
-                name: formData.name,
-                position: formData.position,
-                phone: formData.phone,
-                // 如果是员工或财务人员，需要设置storeID
-                storeID: (formData.position === 'staff' || formData.position === 'finance')
-                    ? originalStaff.storeID || ''
-                    : ''
-            };
+        const employeeData = {
+            employee_id: parseInt(formData.employeeID, 10),
+            user_id: parseInt(formData.userID, 10),
+            first_name: firstName,
+            last_name: lastName,
+            store_id: storeId,
+            job_title_id: jobTitleId,
+            phone: formData.phone,
+            performance: null
+        };
 
-            // 更新表格显示
+        if (typeof updateEmployeeAPI === 'function') {
+            await updateEmployeeAPI(employeeData);
             if (typeof loadStaffData === 'function') {
                 loadStaffData();
             }
-
-            // 关闭模态框
             closeEditStaffModal();
-
-            // 显示成功消息
             alert(`Staff member "${formData.name}" has been updated successfully!`);
         } else {
-            alert('Staff member not found.');
+            alert('Update employee API is not available.');
         }
 
     } catch (error) {
@@ -1213,10 +1126,9 @@ function initRequestFilters() {
 
 // 应用请求筛选器
 function applyRequestFilters() {
-    console.log('Applying request filters...');
-    // 这里可以添加实际的过滤逻辑
-    // 暂时先显示一个提示
-    alert('Filter functionality will be implemented when API is integrated');
+    if (typeof loadReplenishmentRequests === 'function') {
+        loadReplenishmentRequests();
+    }
 }
 
 // 重置请求筛选器
@@ -1239,8 +1151,10 @@ function resetRequestFilters() {
             }
         }
     });
-    
-    console.log('Request filters reset');
+
+    if (typeof loadReplenishmentRequests === 'function') {
+        loadReplenishmentRequests();
+    }
 }
 
 // 初始化库存管理事件监听器
@@ -1362,20 +1276,39 @@ function addSupplierActionButtonListeners() {
     const container = document.getElementById('supplier-table-body');
     if (!container) return;
 
-    container.addEventListener('click', function (e) {
+    // 避免重复绑定事件
+    if (container.dataset.supplierListenersBound === 'true') return;
+    container.dataset.supplierListenersBound = 'true';
+
+    container.addEventListener('click', async function (e) {
         const button = e.target.closest('button');
         if (!button) return;
 
         const row = button.closest('tr');
         const supplierId = row.dataset.supplierId;
-        const supplier = supplierData.find(s => s.id == supplierId);
+
+        // 尝试从本地数组查找，如果找不到则创建一个包含id的对象
+        let supplier = supplierData.find(s => s.id == supplierId || s.supplier_id == supplierId);
+        if (!supplier) {
+            supplier = { id: supplierId, supplier_id: supplierId };
+        }
 
         if (button.classList.contains('edit-supplier-btn')) {
-            openEditSupplierModal(supplier);
+            // 使用API版本的编辑功能
+            if (typeof openEditSupplierModalAPI === 'function') {
+                await openEditSupplierModalAPI(supplierId);
+            } else {
+                openEditSupplierModal(supplier);
+            }
         } else if (button.classList.contains('view-supplier-btn')) {
-            viewSupplierDetails(supplier);
+            // 使用API版本的查看功能
+            if (typeof viewSupplierDetailsAPI === 'function') {
+                await viewSupplierDetailsAPI(supplierId);
+            } else {
+                viewSupplierDetails(supplier);
+            }
         } else if (button.classList.contains('delete-supplier-btn')) {
-            deleteSupplier(supplier);
+            await deleteSupplier(supplier);
         }
     });
 }
@@ -1469,145 +1402,48 @@ function viewSupplierDetails(supplier) {
         `Status: ${supplier.status}`);
 }
 
-// 删除供应商
-function deleteSupplier(supplier) {
-    if (confirm(`Are you sure you want to delete supplier "${supplier.name}"?`)) {
-        const index = supplierData.findIndex(s => s.id === supplier.id);
-        if (index !== -1) {
-            supplierData.splice(index, 1);
-            loadSupplierData();
-            alert('Supplier deleted successfully!');
-        }
+// 删除供应商 - 调用API版本
+async function deleteSupplier(supplier) {
+    // 获取supplierId - 兼容不同数据格式
+    const supplierId = supplier.supplier_id || supplier.id;
+
+    if (!confirm('Are you sure you want to delete this supplier? Suppliers with related purchases cannot be deleted.')) {
+        return;
     }
-}
 
-// 添加新供应商
-async function addNewSupplier() {
     try {
-        const formData = {
-            supplierID: document.getElementById('supplier-id').value.trim(),
-            name: document.getElementById('supplier-name').value.trim(),
-            phone: document.getElementById('supplier-phone').value.trim(),
-            address: document.getElementById('supplier-address').value.trim(),
-            email: document.getElementById('supplier-email').value.trim(),
-            contactPerson: document.getElementById('supplier-contact').value.trim(),
-            category: document.getElementById('supplier-category').value
-        };
-
-        // 验证必填字段
-        if (!formData.supplierID || !formData.name || !formData.phone ||
-            !formData.address || !formData.email) {
-            alert('Please fill in all required fields');
-            return;
-        }
-
-        // 验证供应商ID格式
-        if (!/^SUP\d{3}$/.test(formData.supplierID)) {
-            alert('Supplier ID should be in format SUP001 (SUP followed by 3 digits)');
-            return;
-        }
-
-        // 验证邮箱格式
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(formData.email)) {
-            alert('Please enter a valid email address');
-            return;
-        }
-
-        // 检查供应商ID是否已存在
-        const existingSupplier = supplierData.find(s => s.supplierID === formData.supplierID);
-        if (existingSupplier) {
-            alert('Supplier ID already exists. Please use a different ID.');
-            return;
-        }
-
-        // 创建新供应商对象
-        const newSupplier = {
-            id: supplierData.length > 0 ? Math.max(...supplierData.map(s => s.id)) + 1 : 1,
-            supplierID: formData.supplierID,
-            name: formData.name,
-            phone: formData.phone,
-            address: formData.address,
-            email: formData.email,
-            contactPerson: formData.contactPerson || '',
-            category: formData.category || 'other',
-            status: 'active'
-        };
-
-        // 添加到数据数组
-        supplierData.push(newSupplier);
-
-        // 更新表格显示
-        loadSupplierData();
-
-        // 关闭模态框
-        closeAddSupplierModal();
-
-        // 显示成功消息
-        alert(`Supplier "${formData.name}" has been added successfully!`);
-
-        // 重置表单
-        document.getElementById('add-supplier-form').reset();
-
-    } catch (error) {
-        console.error('Error adding supplier:', error);
-        alert('Failed to add supplier. Please try again.');
-    }
-}
-
-// 更新供应商信息
-async function updateSupplier() {
-    try {
-        const supplierId = document.getElementById('edit-supplier-original-id').value;
-        const formData = {
-            name: document.getElementById('edit-supplier-name').value.trim(),
-            phone: document.getElementById('edit-supplier-phone').value.trim(),
-            address: document.getElementById('edit-supplier-address').value.trim(),
-            email: document.getElementById('edit-supplier-email').value.trim()
-        };
-
-        // 验证必填字段
-        if (!formData.name || !formData.phone || !formData.address || !formData.email) {
-            alert('Please fill in all required fields');
-            return;
-        }
-
-        // 验证邮箱格式
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(formData.email)) {
-            alert('Please enter a valid email address');
-            return;
-        }
-
-        // 查找并更新供应商数据
-        const supplierIndex = supplierData.findIndex(s => s.id == supplierId);
-        if (supplierIndex !== -1) {
-            // 保留原始数据中不需要修改的字段
-            supplierData[supplierIndex] = {
-                ...supplierData[supplierIndex],
-                name: formData.name,
-                phone: formData.phone,
-                address: formData.address,
-                email: formData.email
-            };
-
-            // 更新表格显示
+        // 调用API删除供应商
+        if (typeof deleteSupplierAPI === 'function') {
+            await deleteSupplierAPI(supplierId);
+            showMessage('Supplier deleted successfully', 'success');
             loadSupplierData();
-
-            // 关闭模态框
-            closeEditSupplierModal();
-
-            // 显示成功消息
-            alert('Supplier information updated successfully!');
         } else {
-            alert('Supplier not found.');
+            // 备用：如果deleteSupplierAPI不存在，尝试直接调用managerApiRequest
+            const response = await managerApiRequest(
+                MANAGER_API_CONFIG.endpoints.suppliers.delete,
+                'POST',
+                { supplier_id: supplierId }
+            );
+            showMessage('Supplier deleted successfully', 'success');
+            loadSupplierData();
         }
-
     } catch (error) {
-        console.error('Error updating supplier:', error);
-        alert('Failed to update supplier. Please try again.');
+        const message = String(error && error.message ? error.message : '');
+        // 检查是否是关联订单导致无法删除
+        if (message.includes('associated purchase orders') || message.includes('cannot delete')) {
+            showMessage('Cannot delete supplier: This supplier has associated purchase orders.', 'info');
+            return;
+        }
+        console.error('Failed to delete supplier:', error);
+        showMessage('Failed to delete supplier: ' + message, 'error');
     }
 }
+
+// 添加新供应商 - 已移至 manager-supplier-api.js，使用 API 版本
+// 此函数由 window.addNewSupplier 在 manager-supplier-api.js 中定义
+
+// 更新供应商信息 - 已移至 manager-supplier-api.js，使用 API 版本
+// 此函数由 window.updateSupplier 在 manager-supplier-api.js 中定义
 
 // 布局修复辅助函数
 function fixLayoutAfterFilter() {

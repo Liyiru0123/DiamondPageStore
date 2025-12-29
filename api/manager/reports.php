@@ -83,13 +83,13 @@ function getOverviewStats($conn) {
                         FROM orders o
                         JOIN order_items oi ON o.order_id = oi.order_id
                         JOIN skus s ON oi.sku_id = s.sku_id
-                        WHERE o.order_status = 'paid'";
+                        WHERE o.order_status IN ('paid', 'finished')";
     $totalRevenueStmt = $conn->prepare($totalRevenueSql);
     $totalRevenueStmt->execute();
     $totalRevenue = $totalRevenueStmt->fetch()['total_revenue'];
 
     // 总订单数
-    $totalOrdersSql = "SELECT COUNT(*) as total_orders FROM orders WHERE order_status = 'paid'";
+    $totalOrdersSql = "SELECT COUNT(*) as total_orders FROM orders WHERE order_status IN ('paid', 'finished')";
     $totalOrdersStmt = $conn->prepare($totalOrdersSql);
     $totalOrdersStmt->execute();
     $totalOrders = $totalOrdersStmt->fetch()['total_orders'];

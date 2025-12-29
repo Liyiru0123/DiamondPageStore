@@ -24,7 +24,7 @@
 
 ## 第六步：执行 Customer 相关 SQL
 按顺序执行：
-1. `database/view.sql`
+1. `database/deploy_all.sql`
 2. `database/procedures.sql`
 3. `database/triggers.sql`
 
@@ -33,6 +33,7 @@
 1. `database/manager_tables.sql`
 2. `database/manager_views.sql`
 3. `database/manager_procedures.sql`
+4. database/manager_补丁多合一（报错忽略）.sql
 
 ## 第八步：执行 Finance 相关 SQL
 按顺序执行：

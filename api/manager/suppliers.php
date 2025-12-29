@@ -51,11 +51,15 @@ try {
             deleteSupplier($conn);
             break;
 
+        case 'search':
+            searchSuppliers($conn);
+            break;
+
         default:
             http_response_code(400);
             echo json_encode([
                 'success' => false,
-                'message' => 'Invalid action. Valid actions: list, detail, add, update, delete'
+                'message' => 'Invalid action. Valid actions: list, detail, add, update, delete, search'
             ]);
     }
 } catch (Exception $e) {
@@ -169,10 +173,19 @@ function addSupplier($conn) {
 }
 
 /**
- * 更新供应商信息
+ * 更新供应商信息（调用存储过程）
  */
 function updateSupplier($conn) {
     $data = json_decode(file_get_contents('php://input'), true);
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid JSON: ' . json_last_error_msg()
+        ]);
+        return;
+    }
 
     if (!$data || !isset($data['supplier_id'])) {
         http_response_code(400);
@@ -183,59 +196,45 @@ function updateSupplier($conn) {
         return;
     }
 
-    $updates = [];
-    $params = [':supplier_id' => $data['supplier_id']];
+    // 准备参数
+    $name = isset($data['name']) ? $data['name'] : null;
+    $phone = isset($data['phone']) ? $data['phone'] : null;
+    $email = isset($data['email']) ? $data['email'] : null;
+    $address = isset($data['address']) ? $data['address'] : null;
 
-    if (isset($data['name'])) {
-        $updates[] = "name = :name";
-        $params[':name'] = $data['name'];
-    }
+    // 调用存储过程
+    $sql = "CALL sp_manager_update_supplier(
+        :supplier_id, :name, :phone, :email, :address,
+        @result_code, @result_message
+    )";
 
-    if (isset($data['phone'])) {
-        $updates[] = "phone = :phone";
-        $params[':phone'] = $data['phone'];
-    }
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(':supplier_id', $data['supplier_id'], PDO::PARAM_INT);
+    $stmt->bindParam(':name', $name, PDO::PARAM_STR);
+    $stmt->bindParam(':phone', $phone, PDO::PARAM_STR);
+    $stmt->bindParam(':email', $email, PDO::PARAM_STR);
+    $stmt->bindParam(':address', $address, PDO::PARAM_STR);
+    $stmt->execute();
 
-    if (isset($data['email'])) {
-        $updates[] = "email = :email";
-        $params[':email'] = $data['email'];
-    }
+    // 获取存储过程的输出参数
+    $result = $conn->query("SELECT @result_code as code, @result_message as message")->fetch();
 
-    if (isset($data['address'])) {
-        $updates[] = "address = :address";
-        $params[':address'] = $data['address'];
-    }
-
-    if (empty($updates)) {
+    if ($result['code'] == 1) {
+        echo json_encode([
+            'success' => true,
+            'message' => $result['message']
+        ]);
+    } else {
         http_response_code(400);
         echo json_encode([
             'success' => false,
-            'message' => 'No fields to update'
+            'message' => $result['message']
         ]);
-        return;
     }
-
-    $sql = "UPDATE suppliers SET " . implode(', ', $updates) . " WHERE supplier_id = :supplier_id";
-    $stmt = $conn->prepare($sql);
-    $stmt->execute($params);
-
-    if ($stmt->rowCount() === 0) {
-        http_response_code(404);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Supplier not found'
-        ]);
-        return;
-    }
-
-    echo json_encode([
-        'success' => true,
-        'message' => 'Supplier updated successfully'
-    ]);
 }
 
 /**
- * 删除供应商
+ * 删除供应商（调用存储过程）
  */
 function deleteSupplier($conn) {
     if (!isset($_GET['supplier_id'])) {
@@ -249,28 +248,13 @@ function deleteSupplier($conn) {
 
     $supplierId = intval($_GET['supplier_id']);
 
-    // 检查是否有关联的采购单
-    $checkSql = "SELECT COUNT(*) as purchase_count FROM purchases WHERE supplier_id = :supplier_id";
+    $checkSql = "SELECT supplier_id FROM suppliers WHERE supplier_id = :supplier_id";
     $checkStmt = $conn->prepare($checkSql);
     $checkStmt->bindParam(':supplier_id', $supplierId, PDO::PARAM_INT);
     $checkStmt->execute();
-    $result = $checkStmt->fetch();
+    $supplier = $checkStmt->fetch();
 
-    if ($result['purchase_count'] > 0) {
-        http_response_code(400);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Cannot delete supplier with associated purchases'
-        ]);
-        return;
-    }
-
-    $sql = "DELETE FROM suppliers WHERE supplier_id = :supplier_id";
-    $stmt = $conn->prepare($sql);
-    $stmt->bindParam(':supplier_id', $supplierId, PDO::PARAM_INT);
-    $stmt->execute();
-
-    if ($stmt->rowCount() === 0) {
+    if (!$supplier) {
         http_response_code(404);
         echo json_encode([
             'success' => false,
@@ -279,9 +263,74 @@ function deleteSupplier($conn) {
         return;
     }
 
+    $purchaseStmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM purchases WHERE supplier_id = :supplier_id");
+    $purchaseStmt->bindParam(':supplier_id', $supplierId, PDO::PARAM_INT);
+    $purchaseStmt->execute();
+    $purchaseCount = $purchaseStmt->fetch();
+
+    if ($purchaseCount && intval($purchaseCount['cnt']) > 0) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Supplier has associated purchase orders, cannot delete'
+        ]);
+        return;
+    }
+
+    $delStmt = $conn->prepare("DELETE FROM suppliers WHERE supplier_id = :supplier_id");
+    $delStmt->bindParam(':supplier_id', $supplierId, PDO::PARAM_INT);
+    $delStmt->execute();
+
     echo json_encode([
         'success' => true,
         'message' => 'Supplier deleted successfully'
+    ]);
+}
+
+/**
+ * Search suppliers
+ */
+function searchSuppliers($conn) {
+    $keyword = isset($_GET['keyword']) ? trim($_GET['keyword']) : '';
+
+    if ($keyword === '') {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'keyword is required'
+        ]);
+        return;
+    }
+
+    $sql = "SELECT v.*
+            FROM vw_manager_suppliers v
+            JOIN suppliers s ON v.supplier_id = s.supplier_id
+            WHERE (
+                MATCH(s.name, s.address, s.email) AGAINST (:kw1 IN NATURAL LANGUAGE MODE)
+                OR s.name LIKE :kw_like3
+                OR s.address LIKE :kw_like4
+                OR s.email LIKE :kw_like5
+                OR CAST(s.supplier_id AS CHAR) LIKE :kw_like1
+                OR CAST(s.phone AS CHAR) LIKE :kw_like2
+            )
+            ORDER BY v.supplier_name";
+
+    $likeTerm = "%$keyword%";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue(':kw1', $keyword, PDO::PARAM_STR);
+    $stmt->bindValue(':kw_like1', $likeTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw_like2', $likeTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw_like3', $likeTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw_like4', $likeTerm, PDO::PARAM_STR);
+    $stmt->bindValue(':kw_like5', $likeTerm, PDO::PARAM_STR);
+    $stmt->execute();
+    $suppliers = $stmt->fetchAll();
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Search completed successfully',
+        'data' => $suppliers,
+        'count' => count($suppliers)
     ]);
 }
 ?>

@@ -405,13 +405,11 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Branch</label>
                                     <select id="branch-stock-filter" class="form-input w-full">
                                         <option value="all">All Branches</option>
-                                        <option value="ST001">Central Plaza</option>
-                                        <option value="ST002">Riverside</option>
-                                        <option value="ST003">Westside</option>
-                                        <option value="ST004">Northgate</option>
-                                        <option value="ST005">Southpoint</option>
-                                        <option value="ST006">Eastview</option>
-                                        <option value="ST007">Downtown</option>
+                                        <option value="1">Downtown Store</option>
+                                        <option value="2">University Store</option>
+                                        <option value="3">Community Store</option>
+                                        <option value="4">Suburban Store</option>
+                                        <option value="5">Airport Store</option>
                                     </select>
                                 </div>
                             </div>
@@ -710,51 +708,42 @@
                                 <h3 class="text-lg font-semibold mb-4">Add New Staff</h3>
                                 <form id="add-staff-form">
                                     <div class="space-y-4">
-                                        <!-- Staff Name -->
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                                Staff Name <span class="text-red-500">*</span>
-                                            </label>
-                                            <input type="text" class="form-input" placeholder="Enter full name"
-                                                id="staff-name" required>
-                                        </div>
-
-                                        <!-- Employee ID -->
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                                Employee ID <span class="text-red-500">*</span>
-                                            </label>
-                                            <input type="text" class="form-input" placeholder="Enter employee ID"
-                                                id="employee-id" required>
-                                        </div>
-
-                                        <!-- User ID -->
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                                User ID <span class="text-red-500">*</span>
-                                            </label>
-                                            <input type="text" class="form-input" placeholder="Enter user ID"
-                                                id="user-id" required>
-                                        </div>
-
                                         <!-- Username -->
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-1">
                                                 Username <span class="text-red-500">*</span>
                                             </label>
-                                            <input type="text" class="form-input" placeholder="Enter username"
-                                                id="username" required>
+                                            <input type="text" class="form-input" placeholder="Enter username (emp001)"
+                                                pattern="emp\d{3}" title="Format: emp001"
+                                                id="staff-username" required>
+                                            <p class="text-xs text-gray-500 mt-1">Format: emp001</p>
                                         </div>
 
-                                        <!-- Initial Password -->
+                                        <!-- Password -->
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-1">
-                                                Initial Password <span class="text-red-500">*</span>
+                                                Password <span class="text-red-500">*</span>
                                             </label>
-                                            <input type="password" class="form-input"
-                                                placeholder="Enter initial password" id="initial-password" required>
-                                            <p class="text-xs text-gray-500 mt-1">Will be required to change on first
-                                                login</p>
+                                            <input type="password" class="form-input" placeholder="Enter password"
+                                                id="staff-password" required>
+                                        </div>
+
+                                        <!-- First Name -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                First Name <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="text" class="form-input" placeholder="Enter first name"
+                                                id="staff-first-name" required>
+                                        </div>
+
+                                        <!-- Last Name -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Last Name <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="text" class="form-input" placeholder="Enter last name"
+                                                id="staff-last-name" required>
                                         </div>
 
                                         <!-- Phone Number -->
@@ -766,34 +755,41 @@
                                                 id="phone-number" required>
                                         </div>
 
-                                        <!-- Account Type -->
+                                        <!-- Job Title -->
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-1">
-                                                Account Type <span class="text-red-500">*</span>
+                                                Job Title <span class="text-red-500">*</span>
                                             </label>
-                                            <select class="form-input" id="account-type" required>
-                                                <option value="">Select account type</option>
-                                                <option value="manager">Manager</option>
-                                                <option value="finance">Finance</option>
-                                                <option value="staff">Staff</option>
+                                            <select class="form-input" id="job-title-id" required>
+                                                <option value="">Select job title</option>
+                                                <option value="1">Staff</option>
+                                                <option value="2">Finance</option>
+                                                <option value="3">General Manager</option>
                                             </select>
                                         </div>
 
-                                        <!-- Store ID (Conditional) -->
-                                        <div id="store-id-container" class="hidden">
+                                        <!-- Store ID -->
+                                        <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-1">
                                                 Store ID <span class="text-red-500">*</span>
                                             </label>
-                                            <select class="form-input" id="store-id">
+                                            <select class="form-input" id="store-id" required>
                                                 <option value="">Select store</option>
-                                                <option value="ST001">Central Plaza (ST001)</option>
-                                                <option value="ST002">Riverside (ST002)</option>
-                                                <option value="ST003">Westside (ST003)</option>
-                                                <option value="ST004">Northgate (ST004)</option>
-                                                <option value="ST005">Southpoint (ST005)</option>
-                                                <option value="ST006">Eastview (ST006)</option>
-                                                <option value="ST007">Downtown (ST007)</option>
+                                                <option value="1">Downtown Store (1)</option>
+                                                <option value="2">University Store (2)</option>
+                                                <option value="3">Community Store (3)</option>
+                                                <option value="4">Suburban Store (4)</option>
+                                                <option value="5">Airport Store (5)</option>
                                             </select>
+                                        </div>
+
+                                        <!-- Performance -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Performance
+                                            </label>
+                                            <input type="number" class="form-input" placeholder="0-100"
+                                                id="staff-performance" min="0" max="100" step="1">
                                         </div>
                                     </div>
 
@@ -818,22 +814,22 @@
                                     <input type="hidden" id="edit-original-employee-id">
 
                                     <div class="space-y-4">
-                                        <!-- Employee ID -->
+                                        <!-- Employee ID (readonly) -->
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-1">
-                                                Employee ID <span class="text-red-500">*</span>
+                                                Employee ID <span class="text-gray-400 text-xs">(Cannot be modified)</span>
                                             </label>
-                                            <input type="text" class="form-input" placeholder="Enter employee ID"
-                                                id="edit-employee-id" required>
+                                            <input type="text" class="form-input bg-gray-100 cursor-not-allowed"
+                                                id="edit-employee-id" readonly>
                                         </div>
 
-                                        <!-- User ID -->
+                                        <!-- User ID (readonly) -->
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-1">
-                                                User ID <span class="text-red-500">*</span>
+                                                User ID <span class="text-gray-400 text-xs">(Cannot be modified)</span>
                                             </label>
-                                            <input type="text" class="form-input" placeholder="Enter user ID"
-                                                id="edit-user-id" required>
+                                            <input type="text" class="form-input bg-gray-100 cursor-not-allowed"
+                                                id="edit-staff-user-id" readonly>
                                         </div>
 
                                         <!-- Branch -->
@@ -843,14 +839,11 @@
                                             </label>
                                             <select class="form-input" id="edit-branch" required>
                                                 <option value="">Select branch</option>
-                                                <option value="Central Plaza">Central Plaza</option>
-                                                <option value="Riverside">Riverside</option>
-                                                <option value="Westside">Westside</option>
-                                                <option value="Northgate">Northgate</option>
-                                                <option value="Southpoint">Southpoint</option>
-                                                <option value="Eastview">Eastview</option>
-                                                <option value="Downtown">Downtown</option>
-                                                <option value="Central Office">Central Office</option>
+                                                <option value="Downtown Store">Downtown Store</option>
+                                                <option value="University Store">University Store</option>
+                                                <option value="Community Store">Community Store</option>
+                                                <option value="Suburban Store">Suburban Store</option>
+                                                <option value="Airport Store">Airport Store</option>
                                             </select>
                                         </div>
 
@@ -1038,18 +1031,14 @@
                                         <input type="text" class="form-input" id="edit-username" required>
                                     </div>
 
-                                    <!-- User Type -->
+                                    <!-- User Type (readonly) -->
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">
-                                            User Type <span class="text-red-500">*</span>
+                                            User Type <span class="text-gray-400 text-xs">(Cannot be modified)</span>
                                         </label>
-                                        <select class="form-input" id="edit-user-type" required>
-                                            <option value="">Select user type</option>
-                                            <option value="customer">Customer</option>
-                                            <option value="staff">Staff</option>
-                                            <option value="manager">Manager</option>
-                                            <option value="finance">Finance</option>
-                                        </select>
+                                        <input type="text" class="form-input bg-gray-100 cursor-not-allowed"
+                                            id="edit-user-type-display" readonly>
+                                        <input type="hidden" id="edit-user-type">
                                     </div>
 
                                     <!-- Full Name -->
@@ -1146,9 +1135,10 @@
                         <!-- Notifications will be populated by JavaScript -->
                     </div>
                 </div>
+            </div>
 
-                <!-- Supplier Management Page -->
-                <div id="supplier-management-page" class="page-content hidden">
+            <!-- Supplier Management Page -->
+            <div id="supplier-management-page" class="page-content hidden">
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
                         <div>
                             <h1 class="text-2xl font-bold">Supplier Management</h1>
@@ -1240,6 +1230,9 @@
                         <div class="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
                             <div class="p-6">
                                 <h3 class="text-lg font-semibold mb-4">Add New Supplier</h3>
+                                <!-- 错误消息显示区域 -->
+                                <div id="add-supplier-error" class="hidden mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+                                </div>
                                 <form id="add-supplier-form">
                                     <div class="space-y-4">
                                         <!-- Supplier Name -->
@@ -1249,18 +1242,6 @@
                                             </label>
                                             <input type="text" class="form-input" placeholder="Enter supplier name"
                                                 id="supplier-name" required>
-                                        </div>
-
-                                        <!-- Supplier ID -->
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                                Supplier ID <span class="text-red-500">*</span>
-                                            </label>
-                                            <input type="text" class="form-input"
-                                                placeholder="Enter supplier ID (e.g., SUP001)" id="supplier-id"
-                                                required>
-                                            <p class="text-xs text-gray-500 mt-1">Format: SUP followed by numbers (e.g.,
-                                                SUP001)</p>
                                         </div>
 
                                         <!-- Phone Number -->
@@ -1275,43 +1256,19 @@
                                         <!-- Address -->
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-1">
-                                                Address <span class="text-red-500">*</span>
+                                                Address
                                             </label>
                                             <textarea class="form-input" rows="3" placeholder="Enter full address"
-                                                id="supplier-address" required></textarea>
+                                                id="supplier-address"></textarea>
                                         </div>
 
                                         <!-- Email -->
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-1">
-                                                Email Address <span class="text-red-500">*</span>
+                                                Email Address
                                             </label>
                                             <input type="email" class="form-input" placeholder="Enter email address"
-                                                id="supplier-email" required>
-                                        </div>
-
-                                        <!-- Contact Person -->
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                                Contact Person
-                                            </label>
-                                            <input type="text" class="form-input"
-                                                placeholder="Enter contact person name" id="supplier-contact">
-                                        </div>
-
-                                        <!-- Supplier Category -->
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                                Category
-                                            </label>
-                                            <select class="form-input" id="supplier-category">
-                                                <option value="">Select category</option>
-                                                <option value="book">Book Publisher</option>
-                                                <option value="stationery">Stationery</option>
-                                                <option value="gift">Gift Items</option>
-                                                <option value="office">Office Supplies</option>
-                                                <option value="other">Other</option>
-                                            </select>
+                                                id="supplier-email">
                                         </div>
                                     </div>
 
@@ -1387,7 +1344,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
             </div>
         </main>
     </div>
@@ -1401,6 +1357,8 @@
     <script src="../scripts/manager.js"></script>
     <!-- API Integration (overrides mock data functions) -->
     <script src="../scripts/manager-api-integration.js"></script>
+    <!-- Supplier API Integration -->
+    <script src="../scripts/manager-supplier-api.js"></script>
 
     <!-- 初始化布局 -->
     <script>
