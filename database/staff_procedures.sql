@@ -4,20 +4,46 @@ DELIMITER //
 -- 1. 获取指定门店的库存列表 (包含低库存逻辑)
 -- =============================================
 DROP PROCEDURE IF EXISTS sp_staff_get_inventory //
-CREATE OR REPLACE PROCEDURE sp_staff_get_inventory(
+CREATE PROCEDURE sp_staff_get_inventory(
     IN p_store_id INT
 )
 BEGIN
-    -- 关联 books, skus 和 inventory_batches 表
-    -- 计算该门店每本书的当前库存总量
     SELECT 
         b.ISBN,
         b.name AS book_name,
         b.publisher,
-        s.binding AS category, -- 暂时用 binding 代替 category
+        
+        -- 核心修改: 使用子查询获取真正的分类名称，用逗号分隔
+        (
+            SELECT GROUP_CONCAT(c.name SEPARATOR ', ')
+            FROM book_categories bc
+            JOIN catagories c ON bc.category_id = c.category_id
+            WHERE bc.ISBN = b.ISBN
+        ) AS category,
+        
+        s.binding, -- 保留 binding 字段，以便前端如果有需要可以单独显示
         s.unit_price,
         s.sku_id,
-        COALESCE(SUM(ib.quantity), 0) AS quantity
+        
+        -- 计算库存
+        COALESCE(SUM(ib.quantity), 0) AS quantity,
+        
+        -- 获取批次号 (显示最新的一个，用于列表展示)
+        (
+            SELECT batch_code 
+            FROM inventory_batches ib2 
+            WHERE ib2.sku_id = s.sku_id AND ib2.store_id = p_store_id 
+            ORDER BY ib2.received_date DESC LIMIT 1
+        ) AS batch_number,
+        
+        -- 获取最新的 batch_id 用于编辑
+        (
+            SELECT batch_id 
+            FROM inventory_batches ib3
+            WHERE ib3.sku_id = s.sku_id AND ib3.store_id = p_store_id 
+            ORDER BY ib3.received_date DESC LIMIT 1
+        ) AS batch_id
+
     FROM 
         books b
     JOIN 
