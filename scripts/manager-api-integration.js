@@ -80,15 +80,27 @@ async function loadStaffData() {
         employees.forEach(employee => {
             const row = document.createElement('tr');
             row.className = 'hover:bg-gray-50 transition-colors';
-            row.dataset.storeID = String(employee.store_id);
+            row.dataset.staffId = employee.employee_id;
+            row.dataset.employeeid = employee.employee_id;
+            row.dataset.userid = employee.user_id;
+            row.dataset.branchname = employee.store_name;
+            row.dataset.name = employee.full_name;
+            row.dataset.position = employee.job_title || 'staff';
+            row.dataset.phone = employee.phone;
+            row.dataset.storeid = employee.store_id;
 
-            let position = 'staff';
-            if (employee.job_title && employee.job_title.toLowerCase().includes('manager')) {
-                position = 'manager';
-            } else if (employee.job_title && employee.job_title.toLowerCase().includes('finance')) {
-                position = 'finance';
+            let positionClass = 'role-staff';
+            let positionName = 'Staff';
+
+            if (employee.job_title) {
+                if (employee.job_title.toLowerCase().includes('manager')) {
+                    positionClass = 'role-manager';
+                    positionName = 'Manager';
+                } else if (employee.job_title.toLowerCase().includes('finance')) {
+                    positionClass = 'role-finance';
+                    positionName = 'Finance';
+                }
             }
-            row.dataset.position = position;
 
             row.innerHTML = `
                 <td class="px-4 py-4 text-sm font-medium">${escapeHtml(employee.employee_id)}</td>
@@ -96,18 +108,15 @@ async function loadStaffData() {
                 <td class="px-4 py-4 text-sm">${escapeHtml(employee.store_name)}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(employee.full_name)}</td>
                 <td class="px-4 py-4 text-sm">
-                    <span class="px-2 py-1 text-xs ${position === 'manager' ? 'role-manager' : position === 'finance' ? 'role-finance' : 'role-staff'} rounded-full">
-                        ${escapeHtml(employee.job_title || 'Staff')}
+                    <span class="px-2 py-1 text-xs ${positionClass} rounded-full">
+                        ${escapeHtml(positionName)}
                     </span>
                 </td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(employee.phone)}</td>
                 <td class="px-4 py-4 text-sm">
                     <div class="flex gap-2">
-                        <button class="text-primary hover:text-primary/80 edit-staff" title="Edit">
-                            <i class="fa fa-edit"></i>
-                        </button>
-                        <button class="text-blue-600 hover:text-blue-800 view-staff" title="View Details">
-                            <i class="fa fa-eye"></i>
+                        <button class="text-primary hover:text-primary/80 edit-staff-btn" title="Edit">
+                            <i class="fa fa-edit"></i> Edit
                         </button>
                         <button class="text-red-600 hover:text-red-800 delete-staff" title="Delete">
                             <i class="fa fa-trash"></i>
@@ -122,7 +131,8 @@ async function loadStaffData() {
             staffCount.textContent = String(employees.length);
         }
 
-        addStaffActionButtonListeners();
+        // 使用正确的按钮监听器
+        setupStaffActionListeners();
 
         // 删除 originalContent，防止 hideLoading 覆盖已渲染的数据
         delete tableBody.dataset.originalContent;
@@ -148,35 +158,47 @@ async function deleteStaff(employeeId) {
     }
 }
 
-function addStaffActionButtonListeners() {
-    document.querySelectorAll('#staff-table-body .edit-staff').forEach(button => {
+function setupStaffActionListeners() {
+    // Edit buttons - 监听 edit-staff-btn 类
+    document.querySelectorAll('#staff-table-body .edit-staff-btn').forEach(button => {
         button.addEventListener('click', function () {
             const row = this.closest('tr');
-            const name = row.cells[3].textContent;
-            alert(`Editing: ${name}`);
+            const staffData = {
+                id: row.dataset.staffId,
+                employeeID: row.dataset.employeeid,
+                userID: row.dataset.userid,
+                branchName: row.dataset.branchname,
+                name: row.dataset.name,
+                position: row.dataset.position,
+                phone: row.dataset.phone,
+                storeID: row.dataset.storeid
+            };
+            openEditStaffModal(staffData);
         });
     });
 
-    document.querySelectorAll('#staff-table-body .view-staff').forEach(button => {
-        button.addEventListener('click', function () {
-            const row = this.closest('tr');
-            const employeeID = row.cells[0].textContent;
-            const userID = row.cells[1].textContent;
-            const branchName = row.cells[2].textContent;
-            const name = row.cells[3].textContent;
-            const position = row.cells[4].textContent;
-            const phone = row.cells[5].textContent;
-
-            alert(`Staff Details:\n\nEmployee ID: ${employeeID}\nUser ID: ${userID}\nBranch: ${branchName}\nName: ${name}\nPosition: ${position}\nPhone: ${phone}`);
-        });
-    });
-
+    // Delete buttons
     document.querySelectorAll('#staff-table-body .delete-staff').forEach(button => {
         button.addEventListener('click', function () {
             const row = this.closest('tr');
-            const employeeId = row.cells[0].textContent;
-            deleteStaff(employeeId);
+            const name = row.dataset.name;
+            const employeeID = row.dataset.employeeid;
+
+            if (confirm(`Are you sure you want to delete staff "${name}" (ID: ${employeeID})?`)) {
+                deleteStaff(employeeID);
+            }
         });
+    });
+
+     // 编辑用户表单提交
+    document.getElementById('edit-user-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        updateUser();
+    });
+    
+    // 取消编辑用户
+    document.getElementById('cancel-edit-user')?.addEventListener('click', () => {
+        closeEditUserModal();
     });
 }
 
@@ -342,18 +364,55 @@ async function loadUserManagementData() {
         users.forEach(user => {
             const row = document.createElement('tr');
             row.className = 'hover:bg-gray-50 transition-colors';
+            row.dataset.userId = user.user_id;
+            row.dataset.userData = JSON.stringify(user);
+
+            // 账户状态样式
+            let statusClass = '';
+            let statusText = '';
+            if (user.account_status === 'active') {
+                statusClass = 'bg-green-100 text-green-800';
+                statusText = 'Active';
+            } else if (user.account_status === 'inactive') {
+                statusClass = 'bg-red-100 text-red-800';
+                statusText = 'Inactive';
+            } else if (user.account_status === 'suspended') {
+                statusClass = 'bg-yellow-100 text-yellow-800';
+                statusText = 'Suspended';
+            }
+
+            // 用户类型样式
+            let typeClass = '';
+            if (user.user_type === 'manager') {
+                typeClass = 'bg-primary text-white';
+            } else if (user.user_type === 'finance') {
+                typeClass = 'bg-yellow-100 text-yellow-800';
+            } else if (user.user_type === 'staff') {
+                typeClass = 'bg-blue-100 text-blue-800';
+            } else {
+                typeClass = 'bg-gray-100 text-gray-800';
+            }
+
             row.innerHTML = `
                 <td class="px-4 py-4 text-sm font-medium">${escapeHtml(user.user_id)}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(user.username)}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(user.user_type)}</td>
+                <td class="px-4 py-4 text-sm">
+                    <span class="px-2 py-1 text-xs ${typeClass} rounded-full">${escapeHtml(user.user_type)}</span>
+                </td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(user.full_name || 'N/A')}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(user.phone || 'N/A')}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(new Date(user.create_date).toLocaleDateString())}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(new Date(user.last_log_date).toLocaleDateString())}</td>
+                <td class="px-4 py-4 text-sm">${user.last_log_date ? escapeHtml(new Date(user.last_log_date).toLocaleDateString()) : 'Never'}</td>
                 <td class="px-4 py-4 text-sm">
                     <div class="flex gap-2">
-                        <button class="text-red-600 hover:text-red-800 delete-user-btn" data-user-id="${escapeHtml(user.user_id)}" title="Delete User">
+                        <button class="text-primary hover:text-primary/80 edit-user-btn" title="Edit User">
+                            <i class="fa fa-edit"></i> Edit
+                        </button>
+                        <button class="text-red-600 hover:text-red-800 delete-user-btn" title="Delete User">
                             <i class="fa fa-trash"></i>
+                        </button>
+                        <button class="text-blue-600 hover:text-blue-800 reset-password-btn" title="Reset Password">
+                            <i class="fa fa-key"></i>
                         </button>
                     </div>
                 </td>
@@ -361,12 +420,8 @@ async function loadUserManagementData() {
             tableBody.appendChild(row);
         });
 
-        document.querySelectorAll('#user-management-table-body .delete-user-btn').forEach(button => {
-            button.addEventListener('click', function () {
-                const userId = this.getAttribute('data-user-id');
-                deleteUser(userId);
-            });
-        });
+        // 添加事件监听器
+        addUserActionButtonListeners();
 
         // 删除 originalContent，防止 hideLoading 覆盖已渲染的数据
         delete tableBody.dataset.originalContent;
@@ -379,6 +434,114 @@ async function loadUserManagementData() {
     }
 }
 
+function addUserActionButtonListeners() {
+    // Edit buttons
+    document.querySelectorAll('#user-management-table-body .edit-user-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const row = this.closest('tr');
+            const userData = JSON.parse(row.dataset.userData);
+            openEditUserModal(userData);
+        });
+    });
+
+    // Delete buttons
+    document.querySelectorAll('#user-management-table-body .delete-user-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const row = this.closest('tr');
+            const userId = row.dataset.userId;
+            deleteUser(userId);
+        });
+    });
+
+    // Reset Password buttons
+    document.querySelectorAll('#user-management-table-body .reset-password-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const row = this.closest('tr');
+            const userId = row.dataset.userId;
+            const username = row.cells[1].textContent;
+            resetUserPassword(userId, username);
+        });
+    });
+}
+
+// 打开编辑用户模态框
+function openEditUserModal(userData) {
+    const modal = document.getElementById('edit-user-modal');
+    
+    // 填充表单数据
+    document.getElementById('edit-user-id').value = userData.user_id;
+    document.getElementById('edit-user-userid').value = userData.user_id;
+    document.getElementById('edit-username').value = userData.username;
+    document.getElementById('edit-user-type').value = userData.user_type;
+    document.getElementById('edit-full-name').value = userData.full_name || '';
+    
+    // 设置账户状态
+    let accountStatus = 'active';
+    if (userData.account_status === 'inactive' || userData.is_active === false) {
+        accountStatus = 'inactive';
+    } else if (userData.account_status === 'suspended') {
+        accountStatus = 'suspended';
+    }
+    document.getElementById('edit-account-status').value = accountStatus;
+    
+    modal.classList.remove('hidden');
+    
+    // 添加重置密码按钮事件
+    const resetPasswordBtn = document.getElementById('reset-password-btn');
+    resetPasswordBtn.onclick = () => resetUserPassword(userData.user_id, userData.username);
+}
+
+// 关闭编辑用户模态框
+function closeEditUserModal() {
+    document.getElementById('edit-user-modal').classList.add('hidden');
+    document.getElementById('edit-user-form').reset();
+}
+
+// 更新用户信息
+async function updateUser() {
+    const userId = document.getElementById('edit-user-id').value;
+    
+    const formData = {
+        user_id: userId,
+        username: document.getElementById('edit-username').value.trim(),
+        user_type: document.getElementById('edit-user-type').value,
+        full_name: document.getElementById('edit-full-name').value.trim(),
+        account_status: document.getElementById('edit-account-status').value
+    };
+    
+    // 验证必填字段
+    if (!formData.username || !formData.user_type || !formData.full_name) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    try {
+        await updateUserAPI(formData);
+        showMessage('User updated successfully', 'success');
+        closeEditUserModal();
+        loadUserManagementData();
+    } catch (error) {
+        console.error('Failed to update user:', error);
+        showMessage('Failed to update user: ' + error.message, 'error');
+    }
+}
+
+// 重置用户密码
+async function resetUserPassword(userId, username) {
+    if (!confirm(`Reset password for user "${username}"?\nA password reset link will be sent to their email.`)) {
+        return;
+    }
+    
+    try {
+        await resetPasswordAPI(userId);
+        showMessage(`Password reset link sent for user "${username}"`, 'success');
+    } catch (error) {
+        console.error('Failed to reset password:', error);
+        showMessage('Failed to reset password: ' + error.message, 'error');
+    }
+}
+
+// 删除用户
 async function deleteUser(userId) {
     if (!confirm('Are you sure you want to delete this user?')) return;
 
@@ -429,10 +592,10 @@ async function loadReplenishmentRequests() {
             const statusClass = request.status === 'approved'
                 ? 'bg-green-100 text-green-800'
                 : request.status === 'rejected'
-                ? 'bg-red-100 text-red-800'
-                : request.status === 'completed'
-                ? 'bg-blue-100 text-blue-800'
-                : 'bg-yellow-100 text-yellow-800';
+                    ? 'bg-red-100 text-red-800'
+                    : request.status === 'completed'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-yellow-100 text-yellow-800';
 
             row.innerHTML = `
                 <td class="px-4 py-4 text-sm font-medium">${escapeHtml(request.request_id)}</td>
@@ -627,10 +790,9 @@ async function loadStockOverviewByBranch(branchId = 'all') {
                 <td class="px-4 py-4 text-sm">${escapeHtml(item.total_quantity)}</td>
                 <td class="px-4 py-4 text-sm">${item.last_inbound_date ? escapeHtml(new Date(item.last_inbound_date).toLocaleDateString()) : 'N/A'}</td>
                 <td class="px-4 py-4 text-sm">
-                    <span class="px-2 py-1 text-xs rounded-full ${
-                        item.stock_status === 'High' ? 'stock-high' :
-                        item.stock_status === 'Medium' ? 'stock-medium' : 'stock-low'
-                    }">${escapeHtml(item.stock_status)}</span>
+                    <span class="px-2 py-1 text-xs rounded-full ${item.stock_status === 'High' ? 'stock-high' :
+                    item.stock_status === 'Medium' ? 'stock-medium' : 'stock-low'
+                }">${escapeHtml(item.stock_status)}</span>
                 </td>
             `;
             tableBody.appendChild(row);
@@ -974,3 +1136,7 @@ window.performUserSearch = performUserSearch;
 window.editPricing = editPricing;
 
 console.log('Manager API Integration loaded successfully');
+
+document.addEventListener('DOMContentLoaded', function() {
+    setupUserManagementEventListeners();
+});

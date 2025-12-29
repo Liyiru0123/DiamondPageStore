@@ -778,3 +778,127 @@ const branchMap = {
     'ST006': { id: 'ST006', name: 'Eastview', color: 'bg-pink-100 text-pink-800' },
     'ST007': { id: 'ST007', name: 'Downtown', color: 'bg-indigo-100 text-indigo-800' }
 };
+
+// 供应商数据
+const supplierData = [
+    {
+        id: 1,
+        supplierID: 'SUP001',
+        name: 'ABC Book Publishers',
+        phone: '(555) 123-4567',
+        address: '123 Book Street, New York, NY 10001',
+        email: 'contact@abcbooks.com'
+    },
+    {
+        id: 2,
+        supplierID: 'SUP002',
+        name: 'Global Stationery Co.',
+        phone: '(555) 234-5678',
+        address: '456 Stationery Ave, Los Angeles, CA 90001',
+        email: 'sales@globalstationery.com'
+    },
+    {
+        id: 3,
+        supplierID: 'SUP003',
+        name: 'Premium Gift Suppliers',
+        phone: '(555) 345-6789',
+        address: '789 Gift Lane, Chicago, IL 60601',
+        email: 'info@premiumgifts.com'
+    },
+    {
+        id: 4,
+        supplierID: 'SUP004',
+        name: 'Office Essentials Ltd.',
+        phone: '(555) 456-7890',
+        address: '321 Office Rd, Houston, TX 77001',
+        email: 'support@officeessentials.com'
+    },
+    {
+        id: 5,
+        supplierID: 'SUP005',
+        name: 'Novelty Book Distributors',
+        phone: '(555) 567-8901',
+        address: '654 Novelty Blvd, Phoenix, AZ 85001',
+        email: 'orders@noveltybooks.com'
+    },
+    {
+        id: 6,
+        supplierID: 'SUP006',
+        name: 'Creative Arts Supplies',
+        phone: '(555) 678-9012',
+        address: '987 Art Street, Philadelphia, PA 19101',
+        email: 'arts@creativesupplies.com'
+    },
+    {
+        id: 7,
+        supplierID: 'SUP007',
+        name: 'Educational Resources Inc.',
+        phone: '(555) 789-0123',
+        address: '147 Education Way, San Antonio, TX 78201',
+        email: 'edu@eduresources.com'
+    },
+    {
+        id: 8,
+        supplierID: 'SUP008',
+        name: 'Quality Book Bindings',
+        phone: '(555) 890-1234',
+        address: '258 Binding Ave, San Diego, CA 92101',
+        email: 'quality@bookbindings.com'
+    },
+    {
+        id: 9,
+        supplierID: 'SUP009',
+        name: 'Wholesale Book Distributors',
+        phone: '(555) 901-2345',
+        address: '369 Wholesale Blvd, Dallas, TX 75201',
+        email: 'wholesale@bookdist.com'
+    },
+    {
+        id: 10,
+        supplierID: 'SUP010',
+        name: 'Metro Office Supplies',
+        phone: '(555) 012-3456',
+        address: '159 Metro Rd, San Jose, CA 95101',
+        email: 'metro@officesupplies.com'
+    },
+    {
+        id: 11,
+        supplierID: 'SUP011',
+        name: 'International Publishers',
+        phone: '(555) 112-2334',
+        address: '753 International Ave, Miami, FL 33101',
+        email: 'international@publishers.com'
+    },
+    {
+        id: 12,
+        supplierID: 'SUP012',
+        name: 'Eco-Friendly Stationery',
+        phone: '(555) 223-3445',
+        address: '852 Eco Way, Seattle, WA 98101',
+        email: 'eco@greenstationery.com'
+    },
+    {
+        id: 13,
+        supplierID: 'SUP013',
+        name: 'Academic Book Suppliers',
+        phone: '(555) 334-4556',
+        address: '951 Academic Blvd, Boston, MA 02101',
+        email: 'academic@booksuppliers.com'
+    },
+    {
+        id: 14,
+        supplierID: 'SUP014',
+        name: 'Children\'s Book Publishers',
+        phone: '(555) 445-5667',
+        address: '753 Children\'s Ave, Atlanta, GA 30301',
+        email: 'children@bookpublishers.com'
+    },
+    {
+        id: 15,
+        supplierID: 'SUP015',
+        name: 'Digital Media Supplies',
+        phone: '(555) 556-6778',
+        address: '159 Digital St, Denver, CO 80201',
+        email: 'digital@mediasupplies.com'
+    }
+];

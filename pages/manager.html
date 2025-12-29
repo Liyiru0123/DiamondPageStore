@@ -11,634 +11,280 @@
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
 
+    <!-- 前端路由守卫 -->
+    <script>
+        (function () {
+            const token = localStorage.getItem('auth_token');
+            const role = localStorage.getItem('user_role');
+            const currentPage = window.location.pathname.split('/').pop();
+
+            // 1. 基础检查：无 Token 直接回退
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // 2. 角色越权检查
+            const roleRouteMap = {
+                'customer': 'customer.html',
+                'staff': 'staff.html',
+                'manager': 'manager.html',
+                'finance': 'finance.html'
+            };
+
+            // 如果当前文件名不是该角色应属的页面，且不是 login.html，则强制纠正
+            if (role !== 'manager') {
+                console.warn("Role mismatch. Clearing session...");
+                localStorage.removeItem('user_role');
+                localStorage.removeItem('auth_token');
+                sessionStorage.removeItem('currentPage');
+                window.location.href = 'login.html';
+            }
+        })();
+    </script>
+
     <!-- 引入 layout.js 处理通用布局 -->
     <script src="../scripts/layout.js"></script>
 
     <!-- Custom Styles -->
     <style type="text/tailwindcss">
         @layer utilities {
-      .content-auto {
-        content-visibility: auto;
-      }
-      .book-shadow {
-        box-shadow: 0 4px 6px -1px rgba(139, 90, 43, 0.1), 0 2px 4px -1px rgba(139, 90, 43, 0.06);
-      }
-      .btn-primary {
-        @apply bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-all duration-300 shadow-md hover:shadow-lg;
-      }
-      .btn-secondary {
-        @apply bg-secondary border border-primary/30 text-primary px-4 py-2 rounded-lg hover:bg-accent/20 transition-all duration-300;
-      }
-      .card {
-        @apply bg-white rounded-xl p-5 book-shadow hover:shadow-lg transition-all duration-300;
-      }
-      .form-input {
-        @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all;
-      }
-      .income-bg {
-        background: linear-gradient(135deg, #8B5A2B 0%, #D2B48C 100%);
-      }
-      .expense-bg {
-        background: linear-gradient(135deg, #4F7942 0%, #90EE90 100%);
-      }
-      
-      /* Custom date input styling */
-      input[type="date"] {
-        font-family: 'Inter', 'system-ui', sans-serif;
-      }
-      
-      /* For Webkit browsers */
-      input[type="date"]::-webkit-datetime-edit {
-        color: #374151;
-      }
-      input[type="date"]::-webkit-datetime-edit-fields-wrapper {
-        color: #374151;
-      }
-      input[type="date"]::-webkit-datetime-edit-text {
-        color: #374151;
-      }
-      input[type="date"]::-webkit-datetime-edit-month-field {
-        color: #374151;
-      }
-      input[type="date"]::-webkit-datetime-edit-day-field {
-        color: #374151;
-      }
-      input[type="date"]::-webkit-datetime-edit-year-field {
-        color: #374151;
-      }
-      input[type="date"]::-webkit-inner-spin-button {
-        display: none;
-      }
-      input[type="date"]::-webkit-calendar-picker-indicator {
-        color: #6B7280;
-        opacity: 0.7;
-      }
-      /* Tab styles for inventory management */
-.tab-button {
-    @apply transition-all duration-200;
-}
-
-.tab-button.active {
-    @apply border-primary text-primary font-medium;
-}
-
-/* Inventory content sections */
-.inventory-content {
-    @apply transition-all duration-300;
-}
-
-/* Stock status badges */
-.stock-low { 
-    background-color: #fef3c7; 
-    color: #92400e; 
-}
-.stock-medium { 
-    background-color: #dbeafe; 
-    color: #1e40af; 
-}
-.stock-high { 
-    background-color: #dcfce7; 
-    color: #166534; 
-}
-
-/* Urgency indicators */
-.urgency-high {
-    background-color: #fee2e2;
-    color: #991b1b;
-}
-.urgency-medium {
-    background-color: #fef3c7;
-    color: #92400e;
-}
-.urgency-low {
-    background-color: #dcfce7;
-    color: #166534;
-}
-
-      /* Status badges */
-      .role-manager { background-color: #8B5A2B; color: white; }
-      .role-finance { background-color: #A0522D; color: white; }
-      .role-staff { background-color: #D2B48C; color: #3E2723; }
-      .stock-low { background-color: #fef3c7; color: #92400e; }
-      .stock-medium { background-color: #dbeafe; color: #1e40af; }
-      .stock-high { background-color: #dcfce7; color: #166534; }
-    }
-  </style>
+            .content-auto {
+                content-visibility: auto;
+            }
+            
+            .btn-primary {
+                @apply bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-all duration-300 shadow-md hover:shadow-lg;
+            }
+            .btn-secondary {
+                @apply bg-white border border-primary/30 text-primary px-4 py-2 rounded-lg hover:bg-gray-50 transition-all duration-300;
+            }
+            .card {
+                @apply bg-white rounded-xl p-5 shadow-md hover:shadow-lg transition-all duration-300;
+            }
+            .form-input {
+                @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all;
+            }
+            
+            /* Status badges */
+            .role-manager { 
+                background-color: #8B5A2B; 
+                color: white; 
+            }
+            .role-finance { 
+                background-color: #A0522D; 
+                color: white; 
+            }
+            .role-staff { 
+                background-color: #D2B48C; 
+                color: #3E2723; 
+            }
+            .stock-low { 
+                background-color: #fef3c7; 
+                color: #92400e; 
+            }
+            .stock-medium { 
+                background-color: #dbeafe; 
+                color: #1e40af; 
+            }
+            .stock-high { 
+                background-color: #dcfce7; 
+                color: #166534; 
+            }
+            
+            /* Inventory tabs */
+            .tab-button {
+                @apply transition-all duration-200;
+            }
+            .tab-button.active {
+                @apply border-primary text-primary font-medium;
+            }
+            
+            /* Urgency indicators */
+            .urgency-high {
+                background-color: #fee2e2;
+                color: #991b1b;
+            }
+            .urgency-medium {
+                background-color: #fef3c7;
+                color: #92400e;
+            }
+            .urgency-low {
+                background-color: #dcfce7;
+                color: #166534;
+            }
+        }
+        
+        /* 修复布局问题 */
+        .page-content {
+            width: 100%;
+            box-sizing: border-box;
+            min-height: calc(100vh - 4rem);
+        }
+        
+        /* 表格容器修复 */
+        .table-container {
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        
+        /* 确保主内容区域正确计算高度 */
+        main {
+            flex: 1 1 0%;
+            min-width: 0;
+        }
+    </style>
 </head>
 
-<body class="bg-gray-50 font-sans text-dark min-h-screen flex flex-col">
-    <!-- Main System - 布局将由 layout.js 动态生成 -->
-    <div id="main-system" class="flex flex-col h-screen">
-        <!-- 头部将由 layout.js 动态生成 -->
-        <div id="layout-header"></div>
+<body class="bg-gray-50 font-sans text-dark h-screen flex overflow-hidden">
 
-        <div class="flex flex-1 overflow-hidden">
-            <!-- 侧边栏将由 layout.js 动态生成 -->
-            <div id="layout-sidebar"></div>
+    <!-- 1. 侧边栏容器 (layout.js 填充) -->
+    <div id="layout-sidebar" class="w-64 flex-shrink-0 transition-all duration-300 overflow-hidden relative z-40"></div>
 
-            <!-- Main Content Area -->
-            <main class="flex-1 overflow-y-auto bg-gray-50 p-4 lg:p-6">
-                <!-- Overview Page -->
-                <div id="overview-page" class="page-content">
-                    <div class="flex justify-between items-center mb-6">
-                        <h1 class="text-2xl font-bold">Store Manager Overview</h1>
-                        <div id="current-date" class="text-gray-600"></div>
-                    </div>
+    <!-- 2. 右侧主体区域 -->
+    <div class="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative transition-all duration-300">
 
-                    <!-- Comparison Charts -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                        <!-- 订单数对比 -->
-                        <div class="card">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-lg font-semibold">Order Count Comparison</h3>
-                                <div class="text-sm text-gray-500">
-                                    <i class="fa fa-info-circle"></i> Monthly Data
-                                </div>
-                            </div>
-                            <div class="chart-container h-64">
-                                <canvas id="order-comparison-chart"></canvas>
-                            </div>
-                            <div class="mt-3 text-sm text-gray-600">
-                                <p>Central Plaza leads with 156 orders, showing strong performance.</p>
-                            </div>
-                        </div>
+        <!-- 头部容器 (layout.js 填充) -->
+        <div id="layout-header" class="flex-shrink-0"></div>
 
-                        <!-- 销售分析 - 支付方式对比 -->
-                        <div class="card">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-lg font-semibold">Sales Analysis by Payment Method</h3>
-                                <div class="text-sm text-gray-500">
-                                    <i class="fa fa-credit-card"></i> All Stores
-                                </div>
-                            </div>
-                            <div class="chart-container h-64 overflow-auto">
-                                <div id="payment-method-table" class="w-full">
-                                    <!-- 表格将通过JavaScript动态生成 -->
-                                </div>
-                            </div>
-                            <div class="mt-3 text-sm text-gray-600">
-                                <p>Third-party payments lead with 45% of total sales across all branches.</p>
-                            </div>
-                        </div>
-                    </div>
+        <!-- 具体的页面内容 -->
+        <main class="flex-1 overflow-y-auto p-4 lg:p-6" id="main-content">
 
-                    <!-- 热销图书分类对比 -->
-                    <div class="card mb-6">
+            <!-- Overview Page -->
+            <div id="overview-page" class="page-content">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-bold">Store Manager Overview</h1>
+                    <div id="current-date" class="text-gray-600"></div>
+                </div>
+
+                <!-- Comparison Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- 订单数对比 -->
+                    <div class="card">
                         <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-semibold">Best-Selling Book Categories by Branch</h3>
+                            <h3 class="text-lg font-semibold">Order Count Comparison</h3>
                             <div class="text-sm text-gray-500">
-                                <i class="fa fa-book"></i> Sales Performance
+                                <i class="fa fa-info-circle"></i> Monthly Data
                             </div>
                         </div>
-                        <div class="chart-container overflow-auto max-h-96">
-                            <div id="book-category-table" class="w-full">
+                        <div class="chart-container h-64">
+                            <canvas id="order-comparison-chart"></canvas>
+                        </div>
+                        <div class="mt-3 text-sm text-gray-600">
+                            <p>Central Plaza leads with 156 orders, showing strong performance.</p>
+                        </div>
+                    </div>
+
+                    <!-- 销售分析 - 支付方式对比 -->
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold">Sales Analysis by Payment Method</h3>
+                            <div class="text-sm text-gray-500">
+                                <i class="fa fa-credit-card"></i> All Stores
+                            </div>
+                        </div>
+                        <div class="chart-container h-64 overflow-auto">
+                            <div id="payment-method-table" class="w-full table-container">
                                 <!-- 表格将通过JavaScript动态生成 -->
                             </div>
                         </div>
                         <div class="mt-3 text-sm text-gray-600">
-                            <p>Fiction books generate the highest revenue at 35% of total sales across all branches.</p>
-                        </div>
-                    </div>
-
-                    <!-- Summary Statistics -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-primary/10 p-4 rounded-lg">
-                            <div class="flex items-center mb-2">
-                                <div class="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center mr-2">
-                                    <i class="fa fa-store text-primary text-sm"></i>
-                                </div>
-                                <h4 class="font-medium">Top Performing Branch</h4>
-                            </div>
-                            <p class="text-2xl font-bold">Central Plaza</p>
-                            <p class="text-sm text-gray-600 mt-1">156 orders | ¥8,420 revenue</p>
-                        </div>
-
-                        <div class="bg-blue-50 p-4 rounded-lg">
-                            <div class="flex items-center mb-2">
-                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-2">
-                                    <i class="fa fa-credit-card text-blue-600 text-sm"></i>
-                                </div>
-                                <h4 class="font-medium">Most Popular Payment</h4>
-                            </div>
-                            <p class="text-2xl font-bold">Credit Card</p>
-                            <p class="text-sm text-gray-600 mt-1">42% of all transactions</p>
-                        </div>
-
-                        <div class="bg-green-50 p-4 rounded-lg">
-                            <div class="flex items-center mb-2">
-                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-2">
-                                    <i class="fa fa-book text-green-600 text-sm"></i>
-                                </div>
-                                <h4 class="font-medium">Top Category</h4>
-                            </div>
-                            <p class="text-2xl font-bold">Fiction</p>
-                            <p class="text-sm text-gray-600 mt-1">35% of total book sales</p>
+                            <p>Third-party payments lead with 45% of total sales across all branches.</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Inventory Management Page -->
-                <div id="inventory-page" class="page-content hidden">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                        <div>
-                            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Inventory
-                                Management</h2>
-                            <p class="text-gray-500">Manage replenishment requests and inventory overview</p>
-                        </div>
-                        <div class="mt-4 md:mt-0 flex gap-3">
-                            <div class="relative">
-                                <input type="text" placeholder="Search by SKU or title..."
-                                    class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
-                                    <i class="fa fa-search"></i>
-                                </span>
-                            </div>
+                <!-- 热销图书分类对比 -->
+                <div class="card mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Best-Selling Book Categories by Branch</h3>
+                        <div class="text-sm text-gray-500">
+                            <i class="fa fa-book"></i> Sales Performance
                         </div>
                     </div>
-
-                    <!-- Tabs for Inventory Management -->
-                    <div class="mb-6 border-b border-gray-200">
-                        <nav class="flex space-x-6">
-                            <button id="requests-tab"
-                                class="tab-button active py-3 px-1 border-b-2 border-primary text-primary font-medium">
-                                Replenishment Requests
-                            </button>
-                            <button id="overview-tab"
-                                class="tab-button py-3 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
-                                Stock Overview
-                            </button>
-                            <button id="pricing-tab"
-                                class="tab-button py-3 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
-                                Pricing Management
-                            </button>
-                        </nav>
-                    </div>
-
-                    <!-- Replenishment Requests Table (Default View) -->
-                    <div id="requests-content" class="inventory-content">
-                        <!-- 筛选器部分 -->
-                        <div id="requests-filter-section" class="card mb-6">
-                            <h3 class="font-semibold text-lg mb-4">Filter Replenishment Requests</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                                    <select id="request-branch-filter" class="form-input">
-                                        <option value="all">All Branches</option>
-                                        <option value="1">Downtown Store</option>
-                                        <option value="2">University Store</option>
-                                        <option value="3">Community Store</option>
-                                        <option value="4">Suburban Store</option>
-                                        <option value="5">Airport Store</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                                    <select id="request-status-filter" class="form-input">
-                                        <option value="all">All Status</option>
-                                        <option value="pending">Pending</option>
-                                        <option value="approved">Approved</option>
-                                        <option value="rejected">Rejected</option>
-                                        <option value="completed">Completed</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
-                                    <input type="date" id="request-date-from" class="form-input">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">To</label>
-                                    <input type="date" id="request-date-to" class="form-input">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Urgency</label>
-                                    <select id="request-urgency-filter" class="form-input">
-                                        <option value="all">All</option>
-                                        <option value="low">Low</option>
-                                        <option value="medium">Medium</option>
-                                        <option value="high">High</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="flex gap-2 mt-4">
-                                <button id="apply-request-filters" class="btn-primary">Apply Filters</button>
-                                <button id="reset-request-filters" class="btn-secondary">Reset</button>
-                            </div>
-                        </div>
-
-                        <!-- 表格内容 -->
-                        <div class="card">
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead>
-                                        <tr>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
-                                                Request ID</th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Branch</th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Request Time</th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                SKU Count</th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Total Qty</th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Status</th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
-                                                Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="replenishment-table-body" class="bg-white divide-y divide-gray-200">
-                                        <!-- 数据将通过JavaScript动态生成 -->
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div class="flex justify-between items-center mt-5">
-                                <p class="text-sm text-gray-500">Showing 1 to 10 of 25 requests</p>
-                                <div class="flex gap-1">
-                                    <button
-                                        class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                                        disabled>
-                                        <i class="fa fa-chevron-left text-xs"></i>
-                                    </button>
-                                    <button
-                                        class="w-8 h-8 flex items-center justify-center rounded border border-primary bg-primary text-white">1</button>
-                                    <button
-                                        class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">2</button>
-                                    <button
-                                        class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">3</button>
-                                    <button
-                                        class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50">
-                                        <i class="fa fa-chevron-right text-xs"></i>
-                                    </button>
-                                </div>
-                            </div>
+                    <div class="chart-container overflow-auto max-h-96">
+                        <div id="book-category-table" class="w-full table-container">
+                            <!-- 表格将通过JavaScript动态生成 -->
                         </div>
                     </div>
-
-                    <!-- Stock Overview Table (Hidden by default) -->
-                    <div id="overview-content" class="inventory-content hidden">
-                        <div class="mb-6">
-                            <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
-                                <div class="card">
-                                    <h4 class="font-semibold mb-2">View Options</h4>
-                                    <div class="space-y-2">
-                                        <label class="flex items-center">
-                                            <input type="radio" name="view-option" value="by-branch" checked class="mr-2">
-                                            <span>By Branch</span>
-                                        </label>
-                                        <label class="flex items-center">
-                                            <input type="radio" name="view-option" value="by-sku" class="mr-2">
-                                            <span>By SKU</span>
-                                        </label>
-                                    </div>
-
-                                    <!-- Branch Filter for By Branch view -->
-                                    <div id="branch-filter-container" class="mt-4">
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Filter by
-                                            Branch</label>
-                                        <select id="branch-stock-filter" class="form-input w-full">
-                                            <option value="all">All Branches</option>
-                                            <option value="ST001">Central Plaza</option>
-                                            <option value="ST002">Riverside</option>
-                                            <option value="ST003">Westside</option>
-                                            <option value="ST004">Northgate</option>
-                                            <option value="ST005">Southpoint</option>
-                                            <option value="ST006">Eastview</option>
-                                            <option value="ST007">Downtown</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Stock Overview By Branch -->
-                        <div id="stock-by-branch" class="card mb-6">
-                            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-                                <h3 class="font-semibold text-lg">Stock Overview by Branch</h3>
-                                <div class="mt-2 md:mt-0 text-sm text-gray-500">
-                                    Showing <span id="branch-stock-count">15</span> items
-                                </div>
-                            </div>
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead>
-                                        <tr>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
-                                                SKU
-                                            </th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Book Title
-                                            </th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Branch
-                                            </th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Current Stock
-                                            </th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Last Inbound Date
-                                            </th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
-                                                Stock Status
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="stock-branch-table-body" class="bg-white divide-y divide-gray-200">
-                                        <!-- Data will be populated by JavaScript -->
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <!-- Pagination -->
-                            <div class="flex justify-between items-center mt-5">
-                                <p class="text-sm text-gray-500">Showing 1 to 10 of <span id="branch-total-count">15</span>
-                                    items</p>
-                                <div class="flex gap-1">
-                                    <button
-                                        class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                                        disabled>
-                                        <i class="fa fa-chevron-left text-xs"></i>
-                                    </button>
-                                    <button
-                                        class="w-8 h-8 flex items-center justify-center rounded border border-primary bg-primary text-white">1</button>
-                                    <button
-                                        class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">2</button>
-                                    <button
-                                        class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50">
-                                        <i class="fa fa-chevron-right text-xs"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Stock Overview By SKU (Hidden by default) -->
-                        <div id="stock-by-sku" class="card hidden">
-                            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-                                <h3 class="font-semibold text-lg">Inventory Distribution by SKU</h3>
-                                <div class="mt-2 md:mt-0">
-                                    <div class="relative">
-                                        <input type="text" placeholder="Search by SKU or title..."
-                                            class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
-                                            id="sku-search-input">
-                                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
-                                            <i class="fa fa-search"></i>
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead>
-                                        <tr>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
-                                                SKU
-                                            </th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Book Title
-                                            </th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Downtown Store
-                                            </th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                University Store
-                                            </th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Community Store
-                                            </th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Suburban Store
-                                            </th>
-                                            <th
-                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
-                                                Airport Store
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="stock-sku-table-body" class="bg-white divide-y divide-gray-200">
-                                        <!-- Data will be populated by JavaScript -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Pricing Management Content -->
-                    <div id="pricing-content" class="inventory-content hidden">
-                        <div class="mb-6">
-                            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                                <h3 class="font-semibold text-lg">Pricing Management</h3>
-                                <div class="flex flex-col sm:flex-row gap-3">
-                                    <!-- 书籍搜索框 -->
-                                    <div class="relative">
-                                        <input type="text" placeholder="Search by title or ISBN..."
-                                            class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
-                                            id="pricing-search-input">
-                                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
-                                            <i class="fa fa-search"></i>
-                                        </span>
-                                    </div>
-                                    <!-- 添加书籍信息按钮 -->
-                                    <button class="btn-primary flex items-center gap-2" id="add-book-info-btn">
-                                        <i class="fa fa-plus"></i> Add Book Info
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- Pricing Table -->
-                            <div class="card">
-                                <div class="overflow-x-auto">
-                                    <table class="min-w-full divide-y divide-gray-200">
-                                        <thead>
-                                            <tr>
-                                                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
-                                                    Book Title</th>
-                                                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    ISBN</th>
-                                                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Current Price</th>
-                                                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
-                                                    Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="pricing-table-body" class="bg-white divide-y divide-gray-200">
-                                            <!-- Data will be populated by JavaScript -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Request Detail Modal -->
-                    <div id="request-detail-modal"
-                        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-                        <div class="bg-white rounded-lg w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
-                            <div class="p-6">
-                                <h3 class="text-lg font-semibold mb-4">Request Detail</h3>
-                                <div id="request-detail-content">
-                                    <!-- Request details will be populated by JavaScript -->
-                                </div>
-                                <div class="flex justify-end gap-3 mt-6">
-                                    <button type="button" id="close-request-detail" class="btn-secondary">Close</button>
-                                    <button type="button" id="approve-request"
-                                        class="btn-primary bg-green-600 hover:bg-green-700">Approve</button>
-                                    <button type="button" id="reject-request"
-                                        class="btn-primary bg-red-600 hover:bg-red-700">Reject</button>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="mt-3 text-sm text-gray-600">
+                        <p>Fiction books generate the highest revenue at 35% of total sales across all branches.</p>
                     </div>
                 </div>
 
-                <!-- Staff Management Page -->
-                <div id="staff-page" class="page-content hidden">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                        <div>
-                            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Staff
-                                Management</h2>
-                            <p class="text-gray-500">Manage employees across all branches</p>
-                        </div>
-                        <div class="mt-4 md:mt-0 flex gap-3">
-                            <div class="relative">
-                                <input type="text" placeholder="Search staff..."
-                                    class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
-                                    <i class="fa fa-search"></i>
-                                </span>
+                <!-- Summary Statistics -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-primary/10 p-4 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <div class="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center mr-2">
+                                <i class="fa fa-store text-primary text-sm"></i>
                             </div>
-                            <button class="btn-primary flex items-center gap-2">
-                                <i class="fa fa-plus"></i> Add Staff
-                            </button>
+                            <h4 class="font-medium">Top Performing Branch</h4>
                         </div>
+                        <p class="text-2xl font-bold">Central Plaza</p>
+                        <p class="text-sm text-gray-600 mt-1">156 orders | ¥8,420 revenue</p>
                     </div>
 
-                    <!-- Staff Filters -->
-                    <div class="card mb-6">
-                        <h3 class="font-semibold text-lg mb-4">Filter Staff</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-2">
+                                <i class="fa fa-credit-card text-blue-600 text-sm"></i>
+                            </div>
+                            <h4 class="font-medium">Most Popular Payment</h4>
+                        </div>
+                        <p class="text-2xl font-bold">Credit Card</p>
+                        <p class="text-sm text-gray-600 mt-1">42% of all transactions</p>
+                    </div>
+
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-2">
+                                <i class="fa fa-book text-green-600 text-sm"></i>
+                            </div>
+                            <h4 class="font-medium">Top Category</h4>
+                        </div>
+                        <p class="text-2xl font-bold">Fiction</p>
+                        <p class="text-sm text-gray-600 mt-1">35% of total book sales</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory Management Page -->
+            <div id="inventory-page" class="page-content hidden">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                    <div>
+                        <h1 class="text-2xl font-bold">Inventory Management</h1>
+                        <p class="text-gray-500">Manage replenishment requests and inventory overview</p>
+                    </div>
+                </div>
+
+                <!-- Tabs for Inventory Management -->
+                <div class="mb-6 border-b border-gray-200">
+                    <nav class="flex space-x-6">
+                        <button id="requests-tab"
+                            class="tab-button active py-3 px-1 border-b-2 border-primary text-primary font-medium">
+                            Replenishment Requests
+                        </button>
+                        <button id="overview-tab"
+                            class="tab-button py-3 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                            Stock Overview
+                        </button>
+                        <button id="pricing-tab"
+                            class="tab-button py-3 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                            Pricing Management
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Replenishment Requests Table (Default View) -->
+                <div id="requests-content" class="inventory-content">
+                    <!-- 筛选器部分 -->
+                    <div id="requests-filter-section" class="card mb-6">
+                        <h3 class="font-semibold text-lg mb-4">Filter Replenishment Requests</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                                <select class="form-input" id="branch-filter">
+                                <select id="request-branch-filter" class="form-input">
                                     <option value="all">All Branches</option>
                                     <option value="1">Downtown Store</option>
                                     <option value="2">University Store</option>
@@ -648,68 +294,76 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Position</label>
-                                <select class="form-input" id="position-filter">
-                                    <option value="all">All Positions</option>
-                                    <option value="manager">Manager</option>
-                                    <option value="finance">Finance</option>
-                                    <option value="staff">Staff</option>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                <select id="request-status-filter" class="form-input">
+                                    <option value="all">All Status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="rejected">Rejected</option>
+                                    <option value="completed">Completed</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Actions</label>
-                                <div class="flex gap-2 pt-2">
-                                    <button class="btn-primary flex-1" id="apply-filters">Apply</button>
-                                    <button class="btn-secondary flex-1" id="reset-filters">Reset</button>
-                                </div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+                                <input type="date" id="request-date-from" class="form-input">
                             </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">To</label>
+                                <input type="date" id="request-date-to" class="form-input">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Urgency</label>
+                                <select id="request-urgency-filter" class="form-input">
+                                    <option value="all">All</option>
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 mt-4">
+                            <button id="apply-request-filters" class="btn-primary">Apply Filters</button>
+                            <button id="reset-request-filters" class="btn-secondary">Reset</button>
                         </div>
                     </div>
 
-                    <!-- Staff Table -->
+                    <!-- 表格内容 -->
                     <div class="card">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="font-semibold text-lg">All Staff Members</h3>
-                            <div class="text-sm text-gray-500">
-                                Showing <span id="staff-count">24</span> employees
-                            </div>
-                        </div>
-                        <div class="overflow-x-auto">
+                        <div class="overflow-x-auto table-container">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead>
                                     <tr>
                                         <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
-                                            Employee ID</th>
-                                        <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            User ID</th>
+                                            Request ID</th>
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Branch</th>
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Name</th>
+                                            Request Time</th>
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Position</th>
+                                            SKU Count</th>
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Phone</th>
+                                            Total Qty</th>
                                         <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Status</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody id="staff-table-body" class="bg-white divide-y divide-gray-200">
-                                    <!-- Data will be populated by JavaScript -->
+                                <tbody id="replenishment-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- 数据将通过JavaScript动态生成 -->
                                 </tbody>
                             </table>
                         </div>
 
-                        <!-- Pagination -->
-                        <div class="flex justify-between items-center mt-5">
-                            <p class="text-sm text-gray-500">Showing 1 to 10 of 24 employees</p>
+                        <div id="replenishment-pagination-controls" class="flex justify-between items-center mt-5">
+                            <p class="text-sm text-gray-500">Showing 1 to 10 of 25 requests</p>
                             <div class="flex gap-1">
                                 <button
                                     class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
@@ -721,8 +375,6 @@
                                 <button
                                     class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">2</button>
                                 <button
-                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">3</button>
-                                <button
                                     class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50">
                                     <i class="fa fa-chevron-right text-xs"></i>
                                 </button>
@@ -731,175 +383,92 @@
                     </div>
                 </div>
 
-                <!-- Sales Management Page -->
-                <div id="pricing-page" class="page-content hidden">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                        <div>
-                            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Sales
-                                Management</h2>
-                            <p class="text-gray-500">Adjust book prices and manage promotions</p>
-                        </div>
-                    </div>
+                <!-- Stock Overview Table (Hidden by default) -->
+                <div id="overview-content" class="inventory-content hidden">
+                    <div class="mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
+                            <div class="card">
+                                <h4 class="font-semibold mb-2">View Options</h4>
+                                <div class="space-y-2">
+                                    <label class="flex items-center">
+                                        <input type="radio" name="view-option" value="by-branch" checked class="mr-2">
+                                        <span>By Branch</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="view-option" value="by-sku" class="mr-2">
+                                        <span>By SKU</span>
+                                    </label>
+                                </div>
 
-                    <!-- Bestsellers and Need Promotion in Compact Layout -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <!-- Bestsellers Compact -->
-                        <div class="card">
-                            <h3 class="font-semibold text-lg mb-3">Bestsellers</h3>
-                            <div class="space-y-2" id="bestsellers-list">
-                                <div class="flex items-center justify-between p-2 bg-green-50 rounded">
-                                    <div class="flex items-center gap-2 min-w-0 flex-1">
-                                        <div
-                                            class="w-6 h-6 bg-primary/10 rounded flex items-center justify-center flex-shrink-0">
-                                            <i class="fa fa-book text-primary text-xs"></i>
-                                        </div>
-                                        <div class="min-w-0 flex-1">
-                                            <p class="font-medium text-sm truncate">Atomic Habits</p>
-                                            <p class="text-xs text-gray-500 truncate">42 sold</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center justify-between p-2 bg-green-50 rounded">
-                                    <div class="flex items-center gap-2 min-w-0 flex-1">
-                                        <div
-                                            class="w-6 h-6 bg-primary/10 rounded flex items-center justify-center flex-shrink-0">
-                                            <i class="fa fa-book text-primary text-xs"></i>
-                                        </div>
-                                        <div class="min-w-0 flex-1">
-                                            <p class="font-medium text-sm truncate">The Midnight Library</p>
-                                            <p class="text-xs text-gray-500 truncate">38 sold</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center justify-between p-2 bg-green-50 rounded">
-                                    <div class="flex items-center gap-2 min-w-0 flex-1">
-                                        <div
-                                            class="w-6 h-6 bg-primary/10 rounded flex items-center justify-center flex-shrink-0">
-                                            <i class="fa fa-book text-primary text-xs"></i>
-                                        </div>
-                                        <div class="min-w-0 flex-1">
-                                            <p class="font-medium text-sm truncate">Sapiens</p>
-                                            <p class="text-xs text-gray-500 truncate">35 sold</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Books Needing Promotion Compact -->
-                        <div class="card">
-                            <h3 class="font-semibold text-lg mb-3">Need Promotion</h3>
-                            <div class="space-y-2" id="promotion-list">
-                                <div class="flex items-center justify-between p-2 bg-yellow-50 rounded">
-                                    <div class="flex items-center gap-2 min-w-0 flex-1">
-                                        <div
-                                            class="w-6 h-6 bg-primary/10 rounded flex items-center justify-center flex-shrink-0">
-                                            <i class="fa fa-book text-primary text-xs"></i>
-                                        </div>
-                                        <div class="min-w-0 flex-1">
-                                            <p class="font-medium text-sm truncate">Pride & Prejudice</p>
-                                            <p class="text-xs text-gray-500 truncate">8 weeks</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        class="text-primary hover:text-primary/80 text-xs font-medium flex-shrink-0 ml-2">Promote</button>
-                                </div>
-                                <div class="flex items-center justify-between p-2 bg-yellow-50 rounded">
-                                    <div class="flex items-center gap-2 min-w-0 flex-1">
-                                        <div
-                                            class="w-6 h-6 bg-primary/10 rounded flex items-center justify-center flex-shrink-0">
-                                            <i class="fa fa-book text-primary text-xs"></i>
-                                        </div>
-                                        <div class="min-w-0 flex-1">
-                                            <p class="font-medium text-sm truncate">Moby Dick</p>
-                                            <p class="text-xs text-gray-500 truncate">6 weeks</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        class="text-primary hover:text-primary/80 text-xs font-medium flex-shrink-0 ml-2">Promote</button>
-                                </div>
-                                <div class="flex items-center justify-between p-2 bg-yellow-50 rounded">
-                                    <div class="flex items-center gap-2 min-w-0 flex-1">
-                                        <div
-                                            class="w-6 h-6 bg-primary/10 rounded flex items-center justify-center flex-shrink-0">
-                                            <i class="fa fa-book text-primary text-xs"></i>
-                                        </div>
-                                        <div class="min-w-0 flex-1">
-                                            <p class="font-medium text-sm truncate">War and Peace</p>
-                                            <p class="text-xs text-gray-500 truncate">10 weeks</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        class="text-primary hover:text-primary/80 text-xs font-medium flex-shrink-0 ml-2">Promote</button>
+                                <!-- Branch Filter for By Branch view -->
+                                <div id="branch-filter-container" class="mt-4">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Branch</label>
+                                    <select id="branch-stock-filter" class="form-input w-full">
+                                        <option value="all">All Branches</option>
+                                        <option value="ST001">Central Plaza</option>
+                                        <option value="ST002">Riverside</option>
+                                        <option value="ST003">Westside</option>
+                                        <option value="ST004">Northgate</option>
+                                        <option value="ST005">Southpoint</option>
+                                        <option value="ST006">Eastview</option>
+                                        <option value="ST007">Downtown</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- User Management Page -->
-                <div id="user-management-page" class="page-content hidden">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                        <div>
-                            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">User Management
-                            </h2>
-                            <p class="text-gray-500">Manage user accounts, permissions and status</p>
-                        </div>
-                        <div class="mt-4 md:mt-0 flex gap-3">
+                    <!-- Stock Overview By Branch -->
+                    <div id="stock-by-branch" class="card mb-6">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+                            <h3 class="font-semibold text-lg">Stock Overview by Branch</h3>
+                            <div class="mt-2 md:mt-0 text-sm text-gray-500">
+                                Showing <span id="branch-stock-count">15</span> items
+                            </div>
+                            <!-- 按分店查询的搜索框 -->
                             <div class="relative">
-                                <input type="text" placeholder="Search users..."
-                                    class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
-                                    <i class="fa fa-search"></i>
+                                <input type="text" placeholder="Search SKU or title..."
+                                    class="w-full md:w-48 px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all text-sm"
+                                    id="branch-stock-search">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                    <i class="fa fa-search text-sm"></i>
                                 </span>
                             </div>
-                            <button class="btn-primary flex items-center gap-2">
-                                <i class="fa fa-plus"></i> Add User
-                            </button>
                         </div>
-                    </div>
-
-                    <!-- User Management Table -->
-                    <div class="card">
-                        <div class="overflow-x-auto">
+                        <div class="overflow-x-auto table-container">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead>
                                     <tr>
                                         <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
-                                            User ID</th>
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            SKU</th>
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Username</th>
+                                            Book Title</th>
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            User Type</th>
+                                            Branch</th>
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Full Name</th>
+                                            Current Stock</th>
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Phone</th>
+                                            Last Inbound Date</th>
                                         <th
                                             class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Created At</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Last Login</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
-                                            Actions</th>
+                                            Stock Status</th>
                                     </tr>
                                 </thead>
-                                <tbody id="user-management-table-body" class="bg-white divide-y divide-gray-200">
+                                <tbody id="stock-branch-table-body" class="bg-white divide-y divide-gray-200">
                                     <!-- Data will be populated by JavaScript -->
                                 </tbody>
                             </table>
                         </div>
 
                         <!-- Pagination -->
-                        <div class="flex justify-between items-center mt-5">
-                            <p class="text-sm text-gray-500">Showing 1 to 10 of 48 users</p>
+                        <div id="stock-branch-pagination-controls" class="flex justify-between items-center mt-5">
+                            <p class="text-sm text-gray-500">Showing 1 to 10 of <span id="branch-total-count">15</span>
+                                items</p>
                             <div class="flex gap-1">
                                 <button
                                     class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
@@ -911,195 +480,916 @@
                                 <button
                                     class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">2</button>
                                 <button
-                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">3</button>
-                                <button
-                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">4</button>
-                                <button
-                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">5</button>
-                                <button
                                     class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50">
                                     <i class="fa fa-chevron-right text-xs"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Stock Overview By SKU (Hidden by default) -->
+                    <div id="stock-by-sku" class="card hidden">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+                            <h3 class="font-semibold text-lg">Inventory Distribution by SKU</h3>
+                            <div class="mt-2 md:mt-0">
+                                <div class="relative">
+                                    <input type="text" placeholder="Search by SKU or title..."
+                                        class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+                                        id="sku-search-input">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
+                                        <i class="fa fa-search"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto table-container">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                    <tr>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            SKU</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Book Title</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Downtown Store</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            University Store</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Community Store</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Suburban Store</th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Airport Store</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stock-sku-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- Data will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Notifications Page -->
-                <div id="notifications-page" class="page-content hidden">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                        <div>
-                            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Notifications
-                            </h2>
-                            <p class="text-gray-500">Send announcements and notifications</p>
+                <!-- Pricing Management Content -->
+                <div id="pricing-content" class="inventory-content hidden">
+                    <div class="mb-6">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                            <h3 class="font-semibold text-lg">Pricing Management</h3>
+                            <div class="flex flex-col sm:flex-row gap-3">
+                                <!-- 书籍搜索框 -->
+                                <div class="relative">
+                                    <input type="text" placeholder="Search by title or ISBN..."
+                                        class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+                                        id="pricing-search-input" oninput="performPricingSearch(this.value)">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
+                                        <i class="fa fa-search"></i>
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mt-4 md:mt-0 flex gap-3">
-                            <button class="btn-primary flex items-center gap-2" id="compose-notification-btn">
-                                <i class="fa fa-plus"></i> Compose Message
+
+                        <!-- Pricing Table -->
+                        <div class="card">
+                            <div class="overflow-x-auto table-container">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead>
+                                        <tr>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                                                ISBN</th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">
+                                                Book Title</th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                                                Current Price</th>
+                                            <th
+                                                class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                                                Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pricing-table-body" class="bg-white divide-y divide-gray-200">
+                                        <!-- Data will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="pricing-pagination-controls" class="mt-4"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Request Detail Modal -->
+                <div id="request-detail-modal"
+                    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+                    <div class="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <div class="p-6">
+                            <h3 class="text-lg font-semibold mb-4">Request Detail</h3>
+                            <div id="request-detail-content">
+                                <!-- Request details will be populated by JavaScript -->
+                            </div>
+                            <div class="flex justify-end gap-3 mt-6">
+                                <button type="button" id="close-request-detail" class="btn-secondary">Close</button>
+                                <button type="button" id="approve-request"
+                                    class="btn-primary bg-green-600 hover:bg-green-700">Approve</button>
+                                <button type="button" id="reject-request"
+                                    class="btn-primary bg-red-600 hover:bg-red-700">Reject</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Staff Management Page -->
+            <div id="staff-page" class="page-content hidden">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                    <div>
+                        <h1 class="text-2xl font-bold">Staff Management</h1>
+                        <p class="text-gray-500">Manage employees across all branches</p>
+                    </div>
+                    <div class="mt-4 md:mt-0 flex gap-3">
+                        <div class="relative">
+                            <input type="text" placeholder="Search staff..."
+                                class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
+                                <i class="fa fa-search"></i>
+                            </span>
+                        </div>
+                        <button class="btn-primary flex items-center gap-2">
+                            <i class="fa fa-plus"></i> Add Staff
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Staff Filters -->
+                <div class="card mb-6">
+                    <h3 class="font-semibold text-lg mb-4">Filter Staff</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                            <select class="form-input" id="branch-filter">
+                                <option value="all">All Branches</option>
+                                <option value="1">Downtown Store</option>
+                                <option value="2">University Store</option>
+                                <option value="3">Community Store</option>
+                                <option value="4">Suburban Store</option>
+                                <option value="5">Airport Store</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Position</label>
+                            <select class="form-input" id="position-filter">
+                                <option value="all">All Positions</option>
+                                <option value="manager">Manager</option>
+                                <option value="finance">Finance</option>
+                                <option value="staff">Staff</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Actions</label>
+                            <div class="flex gap-2 pt-2">
+                                <button class="btn-primary flex-1" id="apply-filters">Apply</button>
+                                <button class="btn-secondary flex-1" id="reset-filters">Reset</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Staff Table -->
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold text-lg">All Staff Members</h3>
+                        <div class="text-sm text-gray-500">
+                            Showing <span id="staff-count">24</span> employees
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto table-container">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Employee ID</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        User ID</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Branch</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Name</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Position</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Phone</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="staff-table-body" class="bg-white divide-y divide-gray-200">
+                                <!-- Data will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Add Staff Modal -->
+                    <div id="add-staff-modal"
+                        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+                        <div class="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+                            <div class="p-6">
+                                <h3 class="text-lg font-semibold mb-4">Add New Staff</h3>
+                                <form id="add-staff-form">
+                                    <div class="space-y-4">
+                                        <!-- Staff Name -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Staff Name <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="text" class="form-input" placeholder="Enter full name"
+                                                id="staff-name" required>
+                                        </div>
+
+                                        <!-- Employee ID -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Employee ID <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="text" class="form-input" placeholder="Enter employee ID"
+                                                id="employee-id" required>
+                                        </div>
+
+                                        <!-- User ID -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                User ID <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="text" class="form-input" placeholder="Enter user ID"
+                                                id="user-id" required>
+                                        </div>
+
+                                        <!-- Username -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Username <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="text" class="form-input" placeholder="Enter username"
+                                                id="username" required>
+                                        </div>
+
+                                        <!-- Initial Password -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Initial Password <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="password" class="form-input"
+                                                placeholder="Enter initial password" id="initial-password" required>
+                                            <p class="text-xs text-gray-500 mt-1">Will be required to change on first
+                                                login</p>
+                                        </div>
+
+                                        <!-- Phone Number -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Phone Number <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="tel" class="form-input" placeholder="Enter phone number"
+                                                id="phone-number" required>
+                                        </div>
+
+                                        <!-- Account Type -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Account Type <span class="text-red-500">*</span>
+                                            </label>
+                                            <select class="form-input" id="account-type" required>
+                                                <option value="">Select account type</option>
+                                                <option value="manager">Manager</option>
+                                                <option value="finance">Finance</option>
+                                                <option value="staff">Staff</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Store ID (Conditional) -->
+                                        <div id="store-id-container" class="hidden">
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Store ID <span class="text-red-500">*</span>
+                                            </label>
+                                            <select class="form-input" id="store-id">
+                                                <option value="">Select store</option>
+                                                <option value="ST001">Central Plaza (ST001)</option>
+                                                <option value="ST002">Riverside (ST002)</option>
+                                                <option value="ST003">Westside (ST003)</option>
+                                                <option value="ST004">Northgate (ST004)</option>
+                                                <option value="ST005">Southpoint (ST005)</option>
+                                                <option value="ST006">Eastview (ST006)</option>
+                                                <option value="ST007">Downtown (ST007)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex justify-end gap-3 mt-6">
+                                        <button type="button" id="cancel-add-staff"
+                                            class="btn-secondary">Cancel</button>
+                                        <button type="submit" class="btn-primary">Add Staff</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Edit Staff Modal -->
+                    <div id="edit-staff-modal"
+                        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+                        <div class="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+                            <div class="p-6">
+                                <h3 class="text-lg font-semibold mb-4">Edit Staff Information</h3>
+                                <form id="edit-staff-form">
+                                    <input type="hidden" id="edit-staff-id">
+                                    <input type="hidden" id="edit-original-employee-id">
+
+                                    <div class="space-y-4">
+                                        <!-- Employee ID -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Employee ID <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="text" class="form-input" placeholder="Enter employee ID"
+                                                id="edit-employee-id" required>
+                                        </div>
+
+                                        <!-- User ID -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                User ID <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="text" class="form-input" placeholder="Enter user ID"
+                                                id="edit-user-id" required>
+                                        </div>
+
+                                        <!-- Branch -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Branch <span class="text-red-500">*</span>
+                                            </label>
+                                            <select class="form-input" id="edit-branch" required>
+                                                <option value="">Select branch</option>
+                                                <option value="Central Plaza">Central Plaza</option>
+                                                <option value="Riverside">Riverside</option>
+                                                <option value="Westside">Westside</option>
+                                                <option value="Northgate">Northgate</option>
+                                                <option value="Southpoint">Southpoint</option>
+                                                <option value="Eastview">Eastview</option>
+                                                <option value="Downtown">Downtown</option>
+                                                <option value="Central Office">Central Office</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Name -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Name <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="text" class="form-input" placeholder="Enter full name"
+                                                id="edit-name" required>
+                                        </div>
+
+                                        <!-- Position -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Position <span class="text-red-500">*</span>
+                                            </label>
+                                            <select class="form-input" id="edit-position" required>
+                                                <option value="">Select position</option>
+                                                <option value="manager">Manager</option>
+                                                <option value="finance">Finance</option>
+                                                <option value="staff">Staff</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Phone -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Phone Number <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="tel" class="form-input" placeholder="Enter phone number"
+                                                id="edit-phone" required>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex justify-end gap-3 mt-6">
+                                        <button type="button" id="cancel-edit-staff"
+                                            class="btn-secondary">Cancel</button>
+                                        <button type="submit" class="btn-primary">Save Changes</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div id="staff-pagination-controls" class="flex justify-between items-center mt-5">
+                        <p class="text-sm text-gray-500">Showing 1 to 10 of 24 employees</p>
+                        <div class="flex gap-1">
+                            <button
+                                class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                disabled>
+                                <i class="fa fa-chevron-left text-xs"></i>
+                            </button>
+                            <button
+                                class="w-8 h-8 flex items-center justify-center rounded border border-primary bg-primary text-white">1</button>
+                            <button
+                                class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">2</button>
+                            <button
+                                class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">3</button>
+                            <button
+                                class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50">
+                                <i class="fa fa-chevron-right text-xs"></i>
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Compose Notification Form -->
-                    <div id="compose-notification" class="card mb-6 hidden">
-                        <h3 class="font-semibold text-lg mb-4">Compose Notification</h3>
-                        <form id="notification-form">
-                            <div class="grid grid-cols-1 gap-4">
-                                <div class="bg-blue-50 p-3 rounded-lg">
-                                    <p class="text-sm text-blue-600 mb-1"><i class="fa fa-info-circle"></i> This
-                                        notification will be sent to the shopping system homepage.</p>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-                                    <input type="text" class="form-input" placeholder="Enter notification subject"
-                                        id="notification-subject" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Message</label>
-                                    <textarea class="form-input" rows="5" placeholder="Enter your message"
-                                        id="notification-message" required></textarea>
-                                </div>
-                                <div class="flex gap-2">
-                                    <button type="submit" class="btn-primary">Send</button>
-                                    <button type="button" class="btn-secondary" id="cancel-notification">Cancel</button>
-                                </div>
-                            </div>
-                        </form>
+            <!-- User Management Page -->
+            <div id="user-management-page" class="page-content hidden">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                    <div>
+                        <h1 class="text-2xl font-bold">User Management</h1>
+                        <p class="text-gray-500">Manage user accounts, permissions and status</p>
                     </div>
-
-                    <!-- Notifications List -->
-                    <div class="card">
-                        <h3 class="font-semibold text-lg mb-4">Recent Notifications</h3>
-                        <div class="space-y-4" id="notifications-list">
-                            <!-- Notifications will be populated by JavaScript -->
+                    <div class="mt-4 md:mt-0 flex gap-3">
+                        <!-- 删除 Add User 按钮 -->
+                        <div class="relative">
+                            <input type="text" placeholder="Search users..."
+                                class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
+                                <i class="fa fa-search"></i>
+                            </span>
                         </div>
                     </div>
                 </div>
 
-                <!-- 添加书籍信息模态框 -->
-                <div id="add-book-modal"
-                    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-                    <div class="bg-white rounded-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+                <!-- User Management Table -->
+                <div class="card">
+                    <div class="overflow-x-auto table-container">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        User ID
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Username
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        User Type
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Full Name
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Phone
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Created At
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Last Login
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="user-management-table-body" class="bg-white divide-y divide-gray-200">
+                                <!-- Data will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div id="user-management-pagination-controls" class="flex justify-between items-center mt-5">
+                        <p class="text-sm text-gray-500">Showing 1 to 10 of 48 users</p>
+                        <div class="flex gap-1">
+                            <button
+                                class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                disabled>
+                                <i class="fa fa-chevron-left text-xs"></i>
+                            </button>
+                            <button
+                                class="w-8 h-8 flex items-center justify-center rounded border border-primary bg-primary text-white">1</button>
+                            <button
+                                class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">2</button>
+                            <button
+                                class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">3</button>
+                            <button
+                                class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">4</button>
+                            <button
+                                class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">5</button>
+                            <button
+                                class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50">
+                                <i class="fa fa-chevron-right text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit User Modal -->
+                <div id="edit-user-modal"
+                    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+                    <div class="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
                         <div class="p-6">
-                            <h3 class="text-lg font-semibold mb-4">Add New Book Information</h3>
-                            <form id="add-book-form">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <h3 class="text-lg font-semibold mb-4">Edit User Account</h3>
+                            <form id="edit-user-form">
+                                <input type="hidden" id="edit-user-id">
+
+                                <div class="space-y-4">
+                                    <!-- User ID (readonly) -->
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Book Title *</label>
-                                        <input type="text" id="add-book-title" class="form-input" required>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            User ID <span class="text-gray-500">(cannot be changed)</span>
+                                        </label>
+                                        <input type="text" class="form-input bg-gray-50" id="edit-user-userid" readonly>
                                     </div>
+
+                                    <!-- Username -->
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">ISBN *</label>
-                                        <input type="text" id="add-book-isbn" class="form-input" required>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Username <span class="text-red-500">*</span>
+                                        </label>
+                                        <input type="text" class="form-input" id="edit-username" required>
                                     </div>
+
+                                    <!-- User Type -->
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Author *</label>
-                                        <input type="text" id="add-book-author" class="form-input" required>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Publisher *</label>
-                                        <input type="text" id="add-book-publisher" class="form-input" required>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Language *</label>
-                                        <input type="text" id="add-book-language" class="form-input" required>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                                        <select id="add-book-category" class="form-input" required>
-                                            <option value="">Select Category</option>
-                                            <option value="Fiction">Fiction</option>
-                                            <option value="Non-Fiction">Non-Fiction</option>
-                                            <option value="Science">Science</option>
-                                            <option value="History">History</option>
-                                            <option value="Biography">Biography</option>
-                                            <option value="Children">Children</option>
-                                            <option value="Self-help">Self-help</option>
-                                            <option value="Classic">Classic</option>
-                                            <option value="Memoir">Memoir</option>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            User Type <span class="text-red-500">*</span>
+                                        </label>
+                                        <select class="form-input" id="edit-user-type" required>
+                                            <option value="">Select user type</option>
+                                            <option value="customer">Customer</option>
+                                            <option value="staff">Staff</option>
+                                            <option value="manager">Manager</option>
+                                            <option value="finance">Finance</option>
                                         </select>
                                     </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">SKU ID *</label>
-                                        <input type="text" id="add-book-sku" class="form-input" required>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Current Price
-                                            *</label>
-                                        <input type="text" id="add-book-price" class="form-input" placeholder="¥0.00"
-                                            required>
-                                    </div>
-                                    <div class="md:col-span-2">
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Comment</label>
-                                        <textarea id="add-book-comment" class="form-input" rows="3"
-                                            placeholder="Add any additional notes about this book"></textarea>
-                                    </div>
-                                </div>
-                                <div class="flex justify-end gap-3 mt-6">
-                                    <button type="button" id="cancel-add-book" class="btn-secondary">Cancel</button>
-                                    <button type="submit" class="btn-primary">Add Book</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Edit Book Modal -->
-                <div id="edit-book-modal"
-                    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-                    <div class="bg-white rounded-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-                        <div class="p-6">
-                            <h3 class="text-lg font-semibold mb-4">Edit Book Details</h3>
-                            <form id="edit-book-form">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <!-- Full Name -->
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Book Title</label>
-                                        <input type="text" id="edit-book-title" class="form-input" required>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Full Name <span class="text-red-500">*</span>
+                                        </label>
+                                        <input type="text" class="form-input" id="edit-full-name" required>
                                     </div>
+
+                                    <!-- Reset Password -->
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">ISBN</label>
-                                        <input type="text" id="edit-book-isbn" class="form-input" required>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Reset Password
+                                        </label>
+                                        <div class="flex items-center">
+                                            <button type="button" id="reset-password-btn"
+                                                class="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors">
+                                                <i class="fa fa-key mr-2"></i>Reset Password
+                                            </button>
+                                            <span class="ml-3 text-sm text-gray-500">Will send reset link to
+                                                email</span>
+                                        </div>
                                     </div>
+
+                                    <!-- Account Status -->
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Author</label>
-                                        <input type="text" id="edit-book-author" class="form-input" required>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Publisher</label>
-                                        <input type="text" id="edit-book-publisher" class="form-input" required>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Language</label>
-                                        <input type="text" id="edit-book-language" class="form-input" required>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                                        <input type="text" id="edit-book-category" class="form-input" required>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">SKU ID</label>
-                                        <input type="text" id="edit-book-sku" class="form-input" required>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Current
-                                            Price</label>
-                                        <input type="text" id="edit-book-price" class="form-input" required>
-                                    </div>
-                                    <div class="md:col-span-2">
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Comment</label>
-                                        <textarea id="edit-book-comment" class="form-input" rows="3"></textarea>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Account Status <span class="text-red-500">*</span>
+                                        </label>
+                                        <select class="form-input" id="edit-account-status" required>
+                                            <option value="active">Active</option>
+                                            <option value="inactive">Inactive</option>
+                                            <option value="suspended">Suspended</option>
+                                        </select>
                                     </div>
                                 </div>
+
                                 <div class="flex justify-end gap-3 mt-6">
-                                    <button type="button" id="cancel-edit-book" class="btn-secondary">Cancel</button>
+                                    <button type="button" id="cancel-edit-user" class="btn-secondary">Cancel</button>
                                     <button type="submit" class="btn-primary">Save Changes</button>
                                 </div>
                             </form>
                         </div>
                     </div>
                 </div>
-            </main>
-        </div>
+            </div>
+
+            <!-- Notifications Page -->
+            <div id="notifications-page" class="page-content hidden">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                    <div>
+                        <h1 class="text-2xl font-bold">Notifications</h1>
+                        <p class="text-gray-500">Send announcements and notifications</p>
+                    </div>
+                    <div class="mt-4 md:mt-0 flex gap-3">
+                        <button class="btn-primary flex items-center gap-2" id="compose-notification-btn">
+                            <i class="fa fa-plus"></i> Compose Message
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Compose Notification Form -->
+                <div id="compose-notification" class="card mb-6 hidden">
+                    <h3 class="font-semibold text-lg mb-4">Compose Notification</h3>
+                    <form id="notification-form">
+                        <div class="grid grid-cols-1 gap-4">
+                            <div class="bg-blue-50 p-3 rounded-lg">
+                                <p class="text-sm text-blue-600 mb-1"><i class="fa fa-info-circle"></i> This
+                                    notification will be sent to the shopping system homepage.</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                                <input type="text" class="form-input" placeholder="Enter notification subject"
+                                    id="notification-subject" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                                <textarea class="form-input" rows="5" placeholder="Enter your message"
+                                    id="notification-message" required></textarea>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="submit" class="btn-primary">Send</button>
+                                <button type="button" class="btn-secondary" id="cancel-notification">Cancel</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Notifications List -->
+                <div class="card">
+                    <h3 class="font-semibold text-lg mb-4">Recent Notifications</h3>
+                    <div class="space-y-4" id="notifications-list">
+                        <!-- Notifications will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Supplier Management Page -->
+                <div id="supplier-management-page" class="page-content hidden">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                        <div>
+                            <h1 class="text-2xl font-bold">Supplier Management</h1>
+                            <p class="text-gray-500">Manage supplier information and contact details</p>
+                        </div>
+                        <div class="mt-4 md:mt-0 flex gap-3">
+                            <div class="relative">
+                                <input type="text" placeholder="Search by name, phone or address..."
+                                    class="w-full md:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+                                    id="supplier-search-input">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
+                                    <i class="fa fa-search"></i>
+                                </span>
+                            </div>
+                            <button class="btn-primary flex items-center gap-2" id="add-supplier-btn">
+                                <i class="fa fa-plus"></i> Add Supplier
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Supplier Table -->
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-semibold text-lg">All Suppliers</h3>
+                            <div class="text-sm text-gray-500">
+                                Showing <span id="supplier-count">15</span> suppliers
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto table-container">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                    <tr>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Supplier ID
+                                        </th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Name
+                                        </th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Phone
+                                        </th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Address
+                                        </th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Email
+                                        </th>
+                                        <th
+                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="supplier-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- Data will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div id="supplier-pagination-controls" class="flex justify-between items-center mt-5">
+                            <p class="text-sm text-gray-500">Showing 1 to 10 of 15 suppliers</p>
+                            <div class="flex gap-1">
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                    disabled>
+                                    <i class="fa fa-chevron-left text-xs"></i>
+                                </button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-primary bg-primary text-white">1</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50">2</button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50">
+                                    <i class="fa fa-chevron-right text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add Supplier Modal -->
+                    <div id="add-supplier-modal"
+                        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+                        <div class="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+                            <div class="p-6">
+                                <h3 class="text-lg font-semibold mb-4">Add New Supplier</h3>
+                                <form id="add-supplier-form">
+                                    <div class="space-y-4">
+                                        <!-- Supplier Name -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Supplier Name <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="text" class="form-input" placeholder="Enter supplier name"
+                                                id="supplier-name" required>
+                                        </div>
+
+                                        <!-- Supplier ID -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Supplier ID <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="text" class="form-input"
+                                                placeholder="Enter supplier ID (e.g., SUP001)" id="supplier-id"
+                                                required>
+                                            <p class="text-xs text-gray-500 mt-1">Format: SUP followed by numbers (e.g.,
+                                                SUP001)</p>
+                                        </div>
+
+                                        <!-- Phone Number -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Phone Number <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="tel" class="form-input" placeholder="Enter phone number"
+                                                id="supplier-phone" required>
+                                        </div>
+
+                                        <!-- Address -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Address <span class="text-red-500">*</span>
+                                            </label>
+                                            <textarea class="form-input" rows="3" placeholder="Enter full address"
+                                                id="supplier-address" required></textarea>
+                                        </div>
+
+                                        <!-- Email -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Email Address <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="email" class="form-input" placeholder="Enter email address"
+                                                id="supplier-email" required>
+                                        </div>
+
+                                        <!-- Contact Person -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Contact Person
+                                            </label>
+                                            <input type="text" class="form-input"
+                                                placeholder="Enter contact person name" id="supplier-contact">
+                                        </div>
+
+                                        <!-- Supplier Category -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Category
+                                            </label>
+                                            <select class="form-input" id="supplier-category">
+                                                <option value="">Select category</option>
+                                                <option value="book">Book Publisher</option>
+                                                <option value="stationery">Stationery</option>
+                                                <option value="gift">Gift Items</option>
+                                                <option value="office">Office Supplies</option>
+                                                <option value="other">Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex justify-end gap-3 mt-6">
+                                        <button type="button" id="cancel-add-supplier"
+                                            class="btn-secondary">Cancel</button>
+                                        <button type="submit" class="btn-primary">Add Supplier</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Edit Supplier Modal -->
+                    <div id="edit-supplier-modal"
+                        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+                        <div class="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+                            <div class="p-6">
+                                <h3 class="text-lg font-semibold mb-4">Edit Supplier Information</h3>
+                                <form id="edit-supplier-form">
+                                    <input type="hidden" id="edit-supplier-original-id">
+
+                                    <div class="space-y-4">
+                                        <!-- Supplier ID (readonly) -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Supplier ID
+                                            </label>
+                                            <input type="text" class="form-input bg-gray-50" id="edit-supplier-id"
+                                                readonly>
+                                        </div>
+
+                                        <!-- Supplier Name -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Supplier Name <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="text" class="form-input" id="edit-supplier-name" required>
+                                        </div>
+
+                                        <!-- Phone Number -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Phone Number <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="tel" class="form-input" id="edit-supplier-phone" required>
+                                        </div>
+
+                                        <!-- Address -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Address <span class="text-red-500">*</span>
+                                            </label>
+                                            <textarea class="form-input" rows="3" id="edit-supplier-address"
+                                                required></textarea>
+                                        </div>
+
+                                        <!-- Email -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Email Address <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="email" class="form-input" id="edit-supplier-email" required>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex justify-end gap-3 mt-6">
+                                        <button type="button" id="cancel-edit-supplier"
+                                            class="btn-secondary">Cancel</button>
+                                        <button type="submit" class="btn-primary">Save Changes</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
 
     <!-- Manager-specific scripts -->
@@ -1117,7 +1407,11 @@
         // 等待DOM加载完成
         document.addEventListener('DOMContentLoaded', function () {
             // 初始化布局，角色为manager，默认页面为overview
-            window.initLayout('manager', 'overview');
+            if (typeof initLayout === 'function') {
+                initLayout('manager', 'overview');
+            } else {
+                console.error('Layout script failed to load!');
+            }
         });
     </script>
 </body>
