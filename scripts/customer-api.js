@@ -7,7 +7,7 @@ const API_CONFIG = {
     endpoints: {
         books: {
             list: '/books.php?action=list',
-            search: '/books.php?action=search',
+            search: '/search.php',
             detail: '/books.php?action=detail'
         },
         favorites: {
@@ -117,7 +117,7 @@ async function searchBooksAPI(keyword, filters = {}) {
         params.append('sort_by', filters.sortBy);
     }
 
-    const url = API_CONFIG.endpoints.books.search + '&' + params.toString();
+    const url = API_CONFIG.endpoints.books.search + '?' + params.toString();
     const response = await apiRequest(url);
     return response.data;
 }

@@ -79,12 +79,12 @@ async function renderCategoryBooks(category) {
         const books = await fetchBooks(filters);
         allBooks = books; // Cache books data
 
-        if (books.length === 0) {
+        if (results.length === 0) {
             container.innerHTML = '<p class="text-center py-10 col-span-full text-gray-500 italic">No books found in this category.</p>';
             return;
         }
 
-        container.innerHTML = books.map(book => bookCardTemplate(book)).join('');
+        container.innerHTML = results.map(book => bookCardTemplate(book)).join('');
         bindCartAndFavoriteEvents();
         bindBookCardClickEvents();
     } catch (error) {
@@ -120,20 +120,18 @@ async function searchBooks(keyword) {
         };
 
         // 2. 发起请求
-        const response = await searchBooksAPI(keyword, filters);
-        
-        // 关键逻辑：确保 response.data 是数组且存在
-        const books = Array.isArray(response) ? response : (response && response.data ? response.data : []);
-        allBooks = books; // 更新全局缓存供详情页使用
+        const books = await searchBooksAPI(keyword, filters);
+        const results = Array.isArray(books) ? books : [];
+        allBooks = results; // 更新全局缓存供详情页使用
 
         // 3. 渲染
-        if (books.length === 0) {
+        if (results.length === 0) {
             resultsContainer.innerHTML = '';
             noResults.classList.remove('hidden');
         } else {
             noResults.classList.add('hidden');
             // 容错处理：确保 book 对象包含必要字段再渲染
-            resultsContainer.innerHTML = books.map(book => {
+            resultsContainer.innerHTML = results.map(book => {
                 if(!book.isbn) book.isbn = `temp-${book.id}`; // 临时补齐 ISBN 防止崩溃
                 return bookCardTemplate(book);
             }).join('');
