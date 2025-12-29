@@ -539,12 +539,12 @@
     <div class="pb-4 border-b border-brown-light/30 mb-6">
       <div class="flex justify-between items-start">
         <div>
-          <h2 id="detail-book-title" class="text-3xl md:text-4xl font-serif font-bold text-brown-dark">Book Title</h2>
-          <p id="detail-book-author" class="text-xl text-gray-600 mt-1 italic">Author Name</p>
+          <h2 id="detail-book-title" class="text-3xl md:text-4xl font-serif font-bold text-brown-dark">...</h2>
+          <p id="detail-book-author" class="text-xl text-gray-600 mt-1 italic">Loading...</p>
         </div>
         <div class="text-center bg-brown-cream px-4 py-2 rounded-lg border border-brown-light/20">
           <i class="fa fa-heart text-red-500 text-xl"></i>
-          <p id="detail-fav-count" class="text-xs font-bold text-brown-dark mt-1">1,240</p>
+          <p id="detail-fav-count" class="text-xs font-bold text-brown-dark mt-1">0</p>
           <p class="text-[10px] text-gray-500 uppercase">Favorites</p>
         </div>
       </div>
@@ -560,15 +560,17 @@
                 Headquarters</span></p>
             <p class="flex justify-between items-center"><span class="text-sm text-gray-600 font-medium">Binding
                 Format:</span><span id="detail-binding" class="text-sm font-bold text-brown-dark">Hardcover</span></p>
-            <p class="flex justify-between items-center"><span class="text-sm text-gray-600 font-medium">Stock
-                Status:</span><span id="detail-book-stock" class="text-sm font-bold text-green-600"><i
-                  class="fa fa-check-circle"></i> In Stock (50+)</span></p>
+            <p class="flex justify-between items-center">
+              <span class="text-sm text-gray-600 font-medium">Stock Status:</span>
+              <span id="detail-book-stock" class="text-sm font-bold text-gray-400">Checking...</span>
+            </p>
           </div>
         </div>
         <div class="flex flex-col gap-4">
-          <div class="flex items-baseline gap-2"><span id="detail-book-price"
-              class="text-4xl font-extrabold text-red-600">¥0.00</span><span class="text-xs text-gray-400">Regular
-              Price</span></div>
+          <div class="flex items-baseline gap-2">
+            <span id="detail-book-price" class="text-4xl font-extrabold text-red-600">¥0.00</span>
+            <span class="text-xs text-gray-400">Regular Price</span>
+          </div>
           <div class="flex gap-3">
             <button id="add-to-cart"
               class="flex-1 bg-brown text-white py-4 rounded-xl font-bold hover:bg-brown-dark transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"><i
@@ -585,7 +587,8 @@
             Introduction</h3>
           <p id="detail-book-desc"
             class="text-gray-700 leading-relaxed text-base italic bg-gray-50 p-4 rounded-lg border-l-4 border-brown-light">
-            This is a sample book introduction.</p>
+            Loading book introduction...
+          </p>
         </div>
         <div class="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
           <p class="text-sm"><span class="font-medium text-brown-dark">Category:</span> <span id="detail-book-category"
@@ -594,8 +597,6 @@
               id="detail-book-publisher" class="text-gray-600">Publisher Co.</span></p>
           <p class="text-sm"><span class="font-medium text-brown-dark">Language:</span> <span id="detail-book-language"
               class="text-gray-600">English</span></p>
-          <p class="text-sm"><span class="font-medium text-brown-dark">Pages:</span> <span id="detail-book-pages"
-              class="text-gray-600">300</span></p>
           <p class="text-sm col-span-2"><span class="font-medium text-brown-dark">ISBN:</span> <span
               id="detail-book-isbn" class="text-gray-600 text-xs">978-3-16-148410-0</span></p>
         </div>
