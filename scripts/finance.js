@@ -1,20 +1,73 @@
 // scripts/finance.js
 const CURRENCY_SYMBOL = '\uFFE5';
 
+// ==========================================
+// 补丁：放在文件最前面
+// ==========================================
+window.showLoading = function(containerId, message = 'Loading...') {
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.innerHTML = `
+            <tr>
+                <td colspan="100%" class="px-4 py-10 text-center text-gray-500">
+                    <div class="flex flex-col items-center justify-center">
+                        <i class="fa fa-circle-o-notch fa-spin text-3xl text-[#8B5A2B] mb-2"></i>
+                        <span class="text-sm font-medium">${message}</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+};
+
+window.hideLoading = function() {
+    // 占位函数，防止报错
+};
+// ==========================================
+
+
 function addStatusStyles() {
     const style = document.createElement('style');
     style.textContent = `
-        .invoice-unpaid { background-color: #fee2e2; color: #dc2626; }
-        .invoice-partial { background-color: #fef3c7; color: #d97706; }
-        .invoice-paid { background-color: #d1fae5; color: #059669; }
-        .invoice-overdue { background-color: #ffedd5; color: #ea580c; }
-        .invoice-void { background-color: #f3f4f6; color: #6b7280; }
+        /* =========================================
+           1. 补全状态颜色 (对应 JS 中的 switch 逻辑)
+           防止 Tailwind 未加载时颜色丢失
+           ========================================= */
+        
+        /* PAID (绿色) */
+        .bg-green-100 { background-color: #d1fae5 !important; }
+        .text-green-800 { color: #065f46 !important; }
 
-        .order-created { background-color: #dbeafe; color: #1e40af; }
-        .order-processing { background-color: #fef3c7; color: #d97706; }
-        .order-paid { background-color: #d1fae5; color: #059669; }
-        .order-completed { background-color: #f3e8ff; color: #7c3aed; }
+        /* PARTLY_PAID (黄色) */
+        .bg-yellow-100 { background-color: #fef3c7 !important; }
+        .text-yellow-800 { color: #92400e !important; }
 
+        /* DRAFT / ISSUED (蓝色) */
+        .bg-blue-50 { background-color: #eff6ff !important; }
+        .bg-blue-100 { background-color: #dbeafe !important; }
+        .text-blue-600 { color: #2563eb !important; }
+        .text-blue-800 { color: #1e40af !important; }
+
+        /* OVERDUE (红色) */
+        .bg-red-100 { background-color: #fee2e2 !important; }
+        .text-red-800 { color: #991b1b !important; }
+
+        /* VOID (灰色) */
+        .bg-gray-200 { background-color: #e5e7eb !important; }
+        .text-gray-600 { color: #4b5563 !important; }
+        
+        /* CREDITED (紫色) */
+        .bg-purple-100 { background-color: #f3e8ff !important; }
+        .text-purple-800 { color: #6b21a8 !important; }
+        
+        /* 默认/未知 (浅灰) */
+        .bg-gray-50 { background-color: #f9fafb !important; }
+        .bg-gray-100 { background-color: #f3f4f6 !important; }
+        .text-gray-800 { color: #1f2937 !important; }
+
+        /* =========================================
+           2. 之前的 UI 组件样式 (保留不变)
+           ========================================= */
         .modal { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -47,6 +100,8 @@ function addStatusStyles() {
     `;
     document.head.appendChild(style);
 }
+
+
 
 let paymentMethodPieChart = null;
 let revenueByDateChart = null;
@@ -580,92 +635,150 @@ function renderOrderList(orders) {
     }, 0);
 }
 
+
+/**
+ * 渲染发票列表
+ * 基于后端 JSON 数据结构 和 前端 10 列表头设计
+ */
 function renderInvoiceList(invoices) {
     const container = document.getElementById('invoice-table-body');
     if (!container) return;
 
+
+
+    // 1. 清空容器
     container.innerHTML = '';
 
+    // 2. 处理无数据情况
     if (!invoices || invoices.length === 0) {
         container.innerHTML = `
             <tr>
-                <td colspan="11" class="px-4 py-8 text-center text-gray-500">
-                    No invoices found matching your criteria.
+                <td colspan="10" class="px-4 py-8 text-center text-gray-500">
+                    No invoices found.
                 </td>
             </tr>
         `;
-        updateInvoicePaginationInfo(0);
         return;
     }
 
     const fragment = document.createDocumentFragment();
-    
+
+    // 3. 遍历数据生成表格行
     invoices.forEach(invoice => {
-        let statusClass = 'invoice-unpaid';
-        let statusText = invoice.status;
-        switch (invoice.status) {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-50 transition-colors border-b border-gray-100';
+        tr.dataset.invoiceId = invoice.invoiceId; // 用于事件代理
+
+        // --- A. 数据格式化处理 ---
+        
+        // 金额格式化 (保留2位小数，处理 undefined)
+        const formatMoney = (amount) => {
+            const num = parseFloat(amount || 0);
+            return '$' + num.toFixed(2);
+        };
+
+        // 日期格式化 (截取 YYYY-MM-DD)
+        const formatDate = (dateString) => {
+            if (!dateString) return '-';
+            return dateString.substring(0, 10); 
+        };
+
+        // 状态颜色逻辑 (根据 JSON 中的 status 字段)
+        let badgeClass = '';
+        const status = (invoice.status || '').toUpperCase();
+
+        const displayStatus = status.replace(/_/g, ' ');
+        
+        switch (status) {
             case 'PAID':
-                statusClass = 'invoice-paid';
+                badgeClass = 'bg-green-100 text-green-800';
                 break;
             case 'PARTIAL':
-                statusClass = 'invoice-partial';
+            case 'PARTIALLY_PAID':
+            case 'PARTLY_PAID':    
+                badgeClass = 'bg-yellow-100 text-yellow-800';
                 break;
-            case 'OVERDUE':
-                statusClass = 'invoice-overdue';
+            case 'VOIDED':
+                badgeClass = 'bg-gray-200 text-gray-600';
                 break;
-            case 'VOID':
-                statusClass = 'invoice-void';
+            case 'ISSUED':
+            case 'DRAFT':
+                badgeClass = 'bg-blue-100 text-blue-800';
                 break;
+            case 'CREDITED':
+                badgeClass ='bg-purple-100 text-purple-800';
+                break;
+            default: 
+                badgeClass = 'bg-gray-50 text-gray-600';
         }
 
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 transition-colors';
-        row.dataset.invoiceId = invoice.invoiceId;
+        // --- B. 构建 HTML (严格对应 8 列) ---
+        tr.innerHTML = `
+            <td class="px-4 py-4 text-sm font-medium text-gray-900">
+                #${invoice.invoiceNumber}
+            </td>
 
-        row.innerHTML = `
-            <td class="px-4 py-4 text-sm font-medium">${invoice.invoiceNumber || invoice.invoiceId}</td>
-            <td class="px-4 py-4 text-sm">${invoice.orderId}</td>
-            <td class="px-4 py-4 text-sm">${invoice.storeName}</td>
-            <td class="px-4 py-4 text-sm">
-                <div class="flex flex-col">
-                    <span class="font-medium">${invoice.memberId}</span>
-                    <span class="text-xs text-gray-500">${invoice.memberName}</span>
-                </div>
+            <td class="px-4 py-4 text-sm text-gray-500">
+                #${invoice.orderId}
             </td>
-            <td class="px-4 py-4 text-sm">
-                <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${statusText}</span>
+
+            <td class="px-4 py-4 text-sm text-gray-900">
+                <span class="font-medium">${invoice.memberName || 'Guest'}</span>
             </td>
-            <td class="px-4 py-4 text-sm">${formatDateTime(invoice.issuedAt || invoice.issueDate)}</td>
-            <td class="px-4 py-4 text-sm">${formatDateTime(invoice.dueDate)}</td>
-            <td class="px-4 py-4 text-sm">${formatCurrency(invoice.invoiceAmount)}</td>
-            <td class="px-4 py-4 text-sm">${formatCurrency(invoice.paidAmount)}</td>
-            <td class="px-4 py-4 text-sm">${formatCurrency(invoice.balanceAmount)}</td>
+
             <td class="px-4 py-4 text-sm">
-                <div class="flex gap-2">
-                    <button class="text-[#8B5A2B] hover:text-[#8B5A2B]/80 view-invoice" data-invoice="${invoice.invoiceId}" title="View Details">
+                <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${badgeClass}">
+                    ${status}
+                </span>
+            </td>
+
+            <td class="px-4 py-4 text-sm text-gray-500 whitespace-nowrap">
+                ${formatDate(invoice.issueDate)}
+            </td>
+
+            <td class="px-4 py-4 text-sm text-gray-500 whitespace-nowrap">
+                ${formatDate(invoice.dueDate)}
+            </td>
+
+            <td class="px-4 py-4 text-sm font-medium text-gray-900">
+                ${formatMoney(invoice.invoiceAmount)}
+            </td>
+
+
+            <td class="px-4 py-4 text-sm">
+                <div class="flex items-center gap-3">
+                    <button class="text-blue-600 hover:text-blue-800 transition-colors view-invoice" 
+                            title="View Details"
+                            onclick="window.viewInvoiceDetail(${invoice.invoiceId})">
                         <i class="fa fa-eye"></i>
                     </button>
-                    <button class="text-red-600 hover:text-red-800 void-invoice" data-invoice="${invoice.invoiceId}" data-status="${invoice.status}" title="Void Invoice" ${invoice.status === 'VOID' || invoice.status === 'PAID' ? 'disabled' : ''}>
+                    
+                    <button class="text-red-600 hover:text-red-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Void Invoice"
+                            onclick="voidInvoice(${invoice.invoiceId})"
+                            ${(status === 'VOID' || status === 'PAID'||status === 'VOIDED'||status ==='PARTLY_PAID') ? 'disabled' : ''}>
                         <i class="fa fa-ban"></i>
                     </button>
-                    <button class="text-blue-600 hover:text-blue-800 print-invoice" data-invoice="${invoice.invoiceId}" title="Print/Export PDF">
+                    
+                    <button class="text-gray-500 hover:text-gray-700 transition-colors print-invoice"
+                            title="Print">
                         <i class="fa fa-print"></i>
                     </button>
                 </div>
             </td>
         `;
-        
-        fragment.appendChild(row);
+
+        fragment.appendChild(tr);
     });
 
+    // 4. 一次性插入 DOM
     container.appendChild(fragment);
-    updateInvoicePaginationInfo(invoices.length);
-    
-    // 延迟添加事件监听器
+    //激活按钮事件
     setTimeout(() => {
         addInvoiceEventListeners();
     }, 0);
 }
+
 function updateOrderPaginationInfo(totalOrders) {
     const paginationInfo = document.getElementById('order-pagination-info');
     if (paginationInfo) {
@@ -921,38 +1034,82 @@ function initInvoicePage() {
     loadInvoiceList();
 }
 
+
+// --- 1. 初始化筛选器监听 ---
 function initInvoiceFilters() {
-    document.getElementById('invoice-search-btn').addEventListener('click', filterInvoices);
-    document.getElementById('invoice-reset-btn').addEventListener('click', resetInvoiceFilters);
-    document.getElementById('invoice-search').addEventListener('keypress', e => {
-        if (e.key === 'Enter') filterInvoices();
-    });
+    // 绑定搜索按钮
+    const searchBtn = document.getElementById('invoice-search-btn');
+    if (searchBtn) {
+        searchBtn.addEventListener('click', filterInvoices);
+    }
+
+    // 绑定重置按钮
+    const resetBtn = document.getElementById('invoice-reset-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', resetInvoiceFilters);
+    }
+
+    // 绑定顶部搜索框的回车事件 (如果有的话)
+    const keywordInput = document.getElementById('invoice-search');
+    if (keywordInput) {
+        keywordInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter') filterInvoices();
+        });
+    }
+
+    // 处理创建按钮
     const createBtn = document.getElementById('create-invoice-btn');
     if (createBtn) {
         createBtn.addEventListener('click', () => alert('Create Invoice is handled from Order list.'));
     }
 }
 
+// --- 2. 执行筛选 ---
 async function filterInvoices() {
+    // 收集所有筛选条件
     const filters = {
-        search: document.getElementById('invoice-search').value.trim(),
+        // 顶部的关键字搜索
+        search: document.getElementById('invoice-search') ? document.getElementById('invoice-search').value.trim() : '',
+        
+        // 状态筛选
         status: document.getElementById('invoice-status-filter').value,
-        // 删除 branch 筛选
-        orderOrInvoiceId: document.getElementById('invoice-order-filter').value.trim(), // 修改：改为搜索order或invoice id
+        
+        // 订单 ID
+        orderId: document.getElementById('invoice-order-filter').value.trim(),
+        
+        // 日期范围
         startDate: document.getElementById('invoice-start-date').value,
-        endDate: document.getElementById('invoice-end-date').value
+        endDate: document.getElementById('invoice-end-date').value,
+        
+        // 🟢 新增：金额范围 (核心修改点)
+        minAmount: document.getElementById('filter-min-amount') ? document.getElementById('filter-min-amount').value : '',
+        maxAmount: document.getElementById('filter-max-amount') ? document.getElementById('filter-max-amount').value : ''
     };
 
+    console.log("正在筛选发票，条件:", filters); // 方便你在 F12 控制台调试
     await loadInvoiceList(filters);
 }
 
+// --- 3. 重置筛选 ---
 async function resetInvoiceFilters() {
-    document.getElementById('invoice-search').value = '';
-    document.getElementById('invoice-status-filter').value = '';
-    document.getElementById('invoice-order-filter').value = '';
-    document.getElementById('invoice-start-date').value = '';
-    document.getElementById('invoice-end-date').value = '';
+    // 定义所有需要清空的输入框 ID
+    const inputIds = [
+        'invoice-search',        // 顶部搜索
+        'invoice-status-filter', // 状态
+        'invoice-order-filter',  // 订单ID
+        'invoice-start-date',    // 开始日期
+        'invoice-end-date',      // 结束日期
+        'filter-min-amount',     // 🟢 新增：最小金额
+        'filter-max-amount'      // 🟢 新增：最大金额
+    ];
 
+    // 循环清空，并在清空前检查元素是否存在(防止报错)
+    inputIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+
+    // 重新加载所有数据
     await loadInvoiceList();
 }
 
@@ -996,84 +1153,6 @@ async function loadInvoiceList(filters = {}) {
     }
 }
 
-function renderInvoiceList(invoices) {
-    const container = document.getElementById('invoice-table-body');
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    if (!invoices || invoices.length === 0) {
-        container.innerHTML = `
-            <tr>
-                <td colspan="11" class="px-4 py-8 text-center text-gray-500">
-                    No invoices found matching your criteria.
-                </td>
-            </tr>
-        `;
-        updateInvoicePaginationInfo(0);
-        return;
-    }
-
-    invoices.forEach(invoice => {
-        let statusClass = 'invoice-unpaid';
-        let statusText = invoice.status;
-        switch (invoice.status) {
-            case 'PAID':
-                statusClass = 'invoice-paid';
-                break;
-            case 'PARTIAL':
-                statusClass = 'invoice-partial';
-                break;
-            case 'OVERDUE':
-                statusClass = 'invoice-overdue';
-                break;
-            case 'VOID':
-                statusClass = 'invoice-void';
-                break;
-        }
-
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 transition-colors';
-        row.dataset.invoiceId = invoice.invoiceId;
-
-        row.innerHTML = `
-            <td class="px-4 py-4 text-sm font-medium">${invoice.invoiceNumber || invoice.invoiceId}</td>
-            <td class="px-4 py-4 text-sm">${invoice.orderId}</td>
-            <td class="px-4 py-4 text-sm">${invoice.storeName}</td>
-            <td class="px-4 py-4 text-sm">
-                <div class="flex flex-col">
-                    <span class="font-medium">${invoice.memberId}</span>
-                    <span class="text-xs text-gray-500">${invoice.memberName}</span>
-                </div>
-            </td>
-            <td class="px-4 py-4 text-sm">
-                <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${statusText}</span>
-            </td>
-            <td class="px-4 py-4 text-sm">${formatDateTime(invoice.issuedAt || invoice.issueDate)}</td>
-            <td class="px-4 py-4 text-sm">${formatDateTime(invoice.dueDate)}</td>
-            <td class="px-4 py-4 text-sm">${formatCurrency(invoice.invoiceAmount)}</td>
-            <td class="px-4 py-4 text-sm">${formatCurrency(invoice.paidAmount)}</td>
-            <td class="px-4 py-4 text-sm">${formatCurrency(invoice.balanceAmount)}</td>
-            <td class="px-4 py-4 text-sm">
-                <div class="flex gap-2">
-                    <button class="text-[#8B5A2B] hover:text-[#8B5A2B]/80 view-invoice" data-invoice="${invoice.invoiceId}" title="View Details">
-                        <i class="fa fa-eye"></i>
-                    </button>
-                    <button class="text-red-600 hover:text-red-800 void-invoice" data-invoice="${invoice.invoiceId}" data-status="${invoice.status}" title="Void Invoice" ${invoice.status === 'VOID' || invoice.status === 'PAID' ? 'disabled' : ''}>
-                        <i class="fa fa-ban"></i>
-                    </button>
-                    <button class="text-blue-600 hover:text-blue-800 print-invoice" data-invoice="${invoice.invoiceId}" title="Print/Export PDF">
-                        <i class="fa fa-print"></i>
-                    </button>
-                </div>
-            </td>
-        `;
-        container.appendChild(row);
-    });
-
-    updateInvoicePaginationInfo(invoices.length);
-    addInvoiceEventListeners();
-}
 
 function updateInvoicePaginationInfo(totalInvoices) {
     const paginationInfo = document.getElementById('invoice-pagination-info');
@@ -1090,26 +1169,7 @@ function addInvoiceEventListeners() {
         });
     });
 
-    document.querySelectorAll('.void-invoice').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const invoiceId = btn.getAttribute('data-invoice');
-            const currentStatus = btn.getAttribute('data-status');
 
-            if (currentStatus === 'VOID') {
-                alert('This invoice is already voided.');
-                return;
-            }
-
-            if (currentStatus === 'PAID') {
-                alert('Cannot void a paid invoice.');
-                return;
-            }
-
-            if (confirm('Are you sure you want to void this invoice? This action cannot be undone.')) {
-                await voidInvoice(invoiceId);
-            }
-        });
-    });
 
     document.querySelectorAll('.print-invoice').forEach(btn => {
         btn.addEventListener('click', async () => {
@@ -1119,7 +1179,7 @@ function addInvoiceEventListeners() {
     });
 }
 
-async function viewInvoiceDetails(invoiceId) {
+/*async function viewInvoiceDetails(invoiceId) {
     try {
         const data = await fetchInvoiceDetail(invoiceId);
         if (data) {
@@ -1131,7 +1191,28 @@ async function viewInvoiceDetails(invoiceId) {
         console.error('Failed to load invoice detail:', error);
         alert('Failed to load invoice detail.');
     }
-}
+}*/
+
+
+window.viewInvoiceDetail = async function(invoiceId) {
+    try {
+        // 1. 调用 API 获取数据
+        // 返回的数据结构是: { invoice: {...}, payments: [...] }
+        const data = await fetchInvoiceDetail(invoiceId);
+        
+        if (data && data.invoice) {
+            
+            // 如果后端返回了支付记录，也可以把 data.payments 传进去，
+            // 但目前 showInvoiceDetailModal 似乎只接收一个参数，我们先传主数据
+            showInvoiceDetailModal(data.invoice); 
+        } else {
+            alert(`Invoice ${invoiceId} not found.`);
+        }
+    } catch (error) {
+        console.error('Failed to load invoice detail:', error);
+        alert('Failed to load invoice detail.');
+    }
+};
 
 // 创建发票详情弹窗
 function showInvoiceDetailModal(invoice) {
@@ -1372,33 +1453,42 @@ function showInvoiceDetailModal(invoice) {
     document.addEventListener('keydown', handleEscKey);
 }
 
-// 作废发票函数
-async function voidInvoice(invoiceId) {
+// ==========================================
+// 作废发票核心函数 (挂载到 window 全局)
+// ==========================================
+window.voidInvoice = async function(invoiceId) {
+    // 1. 安全检查：ID 是否存在
+    if (!invoiceId) {
+        alert('Error: Missing Invoice ID');
+        return;
+    }
+
+    // 2. 状态检查：二次确认
+    // (注意：HTML 里的 disabled 属性防君子不防小人，这里确认框是最后一道防线)
+    if (!confirm('Are you sure you want to void this invoice? This action cannot be undone.')) {
+        return;
+    }
+
     try {
-        // 这里应该调用API作废发票
-        // 暂时用模拟函数
-        const response = await voidInvoiceApi(invoiceId);
+        // 3. 调用 API (注意：这里用了 voidInvoiceRequest)
+        // 确保你的 finance-api.js 里已经改成了 endpoints.invoices.voidInvoice
+        const response = await voidInvoiceRequest(invoiceId);
+        
         if (response.success) {
             alert('Invoice has been voided successfully.');
-            await loadInvoiceList(); // 重新加载发票列表
+            
+            // 4. 刷新列表 (保留当前筛选条件的最佳做法是重新调用 loadInvoiceList)
+            // 如果你想做得更完美，可以检查当前是否有筛选条件
+            await loadInvoiceList(); 
         } else {
             alert('Failed to void invoice: ' + response.message);
         }
     } catch (error) {
         console.error('Failed to void invoice:', error);
-        alert('Failed to void invoice.');
+        alert('Error: ' + (error.message || 'Failed to connect to server'));
     }
-}
+};
 
-// 模拟作废发票API函数
-async function voidInvoiceApi(invoiceId) {
-    return new Promise(resolve => {
-        setTimeout(() => {
-            // 在实际应用中，这里应该调用后端API
-            resolve({ success: true, message: 'Invoice voided successfully' });
-        }, 100);
-    });
-}
 
 // 打印/导出PDF函数
 async function printInvoice(invoiceId) {
