@@ -3,6 +3,7 @@ staff：
   订单页面details看不了
   排序/搜索还在前端实现
   stock依旧没连接（顺着修呢😁）
+【ywt：现在能实现生成一个order就生成一条状态为draft的invoice记录吗？】
 
 customer:
   ⭐js里面那些原来模拟接入的数据和接口都得删！！！！！！不要一直覆盖，直接替换成能接上后端的接口
@@ -19,5 +20,6 @@ manager:
   搜索的实现
 
 finance:
-xian:我这里看的finance界面加载不出来数据，一直在loading
-可以看一下有哪些按钮不需要了可以进行删除：例如create invoice这种
+xian:我这里看的finance界面加载不出来数据，一直在loading【ywt：已经加载出来了】
+可以看一下有哪些按钮不需要了可以进行删除：例如create invoice这种【ywt：明天删】
+
