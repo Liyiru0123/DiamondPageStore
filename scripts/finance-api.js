@@ -14,7 +14,8 @@ const FINANCE_API_CONFIG = {
         invoices: {
             list: '/invoices.php?action=list',
             detail: '/invoices.php?action=detail',
-            receivePayment: '/invoices.php?action=receive_payment'
+            receivePayment: '/invoices.php?action=receive_payment',
+            voidInvoice: '/invoices.php?action=void'//作废支票
         }
     }
 };
@@ -99,6 +100,8 @@ async function fetchInvoiceList(filters = {}) {
     if (filters.orderId) params.append('order_id', filters.orderId);
     if (filters.startDate) params.append('start_date', filters.startDate);
     if (filters.endDate) params.append('end_date', filters.endDate);
+    if (filters.minAmount) params.append('min_amount', filters.minAmount);
+    if (filters.maxAmount) params.append('max_amount', filters.maxAmount);
     const url = FINANCE_API_CONFIG.endpoints.invoices.list + (params.toString() ? '&' + params.toString() : '');
     const res = await financeApiRequest(url);
     return res.data;
@@ -114,5 +117,13 @@ async function recordInvoicePayment(invoiceId, amount, paymentMethod) {
     return financeApiRequest(FINANCE_API_CONFIG.endpoints.invoices.receivePayment, {
         method: 'POST',
         body: JSON.stringify({ invoice_id: invoiceId, amount, payment_method: paymentMethod })
+    });
+}
+
+
+async function voidInvoiceRequest(invoiceId) {
+    return financeApiRequest(FINANCE_API_CONFIG.endpoints.invoices.voidInvoice, {
+        method: 'POST',
+        body: JSON.stringify({ invoice_id: invoiceId })
     });
 }
