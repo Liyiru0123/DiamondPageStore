@@ -61,16 +61,45 @@ http://localhost/DiamondPageStore/pages/finance.html
 http://localhost/DiamondPageStore/pages/staff.html
 ```
 
-## 第十二步：登录账号和密码()
-Head Office：emp001-003     密码：hash_e001-003  staff
+## 第十二步：登录账号和密码
+### **1. Downtown Store (Store ID: 1)**
+| 工号 | 姓名 | 职位 | 用户名 | 密码哈希 |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | Alex Tan | Head Office | emp001 | hash_e001 |
+| 2 | Brian Lim | Head Office | emp002 | hash_e002 |
+| 3 | Chloe Ng | Head Office | emp003 | hash_e003 |
+| 4 | Dylan Ong | Store Manager | emp004 | hash_e004 |
+| 8 | Henry Chua | Finance | emp008 | hash_e008 |
+| 12 | Lucas Low | Finance | emp012 | hash_e012 |
+| 13 | Megan Wong | Finance | emp013 | hash_e013 |
+| 14 | Noah Chan | Staff | emp014 | hash_e014 |
+| 18 | Ryan Sim | Staff | emp018 | hash_e018 |
+| 22 | Victor Liew | Staff | emp022 | hash_e022 |
 
-Store Manager：emp004-007   密码：hash_e004-007  manager
+### **2. University Store (Store ID: 2)**
+| 工号 | 姓名 | 职位 | 用户名 | 密码哈希 |
+| :--- | :--- | :--- | :--- | :--- |
+| 5 | Ethan Goh | Store Manager | emp005 | hash_e005 |
+| 9 | Ivy Koh | Finance | emp009 | hash_e009 |
+| 15 | Olivia Tan | Staff | emp015 | hash_e015 |
+| 19 | Sophie Lau | Staff | emp019 | hash_e019 |
+| 23 | Wendy Soh | Staff | emp023 | hash_e023 |
 
-Finance Staff: emp008-013   密码：hash_e008-013  finance
+### **3. Community Store (Store ID: 3)**
+| 工号 | 姓名 | 职位 | 用户名 | 密码哈希 |
+| :--- | :--- | :--- | :--- | :--- |
+| 6 | Fiona Teo | Store Manager | emp006 | hash_e006 |
+| 10 | Jason Ho | Finance | emp010 | hash_e010 |
+| 16 | Peter Ang | Staff | emp016 | hash_e016 |
+| 20 | Tristan Foo | Staff | emp020 | hash_e020 |
 
-Sale Staff: emp014-023      密码：hash_e014-023  staff
-
-Customer: member001-077     密码：hash_m001-077  customer
+### **4. Suburban Store (Store ID: 4)**
+| 工号 | 姓名 | 职位 | 用户名 | 密码哈希 |
+| :--- | :--- | :--- | :--- | :--- |
+| 7 | Grace Lee | Store Manager | emp007 | hash_e007 |
+| 11 | Kelly Yap | Finance | emp011 | hash_e011 |
+| 17 | Quinn Seah | Staff | emp017 | hash_e017 |
+| 21 | Uma Yeo | Staff | emp021 | hash_e021 |
 
 ---
 
