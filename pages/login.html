@@ -14,14 +14,6 @@
             const urlParams = new URLSearchParams(window.location.search);
             const role = urlParams.get('role');
             const stage = urlParams.get('stage');
-
-            if (role === 'customer' && stage === '2') {
-                console.log("[Init] Detected Customer Stage 2 login. Auto-selecting UI...");
-                // 1. 自动隐藏角色选择面板 (如有)
-                // document.getElementById('role-selection').classList.add('hidden');
-                // 2. 自动切换到用户登录表单
-                // showLoginForm('customer');
-            }
         })();
     </script>
 </head>

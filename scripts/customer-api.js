@@ -297,16 +297,39 @@ async function fetchProfile() {
 /**
  * 更新个人资料
  */
+
 async function updateProfileAPI(profileData) {
-    const memberId = getCurrentMemberId();
-    const response = await apiRequest(API_CONFIG.endpoints.profile.update, {
+    // 1. 获取当前用户信息
+    const user = JSON.parse(localStorage.getItem('current_user') || '{}');
+    
+    // DEBUG: 在控制台打印出来看看结构（按F12 -> Console查看）
+    console.log("[Profile Update] Current User Data:", user);
+
+    const userId = user.user_id || user.id;
+
+    if (!userId) {
+        console.error("Critical: User ID missing in localStorage object");
+        throw new Error("User ID not found. Please try logging in again.");
+    }
+
+    const payload = {
+        user_id: userId, // 使用修正后的 ID
+        username: profileData.username,
+        contact: profileData.contact,
+        password: profileData.password
+    };
+
+    const response = await fetch('../api/customer/update_profile.php', {
         method: 'POST',
-        body: JSON.stringify({
-            member_id: memberId,
-            ...profileData
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
     });
-    return response;
+
+    const result = await response.json();
+    if (!result.success) {
+        throw new Error(result.message);
+    }
+    return result;
 }
 
 // ========== 会员相关API ==========

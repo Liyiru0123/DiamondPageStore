@@ -248,7 +248,7 @@ SELECT
     st.name AS store_name,
     o.member_id,
     CONCAT(m.first_name, ' ', m.last_name) AS member_name,
-    m.phone AS member_phone,
+    m.email AS member_email,
     o.order_status,
     o.order_date,
     o.note,
@@ -267,7 +267,7 @@ LEFT JOIN invoices inv ON o.order_id = inv.order_id
 LEFT JOIN payment_allocations pa ON inv.invoice_id = pa.invoice_id
 LEFT JOIN payments p ON pa.payment_id = p.payment_id
 GROUP BY o.order_id, o.store_id, st.name, o.member_id, m.first_name, m.last_name,
-         m.phone, o.order_status, o.order_date, o.note, p.payment_method, p.amount, p.create_date
+         m.email, o.order_status, o.order_date, o.note, p.payment_method, p.amount, p.create_date
 ORDER BY o.order_date DESC;
 
 CREATE OR REPLACE VIEW vw_manager_sales_by_store AS

@@ -368,9 +368,17 @@ function renderOrderCard(order) {
 
 function openProfileModal() {
   const user = JSON.parse(localStorage.getItem('current_user') || '{}');
+  
+  // 1. 设置用户名
   document.getElementById('profile-username').value = user.username || '';
-  document.getElementById('profile-email').value = user.email || 'customer@example.com';
+  
+  // 2. 设置邮箱
+  document.getElementById('profile-email').value = user.email || ''; 
+  
+  // 3. 重置密码框
   document.getElementById('profile-password').value = '';
+  
+  // 4. 显示弹窗
   document.getElementById('profile-modal').classList.remove('hidden');
 }
 
@@ -405,6 +413,12 @@ function bindEvents() {
     document.getElementById('sidebar').classList.remove('-translate-x-full');
   });
 
+  // 绑定 Profile Form 提交事件 (新增部分)
+  const profileForm = document.getElementById('profile-form');
+  if (profileForm) {
+      profileForm.addEventListener('submit', handleProfileUpdate);
+  }
+
   document.addEventListener('click', (e) => {
     // A. 侧边栏菜单点击
     const sidebarItem = e.target.closest('.sidebar-item');
@@ -435,7 +449,7 @@ function bindEvents() {
   document.querySelectorAll('.close-profile').forEach(btn => {
     btn.onclick = () => document.getElementById('profile-modal').classList.add('hidden');
   });
-
+  
   // 【新增】购物车内操作的事件委托 (处理动态生成的加减按钮)
   document.getElementById('cart-list')?.addEventListener('click', (e) => {
     const btn = e.target.closest('.cart-op');
@@ -622,3 +636,44 @@ document.addEventListener('click', (e) => {
     }
   }
 });
+
+// 新增处理个人信息函数
+async function handleProfileUpdate(e) {
+    e.preventDefault();
+    
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Saving...";
+
+    const username = document.getElementById('profile-username').value;
+    const contact = document.getElementById('profile-email').value; // 这里对应 "Email / Contact" 输入框
+    const password = document.getElementById('profile-password').value;
+
+    try {
+        await updateProfileAPI({ username, contact, password });
+        
+        // 更新成功后：
+        // 1. 更新本地存储的用户名
+        const currentUser = JSON.parse(localStorage.getItem('current_user') || '{}');
+        currentUser.username = username;
+        localStorage.setItem('current_user', JSON.stringify(currentUser));
+        
+        // 2. 更新界面显示
+        const nameDisplay = document.getElementById('display-user-name');
+        if (nameDisplay) nameDisplay.textContent = username;
+        
+        // 3. 提示并关闭弹窗
+        showAlert("Profile updated successfully!");
+        document.getElementById('profile-modal').classList.add('hidden');
+        
+        // 4. 如果修改了密码，建议重置输入框
+        document.getElementById('profile-password').value = '';
+
+    } catch (error) {
+        showAlert(error.message || "Failed to update profile");
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+}

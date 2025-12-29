@@ -51,12 +51,12 @@ SELECT
     o.note,
     m.first_name,
     m.last_name,
-    m.phone AS member_phone,
+    m.email AS member_email,
     COUNT(oi.sku_id) AS item_count
 FROM orders o
 JOIN members m ON o.member_id = m.member_id
 LEFT JOIN order_items oi ON o.order_id = oi.order_id
-GROUP BY o.order_id, o.store_id, o.order_status, o.order_date, o.note, m.first_name, m.last_name, m.phone;
+GROUP BY o.order_id, o.store_id, o.order_status, o.order_date, o.note, m.first_name, m.last_name, m.email;
 
 -- =========================================================================
 -- CUSTOMER VIEWS
@@ -225,7 +225,7 @@ SELECT
     m.user_id,
     m.first_name,
     m.last_name,
-    m.phone,
+    m.email,
     m.point AS points,
     m.address,
     m.birthday,
