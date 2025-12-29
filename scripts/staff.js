@@ -360,29 +360,32 @@ function renderRecentOrders(data) {
     }
 }
 
-// 渲染 Dashboard: 低库存预警列表
+// A. 渲染 Dashboard: 低库存预警列表 (Dashboard 修正)
 function renderLowStockItems(inventoryData) {
     const lowStockList = document.getElementById('low-stock-list');
     if (!lowStockList) return;
     lowStockList.innerHTML = '';
 
-    // 修改筛选逻辑：qty ==1
+    // 修改筛选逻辑：qty == 1 (根据之前的需求)
     const criticalItems = inventoryData.filter(item => {
         const qty = parseInt(item.quantity || item.stock || 0);
-        return qty === 1
+        return qty === 1;
     });
 
     criticalItems.forEach(item => {
         const row = document.createElement('tr');
 
-        // 兼容字段名
         const name = item.book_name || item.title || 'Unknown';
+        // 修正：优先使用 category，如果没有则显示 binding
         const cat = item.category || item.binding || 'General';
 
-        // 修复后的 HTML 结构：只有 3 个 td，且结构完整
         row.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${name}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${cat}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 overflow-hidden text-ellipsis max-w-[200px]" title="${name}">
+                ${name}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                ${cat}
+            </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm">
                 <button class="text-primary hover:text-primary/80" onclick="switchPage('inventory')">
                     <i class="fa fa-plus-square mr-1"></i> Restock
@@ -393,11 +396,11 @@ function renderLowStockItems(inventoryData) {
     });
 
     if (criticalItems.length === 0) {
-        lowStockList.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-400">No low stock items (1-3)</td></tr>';
+        lowStockList.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-400">No low stock items (Qty: 1)</td></tr>';
     }
 }
 
-// 渲染 Inventory：接收书籍数组，生成 HTML 字符串。负责计算“库存状态颜色”（low/high）
+// 渲染 Inventory：接收书籍数组，生成 HTML
 function renderInventory(data) {
     const inventoryList = document.getElementById('inventory-list');
     if (!inventoryList) return;
@@ -406,17 +409,19 @@ function renderInventory(data) {
     const sourceData = data || globalBooks;
     const pageSize = 10;
 
-    // 2. 获取分页后的切片数据 (使用 common.js 中的工具函数)
+    // 2. 获取分页后的切片数据
     const paginatedData = getPaginatedData(sourceData, staffPageState.inventory, pageSize);
 
-    // 3. 直接渲染行内容
+    // 3. 渲染行内容
     inventoryList.innerHTML = paginatedData.map(item => {
-        // 兼容处理：字段可能来自后端 (book_name) 或前端 mock (title)
         const title = item.book_name || item.title || 'Unknown Title';
         const batch = item.batch_number || item.batch_id || '-';
         const author = item.publisher || item.author || '-';
         const isbn = item.ISBN || item.isbn || '-';
-        const category = item.category || item.binding || '-';
+        
+        // 确保 category 存在，如果为空显示 Uncategorized
+        const category = item.category || 'Uncategorized';
+        
         const price = parseFloat(item.unit_price || item.price || 0).toFixed(2);
         const stock = parseInt(item.quantity || item.stock || 0);
 
@@ -431,24 +436,26 @@ function renderInventory(data) {
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${author}</td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-mono">${isbn}</td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${category}</td>
+                
+                <!-- 修改点：添加 max-w-[150px] 和 truncate 实现省略号 -->
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 max-w-[150px] truncate" title="${category}">
+                    ${category}
+                </td>
+                
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-semibold">¥${price}</td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${stock}</td>
                 <td class="px-4 py-3 whitespace-nowrap">
                     <span class="status-${stockStatus}">${capitalize(stockStatus)}</span>
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm">
-                    <button class="text-primary hover:text-primary/80 mr-3 edit-book-btn" data-id="${item.batch_id || item.id}">
+                    <button class="text-primary hover:text-primary/80 edit-book-btn" data-id="${item.batch_id || item.id}">
                         <i class="fa fa-edit"></i> Edit
-                    </button>
-                    <button class="text-red-600 hover:text-red-700 delete-book-btn" data-id="${item.batch_id || item.id}">
-                        <i class="fa fa-trash"></i> Delete
                     </button>
                 </td>
             </tr>`;
     }).join('');
 
-    // 4. 更新分页控制条 (确保 staff.html 中有 inventory-pagination-controls 容器)
+    // 4. 更新分页控制条
     renderPaginationControls(
         'inventory-pagination-controls',
         sourceData.length,
@@ -460,7 +467,7 @@ function renderInventory(data) {
         pageSize
     );
 
-    // 5. 重新绑定动态生成的按钮事件 (Edit/Delete)
+    // 5. 重新绑定事件
     bindDynamicEvents();
 }
 
