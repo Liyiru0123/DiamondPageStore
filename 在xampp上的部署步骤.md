@@ -65,10 +65,13 @@ http://localhost/DiamondPageStore/pages/staff.html
 ### **1. Downtown Store (Store ID: 1)**
 | 工号 | 姓名 | 职位 | 用户名 | 密码哈希 |
 | :--- | :--- | :--- | :--- | :--- |
-| 1 | Alex Tan | Head Office | emp001 | hash_e001 |
-| 2 | Brian Lim | Head Office | emp002 | hash_e002 |
-| 3 | Chloe Ng | Head Office | emp003 | hash_e003 |
-| 4 | Dylan Ong | Store Manager | emp004 | hash_e004 |
+| 1 | Alex Tan | General Manager | emp001 | hash_e001 |
+| 2 | Brian Lim | General Manager | emp002 | hash_e002 |
+| 3 | Chloe Ng | General Manager | emp003 | hash_e003 |
+| 4 | Dylan Ong | General Manager | emp004 | hash_e004 |
+| 5 | Ethan Goh | General Manager | emp005 | hash_e005 |
+| 6 | Fiona Teo | General Manager | emp006 | hash_e006 |
+| 7 | Grace Lee | General Manager | emp007 | hash_e007 |
 | 8 | Henry Chua | Finance | emp008 | hash_e008 |
 | 12 | Lucas Low | Finance | emp012 | hash_e012 |
 | 13 | Megan Wong | Finance | emp013 | hash_e013 |
@@ -79,7 +82,6 @@ http://localhost/DiamondPageStore/pages/staff.html
 ### **2. University Store (Store ID: 2)**
 | 工号 | 姓名 | 职位 | 用户名 | 密码哈希 |
 | :--- | :--- | :--- | :--- | :--- |
-| 5 | Ethan Goh | Store Manager | emp005 | hash_e005 |
 | 9 | Ivy Koh | Finance | emp009 | hash_e009 |
 | 15 | Olivia Tan | Staff | emp015 | hash_e015 |
 | 19 | Sophie Lau | Staff | emp019 | hash_e019 |
@@ -88,7 +90,6 @@ http://localhost/DiamondPageStore/pages/staff.html
 ### **3. Community Store (Store ID: 3)**
 | 工号 | 姓名 | 职位 | 用户名 | 密码哈希 |
 | :--- | :--- | :--- | :--- | :--- |
-| 6 | Fiona Teo | Store Manager | emp006 | hash_e006 |
 | 10 | Jason Ho | Finance | emp010 | hash_e010 |
 | 16 | Peter Ang | Staff | emp016 | hash_e016 |
 | 20 | Tristan Foo | Staff | emp020 | hash_e020 |
@@ -96,11 +97,16 @@ http://localhost/DiamondPageStore/pages/staff.html
 ### **4. Suburban Store (Store ID: 4)**
 | 工号 | 姓名 | 职位 | 用户名 | 密码哈希 |
 | :--- | :--- | :--- | :--- | :--- |
-| 7 | Grace Lee | Store Manager | emp007 | hash_e007 |
 | 11 | Kelly Yap | Finance | emp011 | hash_e011 |
 | 17 | Quinn Seah | Staff | emp017 | hash_e017 |
 | 21 | Uma Yeo | Staff | emp021 | hash_e021 |
 
+### **客户账户**
+| 用户名 | 密码哈希 |
+| :--- | :--- |
+| member001 | hash_m001 |
+| ... | ... |
+| member077 | hash_m077 |
 ---
 
 ## API 快速检查（可选）
