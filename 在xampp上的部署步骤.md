@@ -26,7 +26,7 @@
 ## 第六步：执行 Customer 相关 SQL
 按顺序执行：
 1. `database/deploy_all.sql`
-2. `database/procedures.sql`
+2. `database/customer_procedures.sql`
 3. `database/triggers.sql`
 
 ## 第七步：执行 Manager 相关 SQL
