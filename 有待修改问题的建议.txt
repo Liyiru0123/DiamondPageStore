@@ -17,7 +17,6 @@ manager:
   Inventory & Pricing 中价格管理，加的书不会被加到数据库中
   删除user会报错
   搜索的实现
-xian:没能成功加载T_T
 
 finance:
 xian:我这里看的finance界面加载不出来数据，一直在loading
