@@ -10,6 +10,47 @@ function showNotification(message) {
     }
 }
 
+window.showAlert = function(message, type = 'info') {
+    // 1. 尝试获取现有的弹窗元素，如果没有则创建
+    let alertElement = document.getElementById('customAlert');
+    if (!alertElement) {
+        alertElement = document.createElement('div');
+        alertElement.id = 'customAlert';
+        // 初始状态为 opacity-0 (不可见)
+        alertElement.className = 'fixed top-20 left-1/2 -translate-x-1/2 text-white px-6 py-3 rounded-lg shadow-lg z-[100] transition-all duration-300 pointer-events-none opacity-0';
+        alertElement.innerHTML = '<span id="alertText"></span>';
+        document.body.appendChild(alertElement);
+    }
+
+    const alertText = document.getElementById('alertText');
+    alertText.innerText = message;
+
+    // 2. 根据 type 动态调整背景颜色 (可选，增加视觉反馈)
+    const typeColors = {
+        'info': 'bg-brown-dark',   // 你原本定义的棕色
+        'success': 'bg-green-600',
+        'error': 'bg-red-600',
+        'warning': 'bg-orange-500'
+    };
+    
+    // 清除之前的背景类，添加当前的背景类
+    alertElement.className = alertElement.className.replace(/bg-\S+/g, '');
+    alertElement.classList.add(typeColors[type] || 'bg-gray-800');
+
+    // 3. 显示弹窗 (修改透明度和位置)
+    alertElement.classList.remove('opacity-0', 'pointer-events-none');
+    alertElement.classList.add('opacity-100');
+    console.log(`[Alert] ${type}: ${message}`);
+
+    // 4. 设定 3 秒后自动消失
+    // 清除之前的定时器，防止快速连续点击导致显示异常
+    if (window.alertTimer) clearTimeout(window.alertTimer);
+    
+    window.alertTimer = setTimeout(() => {
+        alertElement.classList.remove('opacity-100');
+        alertElement.classList.add('opacity-0', 'pointer-events-none');
+    }, 3000);
+};
 /**
  * 全局鉴权检查逻辑，检查用户是否登录以及是否有权限
  * @param {Array} allowedRoles 允许访问该页面的角色列表

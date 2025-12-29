@@ -42,9 +42,26 @@ const API_CONFIG = {
 
 // 获取当前登录用户的member_id
 function getCurrentMemberId() {
-    const user = JSON.parse(localStorage.getItem('current_user') || '{}');
-    // 根据实际的数据结构调整
-    return user.member_id || 1; // 默认返回1用于测试
+    const userData = localStorage.getItem('current_user');
+    if (!userData) {
+        console.error("用户未登录，找不到 current_user");
+        return 1; // 临时返回1，但实际应引导去登录
+    }
+    
+    try {
+        const user = JSON.parse(userData);
+        // 关键：检查你的后端传回来的到底是 id 还是 member_id 还是其他名字
+        const id = user.member_id || user.user_id || user.user_name; 
+        if (!id) {
+            console.warn("解析到了用户对象，但找不到 ID 字段", user);
+            console.log(userObject);
+            return 1;
+        }
+        return id;
+    } catch (e) {
+        console.error("解析用户信息失败", e);
+        return 1;
+    }
 }
 
 // 通用API请求函数
