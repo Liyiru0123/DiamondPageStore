@@ -5,7 +5,9 @@
 // ========== Global Variables ==========
 let allBooks = []; // Cache all books fetched from API
 let ordersCache = []; // Cache orders list from API
-let favorites = favorites || [];
+if (typeof favorites === 'undefined') {
+    favorites = [];
+}
 function getBookById(id) {
     return allBooks.find(book => book.id === id) || null;
 }
@@ -121,7 +123,7 @@ async function searchBooks(keyword) {
         const response = await searchBooksAPI(keyword, filters);
         
         // 关键逻辑：确保 response.data 是数组且存在
-        const books = (response && response.success) ? response.data : [];
+        const books = Array.isArray(response) ? response : (response && response.data ? response.data : []);
         allBooks = books; // 更新全局缓存供详情页使用
 
         // 3. 渲染
