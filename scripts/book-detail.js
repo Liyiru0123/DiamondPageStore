@@ -2,83 +2,113 @@
 
 let currentBook = null;
 
-const elements = {
-  overlay: document.getElementById('detail-overlay'),
-  modal: document.getElementById('book-detail-modal'),
-  closeBtn: document.getElementById('close-detail'),
-  addToCartBtn: document.getElementById('add-to-cart'),
-  addToFavoriteBtn: document.getElementById('add-to-favorite'),
-  title: document.getElementById('detail-book-title'),
-  author: document.getElementById('detail-book-author'),
-  price: document.getElementById('detail-book-price'),
-  favCount: document.getElementById('detail-fav-count'),
-  store: document.getElementById('detail-store-name'),
-  binding: document.getElementById('detail-binding'),
-  stock: document.getElementById('detail-book-stock'),
-  category: document.getElementById('detail-book-category'),
-  publisher: document.getElementById('detail-book-publisher'),
-  language: document.getElementById('detail-book-language'),
-  pages: document.getElementById('detail-book-pages'),
-  isbn: document.getElementById('detail-book-isbn'),
-  desc: document.getElementById('detail-book-desc')
-};
+// 1. 先声明对象，但不立即赋值
+let elements = {};
 
-function initEventListeners() {
-  if (elements.closeBtn) elements.closeBtn.addEventListener('click', hideBookDetail);
-  if (elements.overlay) {
-    elements.overlay.addEventListener('click', (e) => {
-      if (e.target === elements.overlay) hideBookDetail();
-    });
-  }
-  if (elements.addToCartBtn) elements.addToCartBtn.addEventListener('click', handleAddToCart);
-  if (elements.addToFavoriteBtn) elements.addToFavoriteBtn.addEventListener('click', handleAddToFavorite);
+/**
+ * 核心修复：在这里统一获取 DOM 元素
+ */
+function getElements() {
+  elements = {
+    overlay: document.getElementById('detail-overlay'),
+    modal: document.getElementById('book-detail-modal'),
+    closeBtn: document.getElementById('close-detail'),
+    addToCartBtn: document.getElementById('add-to-cart'),
+    addToFavoriteBtn: document.getElementById('add-to-favorite'),
+
+    title: document.getElementById('detail-book-title'),
+    author: document.getElementById('detail-book-author'),
+    price: document.getElementById('detail-book-price'),
+    favCount: document.getElementById('detail-fav-count'),
+    store: document.getElementById('detail-store-name'),
+    binding: document.getElementById('detail-binding'),
+    stock: document.getElementById('detail-book-stock'),
+    category: document.getElementById('detail-book-category'),
+    publisher: document.getElementById('detail-book-publisher'),
+    language: document.getElementById('detail-book-language'),
+    isbn: document.getElementById('detail-book-isbn'),
+    desc: document.getElementById('detail-book-desc'),
+  };
 }
 
-function showBookDetail(bookData) {
-  if (!bookData) return;
-  currentBook = bookData;
-  renderBookDetail(bookData);
+async function showBookDetail(basicBookData) {
+  if (!basicBookData) return;
+  console.log("[Detail] Showing book:", basicBookData.title);
+
+  // 确保元素已获取
+  if (!elements.modal) getElements();
+
+  currentBook = basicBookData;
+  renderBookDetail(basicBookData);
+  openModalUI();
+
+  if (elements.desc) elements.desc.textContent = "Loading full details...";
+
+  try {
+    const fullBookData = await fetchBookDetail(basicBookData.isbn);
+    if (fullBookData) {
+      currentBook = fullBookData;
+      renderBookDetail(fullBookData);
+    }
+  } catch (error) {
+    console.error("Failed to fetch book detail:", error);
+    if (elements.desc) elements.desc.textContent = "Detailed description currently unavailable.";
+  }
+}
+
+function renderBookDetail(book) {
+  if (!elements.title) return; // 防错检查
+
+  elements.title.textContent = book.title || 'Unknown Title';
+  elements.author.textContent = book.author || book.author_name || 'Unknown Author';
+  elements.price.textContent = `¥${Number(book.price || 0).toFixed(2)}`;
+  elements.favCount.textContent = (book.fav_count || book.favCount || 0).toLocaleString();
+  elements.store.textContent = book.store_name || book.storeName || 'Unknown Store';
+  elements.isbn.textContent = book.isbn;
+
+  // 详情字段
+  if (elements.binding) elements.binding.textContent = book.binding || 'N/A';
+  if (elements.category) elements.category.textContent = book.category_name || book.category || 'General';
+  if (elements.publisher) elements.publisher.textContent = book.publisher || 'N/A';
+  if (elements.language) elements.language.textContent = book.language || 'N/A';
+  if (elements.desc) elements.desc.textContent = book.description || 'No introduction provided.';
+
+  // 动态库存样式处理
+  const stockCount = book.stock_count !== undefined ? book.stock_count : (book.stock || 0);
+  if (elements.stock) {
+    if (stockCount > 0) {
+      elements.stock.innerHTML = `<i class="fa fa-check-circle"></i> In Stock (${stockCount})`;
+      elements.stock.className = "text-sm font-bold text-green-600";
+    } else {
+      elements.stock.innerHTML = `<i class="fa fa-times-circle"></i> Out of Stock`;
+      elements.stock.className = "text-sm font-bold text-red-500";
+    }
+  }
+
+  updateFavoriteButtonUI(book.isbn);
+}
+
+function openModalUI() {
+  if (!elements.modal) return;
   
   elements.overlay.classList.remove('hidden');
   elements.modal.classList.remove('hidden');
-  
-  requestAnimationFrame(() => {
-    elements.overlay.classList.remove('opacity-0');
-    elements.overlay.classList.add('opacity-100');
-    
-    elements.modal.classList.remove('opacity-0', 'scale-95');
-    elements.modal.classList.add('opacity-100', 'scale-100');
-  });
-  
   document.body.style.overflow = 'hidden';
-}
 
-/**
- * 详情弹窗数据填充
- */
-function renderBookDetail(book) {
-  elements.title.textContent = book.title;
-  elements.author.textContent = book.author;
-  elements.price.textContent = `¥${book.price.toFixed(2)}`;
-  elements.favCount.textContent = (book.favCount || 0).toLocaleString();
-  elements.store.textContent = book.storeName;
-  elements.isbn.textContent = book.isbn;
-
-  // CHANGED: 修正主键一致性。后端接口以 isbn 为主键进行收藏校验
-  const favBtnIcon = elements.addToFavoriteBtn.querySelector('i');
-  const isFavorited = typeof favorites !== 'undefined' && favorites.some(f => f.isbn === book.isbn);
-  
-  if (favBtnIcon) {
-    favBtnIcon.className = isFavorited ? 'fa fa-heart text-red-500' : 'fa fa-heart-o';
-  }
+  // 使用 setTimeout 或 requestAnimationFrame 确保 hidden 移除后再触发动画
+  setTimeout(() => {
+    elements.overlay.style.opacity = "1";
+    elements.modal.style.opacity = "1";
+    elements.modal.style.transform = "translate(-50%, -50%) scale(1)"; // 配合居中
+  }, 10);
 }
 
 function hideBookDetail() {
-  elements.overlay.classList.remove('opacity-100');
-  elements.overlay.classList.add('opacity-0');
-  
-  elements.modal.classList.remove('opacity-100', 'scale-100');
-  elements.modal.classList.add('opacity-0', 'scale-95');
+  if (!elements.modal) return;
+
+  elements.overlay.style.opacity = "0";
+  elements.modal.style.opacity = "0";
+  elements.modal.style.transform = "translate(-50%, -50%) scale(0.95)";
   
   setTimeout(() => {
     elements.overlay.classList.add('hidden');
@@ -87,34 +117,46 @@ function hideBookDetail() {
   }, 300);
 }
 
-function handleAddToCart() {
-  if (!currentBook) return;
-  if (typeof addToCart === 'function') {
-    addToCart(currentBook.id);
-    hideBookDetail();
-  }
-}
-
-function handleAddToFavorite() {
-  if (!currentBook || !currentBook.isbn) return; // 使用 ISBN 对齐后端
-  
-  if (typeof toggleFavorite === 'function') {
-    // 路径：用户点击详情窗收藏 -> 调用 toggleFavorite(isbn) -> 内部调用 removeFavoriteAPI(isbn)
-    toggleFavorite(currentBook.isbn); 
-    
-    // UI 实时响应逻辑
-    const favBtnIcon = elements.addToFavoriteBtn.querySelector('i');
-    if (favBtnIcon) {
-        const isFavorited = favorites.some(f => f.isbn === currentBook.isbn);
-        favBtnIcon.className = isFavorited ? 'fa fa-heart text-red-500' : 'fa fa-heart-o';
-    }
-    elements.favCount.textContent = currentBook.favCount.toLocaleString();
-  }
+function updateFavoriteButtonUI(isbn) {
+  const favBtnIcon = elements.addToFavoriteBtn?.querySelector('i');
+  if (!favBtnIcon) return;
+  const isFavorited = typeof favorites !== 'undefined' && favorites.some(f => String(f.isbn) === String(isbn));
+  favBtnIcon.className = isFavorited ? 'fa fa-heart text-red-500' : 'fa fa-heart-o';
 }
 
 function init() {
-  initEventListeners();
+  getElements(); // 1. 初始化时先抓取元素
+  
+  // 2. 绑定事件
+  if (elements.closeBtn) elements.closeBtn.onclick = hideBookDetail;
+  if (elements.overlay) elements.overlay.onclick = (e) => e.target === elements.overlay && hideBookDetail();
+  
+  if (elements.addToCartBtn) {
+    elements.addToCartBtn.onclick = () => {
+      if (currentBook) {
+        addToCart(currentBook.id);
+        hideBookDetail();
+      }
+    };
+  }
+
+  if (elements.addToFavoriteBtn) {
+    elements.addToFavoriteBtn.onclick = () => {
+      if (currentBook) {
+        toggleFavorite(currentBook.isbn);
+        setTimeout(() => updateFavoriteButtonUI(currentBook.isbn), 100);
+      }
+    };
+  }
+
+  // 3. 挂载到全局
   window.showBookDetail = showBookDetail;
+  console.log("[Detail] Module Initialized.");
 }
 
-document.addEventListener('DOMContentLoaded', init);
+// 确保 DOM 加载完成后运行 init
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}

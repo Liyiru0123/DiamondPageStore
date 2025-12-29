@@ -59,38 +59,32 @@ document.addEventListener('DOMContentLoaded', () => App.init());
 
 const bookCardTemplate = (book) => {
   const isFav = favorites.some(f => String(f.isbn) === String(book.isbn));
-  const isOutOfStock = book.stock <= 0;
+  const realStock = book.stock_count !== undefined ? book.stock_count : (book.stock || 0);
+  const fCount = book.fav_count !== undefined ? book.fav_count : (book.favCount || 0);
 
   return `
-    <div class="book-card-item bg-white rounded-xl shadow-sm border border-brown-light/20 hover:shadow-md transition-all duration-300 group cursor-pointer" 
-        data-id="${book.id}" data-isbn="${book.isbn}">
+    <div class="book-card-item bg-white rounded-xl shadow-sm border border-brown-light/20 hover:border-brown transition-all duration-300 cursor-pointer" 
+        data-isbn="${book.isbn}" data-id="${book.id}">
       <div class="p-5">
-        <div class="flex justify-between items-start gap-2 mb-2">
-          <h3 class="font-bold text-lg text-brown-dark line-clamp-2 flex-1">${book.title}</h3>
-          <div class="flex flex-col items-center">
-             <button class="favorite-btn text-gray-400 hover:text-red-500 transition-colors" data-isbn="${book.isbn}">
+        <div class="flex justify-between items-start mb-2">
+          <h3 class="font-bold text-brown-dark line-clamp-2 flex-1">${book.title}</h3>
+          <div class="flex flex-col items-center ml-2">
+             <button class="favorite-btn text-gray-400 hover:text-red-500" data-isbn="${book.isbn}">
                 <i class="fa ${isFav ? 'fa-heart text-red-500' : 'fa-heart-o'} text-xl"></i>
              </button>
-             <span class="fav-count-display text-[10px] mt-1 text-gray-400" data-isbn="${book.isbn}">${book.favCount || 0}</span>
+             <span class="fav-count-display text-[10px] text-gray-400" data-isbn="${book.isbn}">${fCount}</span>
           </div>
         </div>
-        <div class="text-sm text-gray-600 mb-3 space-y-1">
-          <p><span class="font-medium">Author:</span> ${book.author}</p>
-          <p><span class="font-medium">Store:</span> ${book.storeName}</p>
-          <!-- 还原库存实时显示 -->
-          <p class="text-[10px] ${isOutOfStock ? 'text-red-500 font-bold' : 'text-green-600'}">
-            <i class="fa ${isOutOfStock ? 'fa-times-circle' : 'fa-check-circle'}"></i> 
-            ${isOutOfStock ? 'Out of Stock' : `In Stock: ${book.stock}`}
+        <div class="text-sm text-gray-500 mb-4">
+          <p>Author: ${book.author_name || book.author || 'N/A'}</p>
+          <p class="text-[10px] ${realStock > 0 ? 'text-green-600' : 'text-red-500'}">
+            ● ${realStock > 0 ? 'In Stock: ' + realStock : 'Out of Stock'}
           </p>
         </div>
-        <p class="text-xs text-gray-500 line-clamp-3 mb-4 italic">"${book.description || 'No introduction.'}"</p>
-        <div class="flex items-center justify-between pt-4 border-t border-brown-light/10">
-          <span class="text-xl font-bold text-brown">¥${book.price.toFixed(2)}</span>
-          <!-- 仅针对按钮做禁用处理，不影响卡片点击详情 -->
-          <button class="addCartBtn ${isOutOfStock ? 'bg-gray-300 cursor-not-allowed' : 'bg-brown hover:bg-brown-dark'} text-white px-4 py-1.5 rounded-full text-sm flex items-center gap-2"
-               data-id="${book.id}" ${isOutOfStock ? 'disabled' : ''}>
-            <i class="fa ${isOutOfStock ? 'fa-ban' : 'fa-plus'}"></i> Cart
-          </button>
+        <div class="flex items-center justify-between">
+          <span class="text-lg font-bold text-brown">¥${Number(book.price).toFixed(2)}</span>
+          <button class="addCartBtn bg-brown text-white px-3 py-1.5 rounded-full text-xs hover:bg-brown-dark" 
+                  data-id="${book.id}">+ Cart</button>
         </div>
       </div>
     </div>
@@ -139,58 +133,51 @@ async function searchBooks(keyword) {
 // ========== 收藏逻辑 (API 驱动) ==========
 
 async function toggleFavorite(isbn) {
-  // 确保 isbn 是字符串
   const isbnStr = String(isbn);
-  const book = allBooks.find(b => String(b.isbn) === isbnStr);
-
-  const isFav = favorites.some(f => String(f.isbn) === isbnStr);
+  const isCurrentlyFav = favorites.some(f => String(f.isbn) === isbnStr);
+  const bookInCache = allBooks.find(b => String(b.isbn) === isbnStr);
 
   try {
-    if (isFav) {
+    if (isCurrentlyFav) {
       await removeFavoriteAPI(isbnStr);
       favorites = favorites.filter(f => String(f.isbn) !== isbnStr);
-      if (book) book.favCount = Math.max(0, (book.favCount || 0) - 1);
+      if (bookInCache) bookInCache.favCount = Math.max(0, (bookInCache.favCount || 0) - 1);
     } else {
       await addFavoriteAPI(isbnStr);
-      // 如果 book 不在当前缓存中，构造一个简易对象
-      favorites.push(book || { isbn: isbnStr });
-      if (book) book.favCount = (book.favCount || 0) + 1;
+      const bookToStore = bookInCache || { isbn: isbnStr, title: 'Book' };
+      favorites.push(bookToStore);
+      if (bookInCache) bookInCache.favCount = (bookInCache.favCount || 0) + 1;
     }
 
-    // 关键点：强制触发 UI 状态刷新
-    updateFavoriteUIState(isbnStr, !isFav, book ? book.favCount : null);
+    const newCount = bookInCache ? bookInCache.favCount : null;
+    updateFavoriteUIState(isbnStr, !isCurrentlyFav, newCount);
+    showAlert(isCurrentlyFav ? "Removed from Favorites" : "Added to Favorites", "success");
 
-    // 如果在收藏页面，则重新渲染整个列表
     if (!document.getElementById('favorites-page').classList.contains('hidden')) {
       updateFavoritesUI();
     }
   } catch (e) {
-    showAlert("Action failed: Member session may be expired.");
+    console.error("[Favorite Error]", e);
+    showAlert("Action failed. Please try again.", "error");
   }
 }
 
-// 增强选择器鲁棒性
 function updateFavoriteUIState(isbn, isAdded, count) {
   const isbnStr = String(isbn);
-  // 更新列表页所有匹配的按钮
   document.querySelectorAll(`.favorite-btn[data-isbn="${isbnStr}"] i`).forEach(icon => {
     icon.className = isAdded ? 'fa fa-heart text-red-500' : 'fa fa-heart-o text-xl';
   });
-
-  // 更新数字显示
   if (count !== null) {
     document.querySelectorAll(`.fav-count-display[data-isbn="${isbnStr}"]`).forEach(el => {
       el.textContent = count;
     });
   }
-
-  // 同步更新详情弹窗（book-detail.js）里的图标
-  const detailFavBtn = document.querySelector('#add-to-favorite i');
   const detailIsbn = document.getElementById('detail-book-isbn')?.textContent;
-  if (detailFavBtn && detailIsbn === isbnStr) {
-    detailFavBtn.className = isAdded ? 'fa fa-heart text-red-500' : 'fa fa-heart-o text-xl';
-    const detailCount = document.getElementById('detail-fav-count');
-    if (detailCount && count !== null) detailCount.textContent = count.toLocaleString();
+  if (detailIsbn === isbnStr) {
+    const detailFavBtnIcon = document.querySelector('#add-to-favorite i');
+    const detailFavCount = document.getElementById('detail-fav-count');
+    if (detailFavBtnIcon) detailFavBtnIcon.className = isAdded ? 'fa fa-heart text-red-500' : 'fa fa-heart-o text-xl';
+    if (detailFavCount && count !== null) detailFavCount.textContent = count.toLocaleString();
   }
 }
 
@@ -200,20 +187,17 @@ function addToCart(bookId) {
   const book = allBooks.find(b => b.id === parseInt(bookId));
   if (!book) return;
 
-  // --- 拦截 1：库存为 0 ---
   if (book.stock <= 0) {
     return showAlert("Sorry, this book is out of stock.", "warning");
   }
 
   const existing = cart.find(i => i.id === book.id);
   if (existing) {
-    // --- 拦截 2：超过库存上限 ---
     if (existing.quantity >= book.stock) {
-      return showAlert(`Only ${book.stock} copies available in total.`, "info");
+      return showAlert(`Only ${book.stock} copies available.`, "info");
     }
     existing.quantity++;
   } else {
-    // 初次加入，记得把 stock 存入 cart 对象方便 UI 校验
     cart.push({ ...book, quantity: 1 });
   }
 
@@ -246,19 +230,14 @@ async function updateCartUI() {
     const apiItems = cart.map(i => ({ sku_id: i.id, quantity: i.quantity }));
     const result = await calculateCartTotalAPI(apiItems);
 
-    // 修改 updateCartUI 内部的模板生成逻辑
     cartList.innerHTML = result.data.items.map(item => {
-      // 从本地 cart 或 allBooks 溯源完整对象，确保详情页有数据
       const fullBookData = cart.find(i => i.id === item.sku_id) || item;
-
       return `
         <div class="flex items-center justify-between p-4 bg-white border-b border-brown-light/30 rounded-lg shadow-sm mb-3">
-          <!-- 增加点击区域：点击标题和作者触发详情 -->
           <div class="flex flex-col flex-1 cursor-pointer hover:opacity-70" 
               onclick='showBookDetail(${JSON.stringify(fullBookData).replace(/'/g, "&apos;")})'>
             <h4 class="font-bold text-brown-dark">${item.title}</h4>
             <p class="text-sm text-gray-600">${item.author}</p>
-            <!-- 还原店铺显示 -->
             <p class="text-[10px] text-brown/60 italic"><i class="fa fa-map-marker"></i> ${fullBookData.storeName || 'Store'}</p>
           </div>
           <div class="flex items-center gap-4">
@@ -276,7 +255,15 @@ async function updateCartUI() {
 
     cartTotal.textContent = `¥${result.data.total.toFixed(2)}`;
   } catch (e) {
-    cartList.innerHTML = `<p class="text-center py-10 text-red-500">Pricing service unavailable.</p>`;
+    // 容错处理：如果计价接口失败，依然显示列表，让用户能删除物品
+    console.error("Cart Pricing Error:", e);
+    cartList.innerHTML = `<p class="text-center py-5 text-orange-500">Pricing sync failed. You can still modify items.</p>` + 
+      cart.map(item => `
+        <div class="flex items-center justify-between p-4 bg-gray-50 mb-2 rounded">
+          <span>${item.title} (x${item.quantity})</span>
+          <button class="cart-op text-red-500" data-id="${item.id}" data-op="remove">Remove</button>
+        </div>
+      `).join('');
   }
 }
 
@@ -284,72 +271,40 @@ async function updateCartUI() {
 
 async function handleCheckout() {
   if (cart.length === 0) return showAlert("Your cart is empty");
-
-  console.log("[Checkout] Starting process with cart:", cart);
-
   const btn = document.getElementById('proceed-checkout');
   const originalText = btn.textContent;
-
-  // UI 状态进入“处理中”
   btn.disabled = true;
   btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> Processing...`;
 
   try {
     const res = await createOrderAPI(cart);
-    console.log("[Checkout] API Response Received:", res);
-
-    // 关键修正：如果后端没有传 success，尝试兼容判断 data 是否存在
     if (res.success || res.data) {
-      console.log("[Checkout] Success! Clearing cart and switching page.");
-
       cart = [];
       localStorage.setItem('bookCart', JSON.stringify(cart));
       updateCartUI();
-
       showAlert("Order created successfully!");
-
-      // 健壮性切换页面：优先使用 customer-api 定义的跳转
-      if (typeof switchPage === 'function') {
-        switchPage('orders');
-      } else if (window.customerSwitchPage) {
-        // 尝试触发 layout.js 的钩子
-        const ordersTab = document.querySelector('.sidebar-item[data-page="orders"]');
-        ordersTab ? ordersTab.click() : (window.location.hash = 'orders');
-      }
+      if (typeof switchPage === 'function') switchPage('orders');
     } else {
-      console.warn("[Checkout] API returned success=false:", res.message);
       showAlert(res.message || "Server refused to create order.");
     }
   } catch (error) {
-    console.error("[Checkout] Critical Exception:", error);
-    showAlert("Network Error: " + error.message);
+    showAlert("Checkout failed: " + error.message);
   } finally {
-    console.log("[Checkout] Process finished.");
     btn.disabled = false;
     btn.textContent = originalText;
   }
 }
 
-/**
- * 打开支付弹窗并初始化数据
- * @param {Array|string} orderIds - 订单ID数组或单个ID
- */
 function openPaymentModal(orderIds) {
-  // 1. 规格化 ID 组
   pendingPayIds = Array.isArray(orderIds) ? orderIds : [orderIds];
-
-  // 2. 获取 DOM 引用
   const modal = document.getElementById('payment-modal');
   const summaryList = document.getElementById('payment-summary-list');
   const totalDisplay = document.getElementById('payment-modal-total');
 
-  if (!modal) return console.error("Payment modal container missing in HTML");
-
-  // 3. 计算选定订单的总金额 (从 ordersCache 溯源)
+  if (!modal) return;
   const selectedOrders = ordersCache.filter(o => pendingPayIds.includes(o.orderId.toString()));
   const totalAmount = selectedOrders.reduce((sum, o) => sum + o.total, 0);
 
-  // 4. 渲染弹窗内的订单简报
   if (summaryList) {
     summaryList.innerHTML = selectedOrders.map(o => `
             <div class="flex justify-between text-sm py-1">
@@ -358,8 +313,6 @@ function openPaymentModal(orderIds) {
             </div>
         `).join('');
   }
-
-  // 5. 更新总额并显示
   if (totalDisplay) totalDisplay.textContent = `¥${totalAmount.toFixed(2)}`;
   modal.classList.remove('hidden');
 }
@@ -372,13 +325,11 @@ async function renderOrdersUI(filterStatus = 'all') {
   try {
     const orders = await fetchOrders(filterStatus);
     ordersCache = orders;
-
     if (orders.length === 0) {
       list.innerHTML = `<p class="text-center py-20 text-gray-400">No orders found.</p>`;
       document.getElementById('orders-footer')?.classList.add('hidden');
       return;
     }
-
     document.getElementById('orders-footer')?.classList.remove('hidden');
     list.innerHTML = orders.map(order => renderOrderCard(order)).join('');
     updateOrderFooterUI();
@@ -415,19 +366,23 @@ function renderOrderCard(order) {
     </div>`;
 }
 
-// ========== 会员与资料 (API 驱动) ==========
+function openProfileModal() {
+  const user = JSON.parse(localStorage.getItem('current_user') || '{}');
+  document.getElementById('profile-username').value = user.username || '';
+  document.getElementById('profile-email').value = user.email || 'customer@example.com';
+  document.getElementById('profile-password').value = '';
+  document.getElementById('profile-modal').classList.remove('hidden');
+}
 
 async function updateMemberPageUI() {
   try {
     const info = await fetchMemberInfo();
     const tiers = await fetchMemberTiers();
-
     document.getElementById('display-user-name').textContent = info.username;
     document.getElementById('member-total-spent').textContent = `¥${info.totalSpent.toFixed(2)}`;
     document.getElementById('member-points').textContent = info.points.toLocaleString();
     document.getElementById('member-level-badge').textContent = info.tier.name;
     document.getElementById('member-discount-text').textContent = `${info.tier.discountPercent}%`;
-
     const tierContainer = document.getElementById('member-tier-cards');
     if (tierContainer) {
       tierContainer.innerHTML = tiers.map(t => `
@@ -446,34 +401,77 @@ async function updateMemberPageUI() {
 // ========== 事件绑定系统 ==========
 
 function bindEvents() {
-  // 侧边栏与导航
   document.getElementById('sidebarToggle')?.addEventListener('click', () => {
     document.getElementById('sidebar').classList.remove('-translate-x-full');
   });
 
   document.addEventListener('click', (e) => {
+    // A. 侧边栏菜单点击
     const sidebarItem = e.target.closest('.sidebar-item');
-    if (sidebarItem) switchPage(sidebarItem.dataset.page);
+    if (sidebarItem) {
+        const targetPage = sidebarItem.dataset.page;
+        if (typeof switchPage === 'function') switchPage(targetPage);
+        return;
+    }
 
-    const logoutBtn = e.target.closest('#logout-btn');
-    if (logoutBtn) logout();
+    // B. 修复购物车图标点击：
+    // 逻辑：点击带 .fa-shopping-cart 的图标，或者 ID 包含 cart 的按钮
+    const cartTrigger = e.target.closest('.fa-shopping-cart, [id*="cart"], [class*="cart"]');
+    if (cartTrigger) {
+        // 排除掉“加入购物车”按钮本身，只处理跳转按钮
+        if (!cartTrigger.classList.contains('addCartBtn') && !cartTrigger.classList.contains('cart-op')) {
+            console.log("[Navigation] Jumping to cart...");
+            if (typeof switchPage === 'function') switchPage('cart');
+            return;
+        }
+    }
 
-    const profileTrigger = e.target.closest('.fa-user-circle-o');
-    if (profileTrigger) openProfileModal();
+    // C. 资料与退出
+    if (e.target.closest('.fa-user-circle-o, #profile-trigger')) openProfileModal();
+    if (e.target.closest('#logout-btn')) logout();
   });
 
-  // 搜索
+  // 【新增】个人资料弹窗关闭监听
+  document.querySelectorAll('.close-profile').forEach(btn => {
+    btn.onclick = () => document.getElementById('profile-modal').classList.add('hidden');
+  });
+
+  // 【新增】购物车内操作的事件委托 (处理动态生成的加减按钮)
+  document.getElementById('cart-list')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.cart-op');
+    if (!btn) return;
+
+    const bookId = parseInt(btn.dataset.id);
+    const op = btn.dataset.op;
+    const itemIndex = cart.findIndex(i => i.id === bookId);
+    if (itemIndex === -1) return;
+
+    if (op === 'plus') {
+      cart[itemIndex].quantity++;
+    } else if (op === 'minus') {
+      if (cart[itemIndex].quantity > 1) cart[itemIndex].quantity--;
+      else if (confirm("Remove item?")) cart.splice(itemIndex, 1);
+    } else if (op === 'remove') {
+      cart.splice(itemIndex, 1);
+    }
+    localStorage.setItem('bookCart', JSON.stringify(cart));
+    updateCartUI();
+  });
+
   document.getElementById('do-search-btn')?.addEventListener('click', () => {
     searchBooks(document.getElementById('search-input').value.trim());
   });
 
-  // 分类与排序
   document.querySelectorAll('.category-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.category-btn').forEach(b => b.classList.replace('bg-brown', 'bg-white'));
-      btn.classList.replace('bg-white', 'bg-brown');
+    btn.onclick = () => {
+      document.querySelectorAll('.category-btn').forEach(b => {
+        b.classList.remove('bg-brown', 'text-white');
+        b.classList.add('bg-white', 'text-brown', 'border', 'border-brown');
+      });
+      btn.classList.remove('bg-white', 'text-brown');
+      btn.classList.add('bg-brown', 'text-white');
       renderCategoryBooks(btn.dataset.category);
-    });
+    };
   });
 
   document.getElementById('category-sort-filter')?.addEventListener('change', () => {
@@ -481,47 +479,35 @@ function bindEvents() {
     renderCategoryBooks(cat);
   });
 
-  // 购物车操作
   document.getElementById('clear-cart')?.addEventListener('click', () => {
     if (confirm("Clear cart?")) { cart = []; localStorage.removeItem('bookCart'); updateCartUI(); }
   });
 
   document.getElementById('proceed-checkout')?.addEventListener('click', handleCheckout);
 
-  // 订单复选框全选
   document.getElementById('select-all-orders')?.addEventListener('change', (e) => {
     document.querySelectorAll('.order-checkbox:not(:disabled)').forEach(cb => cb.checked = e.target.checked);
     updateOrderFooterUI();
   });
 
-  // 订单页状态切换
   document.querySelectorAll('.order-status-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      // 1. 还原所有按钮为初始“未选中”状态
       document.querySelectorAll('.order-status-btn').forEach(b => {
         b.className = "order-status-btn bg-white text-brown border border-brown px-4 py-2 rounded-full text-sm hover:bg-brown-light/20 transition-colors";
       });
-
-      // 2. 设置当前按钮为“选中”状态（深色背景，白色文字）
       btn.className = "order-status-btn bg-brown text-white px-4 py-2 rounded-full text-sm hover:bg-brown-dark transition-colors";
-
-      // 3. 执行过滤
       renderOrdersUI(btn.dataset.status);
     });
   });
 
-  // 支付弹窗控制 
-  // 关闭弹窗
   document.querySelectorAll('.close-payment').forEach(btn => {
     btn.addEventListener('click', () => {
       document.getElementById('payment-modal').classList.add('hidden');
     });
   });
 
-  // 确认支付按钮
   document.getElementById('confirm-payment-btn')?.addEventListener('click', handlePaymentExecution);
 
-  // 合并支付按钮 (订单页底部)
   document.getElementById('merge-payment-btn')?.addEventListener('click', () => {
     const selectedIds = Array.from(document.querySelectorAll('.order-checkbox:checked'))
       .map(cb => cb.dataset.id);
@@ -529,50 +515,19 @@ function bindEvents() {
   });
 }
 
-// 动态渲染内容的事件委托 (处理卡片点击、收藏、购物车按钮)
 function bindDynamicEvents() {
-  // 注意：这里由于 DOM 结构，我们使用委托或直接绑定。
-  // 为了确保 book-detail 能正常弹出，这里保留 bindBookCardClickEvents 逻辑。
   document.querySelectorAll('.book-card-item').forEach(card => {
     card.onclick = (e) => {
       if (e.target.closest('.addCartBtn, .favorite-btn')) return;
-      const book = allBooks.find(b => b.id === parseInt(card.dataset.id));
-      if (book) showBookDetail(book);
+      const isbn = card.dataset.isbn;
+      if (window.openBookDetail) window.openBookDetail(isbn);
     };
   });
-
   document.querySelectorAll('.addCartBtn').forEach(btn => {
     btn.onclick = (e) => { e.stopPropagation(); addToCart(btn.dataset.id); };
   });
-
   document.querySelectorAll('.favorite-btn').forEach(btn => {
     btn.onclick = (e) => { e.stopPropagation(); toggleFavorite(btn.dataset.isbn); };
-  });
-
-  // 购物车加减逻辑
-  document.querySelectorAll('.cart-op').forEach(btn => {
-    btn.onclick = () => {
-      const id = parseInt(btn.dataset.id);
-      const op = btn.dataset.op;
-      const idx = cart.findIndex(i => i.id === id);
-      if (idx === -1) return;
-
-      if (op === 'plus') {
-        // 获取当前项的库存限制
-        const bookInCart = cart[idx];
-        if (bookInCart.quantity < bookInCart.stock) {
-          bookInCart.quantity++;
-        } else {
-          showAlert(`Reached maximum stock limit (${bookInCart.stock})`);
-          return; // 阻止后续逻辑
-        }
-      }
-      else if (op === 'minus' && cart[idx].quantity > 1) cart[idx].quantity--;
-      else if (op === 'remove' || (op === 'minus' && cart[idx].quantity === 1)) cart.splice(idx, 1);
-
-      localStorage.setItem('bookCart', JSON.stringify(cart));
-      updateCartUI();
-    };
   });
 }
 
@@ -582,7 +537,6 @@ function updateOrderFooterUI() {
   const selected = Array.from(document.querySelectorAll('.order-checkbox:checked')).map(cb => cb.dataset.id);
   const selectedOrders = ordersCache.filter(o => selected.includes(o.orderId.toString()));
   const total = selectedOrders.reduce((s, o) => s + o.total, 0);
-
   if (document.getElementById('selected-orders-count')) document.getElementById('selected-orders-count').textContent = selected.length;
   if (document.getElementById('combined-total-price')) document.getElementById('combined-total-price').textContent = `¥${total.toFixed(2)}`;
   if (document.getElementById('merge-payment-btn')) document.getElementById('merge-payment-btn').disabled = selected.length === 0;
@@ -590,19 +544,16 @@ function updateOrderFooterUI() {
 
 async function handlePaymentExecution() {
   const btn = document.getElementById('confirm-payment-btn');
-  const spinner = document.getElementById('pay-spinner'); // 对齐 HTML
-  const btnText = document.getElementById('pay-btn-text'); // 对齐 HTML
-
+  const spinner = document.getElementById('pay-spinner');
+  const btnText = document.getElementById('pay-btn-text');
   btn.disabled = true;
   spinner?.classList.remove('hidden');
   if (btnText) btnText.textContent = "Processing...";
-
   try {
     await payMultipleOrdersAPI(pendingPayIds);
-    // --- 修正点：支付成功后必须隐藏弹窗并刷新列表 ---
     document.getElementById('payment-modal').classList.add('hidden');
     showAlert("Payment Successful!");
-    renderOrdersUI(); // 重新加载订单列表以更新状态为 Paid
+    renderOrdersUI();
   } catch (e) {
     showAlert("Payment failed: " + e.message);
   } finally {
@@ -612,7 +563,6 @@ async function handlePaymentExecution() {
   }
 }
 
-// 路由钩子增强 (由 layout.js 调用)
 window.customerSwitchPage = function (pageId) {
   if (pageId === 'favorites') updateFavoritesUI();
   if (pageId === 'member') updateMemberPageUI();
@@ -622,8 +572,53 @@ window.customerSwitchPage = function (pageId) {
 async function updateFavoritesUI() {
   const container = document.getElementById('favorites-list');
   if (!container) return;
-  // 直接从 API 同步
-  await App.syncFavorites();
-  container.innerHTML = favorites.length ? favorites.map(b => bookCardTemplate(b)).join('') : '<p class="col-span-full text-center">No favorites yet.</p>';
-  bindDynamicEvents();
+  container.innerHTML = `<div class="col-span-full py-20 text-center"><i class="fa fa-spinner fa-spin text-3xl text-brown"></i></div>`;
+  try {
+    const data = await fetchFavorites();
+    favorites = Array.isArray(data) ? data : [];
+    if (favorites.length === 0) {
+      container.innerHTML = `<div class="col-span-full text-center py-20"><p class="text-gray-400">No favorites yet.</p></div>`;
+      return;
+    }
+    container.innerHTML = favorites.map(book => bookCardTemplate(book)).join('');
+    bindDynamicEvents();
+  } catch (e) {
+    container.innerHTML = `<p class="col-span-full text-center text-red-500 py-10">Failed to load favorites.</p>`;
+  }
 }
+
+function showAlert(message) {
+  let alertElement = document.getElementById('customAlert');
+  if (!alertElement) {
+    alertElement = document.createElement('div');
+    alertElement.id = 'customAlert';
+    alertElement.className = 'fixed top-20 left-1/2 -translate-x-1/2 bg-brown-dark text-white px-6 py-3 rounded-lg shadow-lg z-[100] transition-all duration-300 opacity-0 pointer-events-none';
+    alertElement.innerHTML = '<span id="alertText"></span>';
+    document.body.appendChild(alertElement);
+  }
+  const text = document.getElementById('alertText');
+  text.textContent = message;
+  alertElement.classList.replace('opacity-0', 'opacity-100');
+  setTimeout(() => alertElement.classList.replace('opacity-100', 'opacity-0'), 3000);
+}
+
+document.addEventListener('click', (e) => {
+  // 查找被点击的元素是否在书籍卡片内
+  const card = e.target.closest('.book-card-item');
+  
+  // 核心判断：
+  // 1. 必须点中了卡片 
+  // 2. 不能是点中了卡片里的“+ Cart”按钮
+  // 3. 不能是点中了卡片里的“心形收藏”按钮
+  if (card && !e.target.closest('.addCartBtn, .favorite-btn')) {
+    const isbn = card.getAttribute('data-isbn');
+    console.log("[Detail] Card clicked, ISBN:", isbn);
+    
+    if (window.openBookDetail) {
+      window.openBookDetail(isbn);
+    } else {
+      // 如果报错说没定义，说明 book-detail.js 里的函数没挂载到全局
+      console.error("Function openBookDetail not found! Check book-detail.js");
+    }
+  }
+});
