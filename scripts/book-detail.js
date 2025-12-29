@@ -60,31 +60,14 @@ function renderBookDetail(book) {
   elements.title.textContent = book.title;
   elements.author.textContent = book.author;
   elements.price.textContent = `¥${book.price.toFixed(2)}`;
-  
-  // 关键：实时显示最新的收藏数
   elements.favCount.textContent = (book.favCount || 0).toLocaleString();
-  
-  elements.store.textContent = book.storeName || "Main Headquarters";
-  elements.binding.textContent = book.binding || "Paperback";
-  
-  if (book.stock > 0) {
-    elements.stock.innerHTML = `<i class="fa fa-check-circle"></i> In Stock (${book.stock})`;
-    elements.stock.className = "text-sm font-bold text-green-600";
-  } else {
-    elements.stock.innerHTML = `<i class="fa fa-times-circle"></i> Out of Stock`;
-    elements.stock.className = "text-sm font-bold text-red-600";
-  }
-
-  elements.desc.textContent = book.description || "No description available for this book.";
-  elements.category.textContent = book.category;
-  elements.publisher.textContent = book.publisher;
-  elements.language.textContent = book.language || "English";
-  elements.pages.textContent = book.pages || "N/A";
+  elements.store.textContent = book.storeName;
   elements.isbn.textContent = book.isbn;
 
-  // 收藏按钮状态同步
+  // CHANGED: 修正主键一致性。后端接口以 isbn 为主键进行收藏校验
   const favBtnIcon = elements.addToFavoriteBtn.querySelector('i');
-  const isFavorited = typeof favorites !== 'undefined' && favorites.some(f => f.id === book.id);
+  const isFavorited = typeof favorites !== 'undefined' && favorites.some(f => f.isbn === book.isbn);
+  
   if (favBtnIcon) {
     favBtnIcon.className = isFavorited ? 'fa fa-heart text-red-500' : 'fa fa-heart-o';
   }

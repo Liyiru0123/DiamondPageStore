@@ -64,8 +64,7 @@
 
 <body class="bg-brown-cream min-h-screen flex overflow-x-hidden font-serif">
   <!-- 移动端按钮 -->
-  <button id="sidebarToggle" class="fixed left-4 top-4 z-50 md:hidden bg-brown text-white p-2 rounded-md shadow-lg"
-    onclick="document.getElementById('sidebar').classList.remove('-translate-x-full')">
+  <button id="sidebarToggle" class="fixed left-4 top-4 z-50 md:hidden bg-brown text-white p-2 rounded-md shadow-lg">
     <i class="fa fa-bars"></i>
   </button>
 
@@ -345,8 +344,10 @@
         <div id="cart-empty" class="text-center py-10">
           <i class="fa fa-shopping-cart text-5xl mb-4 text-brown-light"></i>
           <p class="text-gray-600 mb-6">Your cart is empty~</p>
-          <button class="bg-brown text-white px-6 py-2 rounded-md hover:bg-brown-dark transition-colors"
-            onclick="switchPage('home')">Browse Homepage</button>
+          <button id="cart-go-home"
+            class="bg-brown text-white px-6 py-2 rounded-md hover:bg-brown-dark transition-colors">
+            Browse Homepage
+          </button>
         </div>
         <div id="cart-list" class="hidden space-y-4"></div>
         <div id="cart-footer"
@@ -651,7 +652,7 @@
   <script src="../scripts/book-detail.js"></script>
   <script src="../scripts/customer.js"></script>
   <!-- API集成脚本（覆盖customer.js中的函数） -->
-  <script src="../scripts/customer-api-integration.js"></script>
+  <!-- script src="../scripts/customer-api-integration.js"></！script-->
 </body>
 
 </html>
