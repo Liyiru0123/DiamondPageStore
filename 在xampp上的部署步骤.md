@@ -47,8 +47,7 @@
 按顺序执行：
 1. `database/staff_views.sql`
 2. `database/staff_procedures.sql`
-3. `database/finance_triggers.sql`
-4. `database/finance_events.sql`
+
 
 > 如果你打算使用 `book_store_views_finance&manager.sql`，不要和以上文件混用，避免覆盖或重复创建。建议只选一种方案。
 
