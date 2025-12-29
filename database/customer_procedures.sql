@@ -390,55 +390,6 @@ BEGIN
     END IF;
 END$$
 
--- 7. 更新用户资料
--- 功能：更新会员个人信�?
-DROP PROCEDURE IF EXISTS sp_customer_update_profile$$
-CREATE PROCEDURE sp_customer_update_profile(
-    IN p_member_id INT,
-    IN p_first_name VARCHAR(50),
-    IN p_last_name VARCHAR(50),
-    IN p_phone INT,
-    IN p_address VARCHAR(50),
-    IN p_birthday DATE,
-    OUT p_result_code INT,
-    OUT p_result_message VARCHAR(255)
-)
-BEGIN
-    DECLARE v_user_id INT;
-
-    DECLARE EXIT HANDLER FOR SQLEXCEPTION
-    BEGIN
-        SET p_result_code = -1;
-        SET p_result_message = 'Error: Failed to update profile';
-        ROLLBACK;
-    END;
-
-    START TRANSACTION;
-
-    -- 获取 user_id
-    SELECT user_id INTO v_user_id
-    FROM members
-    WHERE member_id = p_member_id;
-
-    IF v_user_id IS NULL THEN
-        SET p_result_code = 0;
-        SET p_result_message = 'Member not found';
-        ROLLBACK;
-    ELSE
-        -- 更新会员信息
-        UPDATE members
-        SET first_name = p_first_name,
-            last_name = p_last_name,
-            phone = p_phone,
-            address = p_address,
-            birthday = p_birthday
-        WHERE member_id = p_member_id;
-
-        SET p_result_code = 1;
-        SET p_result_message = 'Profile updated successfully';
-        COMMIT;
-    END IF;
-END$$
 
 -- 8. 自动更新会员等级
 -- 功能：根据会员的累计消费金额自动更新会员等级
@@ -496,6 +447,72 @@ BEGIN
     END IF;
 
     COMMIT;
+END$$
+
+-- =============================================
+-- 更新顾客个人资料 (用户名, 密码, 电话)
+-- =============================================
+-- 修正点：将结束符 // 改为 $$ 以匹配文件开头的设定
+DROP PROCEDURE IF EXISTS sp_customer_update_profile$$
+
+CREATE PROCEDURE sp_customer_update_profile(
+    IN p_user_id INT,
+    IN p_username VARCHAR(50),
+    IN p_password VARCHAR(50), 
+    IN p_contact VARCHAR(100),  -- 对应 Email
+    OUT p_success BOOLEAN,
+    OUT p_message VARCHAR(100)
+)
+BEGIN
+    DECLARE v_exists INT DEFAULT 0;
+    DECLARE v_email_exists INT DEFAULT 0;
+    
+    -- 异常处理：出错回滚
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_success = FALSE;
+        SET p_message = 'Database error: Update failed.';
+    END;
+
+    START TRANSACTION;
+
+    -- 1. 检查新用户名是否被其他人占用
+    SELECT COUNT(*) INTO v_exists 
+    FROM users 
+    WHERE username = p_username AND user_id != p_user_id;
+
+    -- 2. 检查新邮箱是否被其他人占用
+    SELECT COUNT(*) INTO v_email_exists
+    FROM members
+    WHERE email = p_contact AND user_id != p_user_id;
+
+    IF v_exists > 0 THEN
+        SET p_success = FALSE;
+        SET p_message = 'Username already taken.';
+        ROLLBACK;
+    ELSEIF v_email_exists > 0 THEN
+        SET p_success = FALSE;
+        SET p_message = 'Email already used by another account.';
+        ROLLBACK;
+    ELSE
+        -- 3. 更新 Users 表 (用户名和密码)
+        -- 如果密码为空，则保持原密码不变
+        UPDATE users 
+        SET username = p_username,
+            password_hash = IF(p_password = '' OR p_password IS NULL, password_hash, p_password)
+        WHERE user_id = p_user_id;
+
+        -- 4. 更新 Members 表 (Email)
+        UPDATE members 
+        SET email = p_contact
+        WHERE user_id = p_user_id;
+
+        COMMIT;
+        SET p_success = TRUE;
+        SET p_message = 'Profile updated successfully.';
+    END IF;
+
 END$$
 
 DELIMITER ;

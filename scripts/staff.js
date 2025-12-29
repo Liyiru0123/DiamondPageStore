@@ -300,6 +300,26 @@ function setupInternalEventListeners() {
     if (submitRequestBtn) {
         submitRequestBtn.addEventListener('click', submitStockRequest);
     }
+
+    // 注销逻辑
+    document.body.addEventListener('click', function(e) {
+        // 查找是否点击了 ID 为 logout-btn 的元素（或其子元素）
+        const logoutBtn = e.target.closest('#logout-btn');
+        if (logoutBtn) {
+            e.preventDefault(); // 阻止默认链接跳转
+            console.log("[Staff] Force Logout triggered");
+            
+            // 调用 common.js 中的 logout 函数
+            if (typeof logout === 'function') {
+                logout(); 
+            } else {
+                // 兜底逻辑：如果 common.js 没加载到，手动清除并跳转
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = 'login.html';
+            }
+        }
+    });
 }
 
 /**

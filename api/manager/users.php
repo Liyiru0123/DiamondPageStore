@@ -95,7 +95,7 @@ function listUsers($conn) {
                     ELSE NULL
                 END AS full_name,
                 CASE
-                    WHEN m.member_id IS NOT NULL THEN m.phone
+                    WHEN m.member_id IS NOT NULL THEN m.email
                     WHEN e.employee_id IS NOT NULL THEN e.phone
                     ELSE NULL
                 END AS phone
@@ -143,7 +143,7 @@ function getUserDetail($conn) {
                     ELSE NULL
                 END AS full_name,
                 CASE
-                    WHEN m.member_id IS NOT NULL THEN m.phone
+                    WHEN m.member_id IS NOT NULL THEN m.email
                     WHEN e.employee_id IS NOT NULL THEN e.phone
                     ELSE NULL
                 END AS phone
@@ -529,7 +529,7 @@ function searchUsers($conn) {
                     ELSE NULL
                 END AS full_name,
                 CASE
-                    WHEN m.member_id IS NOT NULL THEN m.phone
+                    WHEN m.member_id IS NOT NULL THEN m.email
                     WHEN e.employee_id IS NOT NULL THEN e.phone
                     ELSE NULL
                 END AS phone,
@@ -545,7 +545,7 @@ function searchUsers($conn) {
                 OR MATCH(e.first_name, e.last_name) AGAINST (:kw3b IN NATURAL LANGUAGE MODE)
                 OR u.user_types LIKE :kw_like1
                 OR CAST(u.user_id AS CHAR) LIKE :kw_like2
-                OR CAST(m.phone AS CHAR) LIKE :kw_like3
+                OR CAST(m.email AS CHAR) LIKE :kw_like3
                 OR CAST(e.phone AS CHAR) LIKE :kw_like4
             )
             ORDER BY relevance_score DESC, u.user_id DESC";

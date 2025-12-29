@@ -51,6 +51,7 @@ window.showAlert = function(message, type = 'info') {
         alertElement.classList.add('opacity-0', 'pointer-events-none');
     }, 3000);
 };
+
 /**
  * 全局鉴权检查逻辑，检查用户是否登录以及是否有权限
  * @param {Array} allowedRoles 允许访问该页面的角色列表
@@ -84,13 +85,21 @@ function checkAuth(allowedRoles = []) {
  */
 function logout() {
     console.log("[Auth] Logging out...");
+    
+    // 1. 清除所有认证相关的本地存储
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user_role');
     localStorage.removeItem('current_user');
+    
+    // 2. 清除会话存储（页面状态记忆）
     sessionStorage.removeItem('currentPage');
     
-    // 按照指令跳转至特定参数页面
-    window.location.href = 'login.html?role=customer&stage=2';
+    // 3. (可选) 清除可能存在的购物车缓存，如果你希望登出后清空购物车
+    // localStorage.removeItem('bookCart'); 
+
+    // 4. 跳转回纯净的登录页，不带任何参数
+    // 这样 login.html 就会显示“Identity Yourself”选择界面，而不是直接进入输入密码界面
+    window.location.href = 'login.html';
 }
 
 /**

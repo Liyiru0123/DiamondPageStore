@@ -10,6 +10,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="../styles/global.css">
 
     <!-- 财务页面特有样式 -->
     <style type="text/tailwindcss">
@@ -178,310 +179,354 @@
             }
         }
     </style>
+
+    <!-- 2. 强力路由守卫 (Security Guard) -->
+    <!-- 默认隐藏 body，只有通过检查才显示，防止未登录看到内容 -->
+    <style>
+        body { visibility: hidden; opacity: 0; transition: opacity 0.3s; }
+    </style>
+    
+    <script>
+        (function () {
+            // 1. 获取凭证
+            const token = localStorage.getItem('auth_token');
+            const role = localStorage.getItem('user_role');
+            
+            // 2. 定义回退函数 (清除垃圾数据并跳转)
+            function rejectAccess() {
+                console.warn("Access Denied. Clearing session and redirecting...");
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user_role');
+                localStorage.removeItem('current_user');
+                sessionStorage.clear();
+                // 使用 replace 替换历史记录，防止用户点“后退”按钮回来
+                window.location.replace('login.html');
+            }
+
+            // 3. 严格检查
+            // 检查 Token 是否存在，且不是 'null'/'undefined' 字符串
+            if (!token || token === 'null' || token === 'undefined') {
+                rejectAccess();
+                return;
+            }
+            
+            // 检查角色权限 (仅允许 finance 和 manager)
+            if (role !== 'finance' && role !== 'manager') { 
+                rejectAccess();
+                return;
+            }
+
+            // 4. 检查通过：显示页面
+            // 等待 DOM 解析后移除隐藏样式
+            document.addEventListener('DOMContentLoaded', function() {
+                document.body.style.visibility = 'visible';
+                document.body.style.opacity = '1';
+            });
+        })();
+    </script>
 </head>
 
-<body class="bg-gray-50 font-sans text-gray-800 min-h-screen">
-    <!-- 使用 layout.js 的布局结构 -->
-    <div id="main-system" class="flex flex-col min-h-screen">
-        <!-- Header 由 layout.js 渲染 -->
-        <div id="layout-header"></div>
+<body class="bg-gray-50 font-sans text-dark h-screen flex overflow-hidden">
+    <!-- Header 由 layout.js 渲染 -->
+    <div id="layout-sidebar" class="w-64 flex-shrink-0 transition-all duration-300 overflow-hidden relative z-40 bg-white border-r border-gray-200"></div>
 
-        <div class="flex flex-1">
-            <!-- Sidebar 由 layout.js 渲染 -->
-            <div id="layout-sidebar"></div>
+    <div class="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative transition-all duration-300">
+        <!-- Sidebar 由 layout.js 渲染 -->
+        <div id="layout-header" class="flex-shrink-0 z-30 bg-white shadow-sm"></div>
 
-            <!-- Main Content Area -->
-            <main class="flex-1 overflow-y-auto bg-gray-50 p-4 lg:p-6">
-                <!-- Financial Overview Dashboard Page -->
-                <div id="income-stats-page" class="page-content">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                        <div>
-                            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Financial
-                                Overview Dashboard</h2>
-                            <p class="text-gray-500">Analyze total financial condition</p>
-                        </div>
-                        <div class="mt-4 md:mt-0 flex gap-3">
-                            <button class="btn-secondary flex items-center gap-2">
-                                <i class="fa fa-calendar"></i> Export Report
-                            </button>
-                            <button class="btn-primary flex items-center gap-2">
-                                <i class="fa fa-download"></i> Download Data
-                            </button>
-                        </div>
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto bg-gray-50 p-4 lg:p-6" id="main-content">
+            <!-- Financial Overview Dashboard Page -->
+            <div id="income-stats-page" class="page-content">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                    <div>
+                        <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Financial
+                            Overview Dashboard</h2>
+                        <p class="text-gray-500">Analyze total financial condition</p>
                     </div>
-
-                    <!-- Total Revenue Card -->
-                    <div class="mb-6" id="total-revenue-container">
-                        <!-- Total revenue card will be populated by JavaScript -->
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                        <div class="card">
-                            <h3 class="font-semibold text-lg mb-4">Revenue by Payment Method</h3>
-                            <div class="pie-chart-wrapper">
-                                <canvas id="payment-method-pie-chart" class="chart-responsive"></canvas>
-                            </div>
-                        </div>
-
-                        <div class="card" id="revenue-by-date-chart-container">
-                            <!-- Revenue by Date chart with date selector will be populated by JavaScript -->
-                        </div>
-                    </div>
-
-                    <!-- Purchase Cost by Date Chart -->
-                    <div class="mb-6">
-                        <div class="card" id="purchase-cost-by-date-chart-container">
-                            <!-- Purchase Cost by Date chart with date selector will be populated by JavaScript -->
-                        </div>
+                    <div class="mt-4 md:mt-0 flex gap-3">
+                        <button class="btn-secondary flex items-center gap-2">
+                            <i class="fa fa-calendar"></i> Export Report
+                        </button>
+                        <button class="btn-primary flex items-center gap-2">
+                            <i class="fa fa-download"></i> Download Data
+                        </button>
                     </div>
                 </div>
 
-                <!-- 发票管理页面 -->
-                <div id="invoice-page" class="page-content hidden">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                        <div>
-                            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Invoice
-                                Management</h2>
-                            <p class="text-gray-500">Manage and track all invoices</p>
-                        </div>
-                        <div class="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
-                            <div class="relative w-full sm:w-auto">
-                                <input type="text" placeholder="Search invoices..." id="invoice-search"
-                                    class="w-full sm:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B5A2B]/30 focus:border-[#8B5A2B] outline-none transition-all">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
-                                    <i class="fa fa-search"></i>
-                                </span>
-                            </div>
-                            <button class="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
-                                id="create-invoice-btn">
-                                <i class="fa fa-plus"></i> Create Invoice
-                            </button>
-                        </div>
-                    </div>
-                    
-                    
-                    <!-- 修复的发票筛选区域 -->
-                    <div class="card mb-6">
-                        <h3 class="font-semibold text-lg mb-4">Filter Criteria</h3>
-                        <div class="space-y-4">
-                            <!-- 第一行：日期范围和状态筛选 -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Issue Date</label>
-                                    <div class="flex gap-2 items-center">
-                                        <input type="date" class="form-input flex-1" id="invoice-start-date" lang="en">
-                                        <span class="text-gray-500 text-sm whitespace-nowrap">to</span>
-                                        <input type="date" class="form-input flex-1" id="invoice-end-date" lang="en">
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Invoice Status</label>
-                                    <select class="form-input w-full" id="invoice-status-filter">
-                                        <option value="">All Statuses</option>
-                                        <option value="draft">draft</option>
-                                        <option value="issued">issued</option>
-                                        <option value="partly_paid">partly_paid</option>
-                                        <option value="paid">paid</option>
-                                        <option value="VOIDED">voided</option>
-                                        <option value="credited">credited</option>
-                                    </select>
-                                </div>
-                            </div>
+                <!-- Total Revenue Card -->
+                <div class="mb-6" id="total-revenue-container">
+                    <!-- Total revenue card will be populated by JavaScript -->
+                </div>
 
-                            <!-- 第二行：员工、订单ID和操作按钮 -->
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Amount Range </label>
-                                    <div class="flex items-center gap-2">
-                                        <input type="number" id="filter-min-amount" placeholder="Min" class="form-input w-full px-2" min="0">
-                                        <span class="text-gray-400">-</span>
-                                        <input type="number" id="filter-max-amount" placeholder="Max" class="form-input w-full px-2" min="0">
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Order ID</label>
-                                    <input type="text" placeholder="Order ID" id="invoice-order-filter"
-                                        class="form-input w-full">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Actions</label>
-                                    <div class="flex gap-2">
-                                        <button class="btn-primary flex-1 py-2" id="invoice-search-btn">
-                                            <i class="fa fa-search mr-2"></i>Search
-                                        </button>
-                                        <button class="btn-secondary flex-1 py-2" id="invoice-reset-btn">
-                                            <i class="fa fa-refresh mr-2"></i>Reset
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div> 
-                    
-
-
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                     <div class="card">
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead>
-                                    <tr>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
-                                            Invoice Number</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Order ID</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Customer</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Status</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Issue Date</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Due Date</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Amount</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
-                                            Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="invoice-table-body" class="bg-white divide-y divide-gray-200">
-                                    <!-- Invoice data will be populated by JavaScript -->
-                                </tbody>
-                            </table>
+                        <h3 class="font-semibold text-lg mb-4">Revenue by Payment Method</h3>
+                        <div class="pie-chart-wrapper">
+                            <canvas id="payment-method-pie-chart" class="chart-responsive"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="card" id="revenue-by-date-chart-container">
+                        <!-- Revenue by Date chart with date selector will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Purchase Cost by Date Chart -->
+                <div class="mb-6">
+                    <div class="card" id="purchase-cost-by-date-chart-container">
+                        <!-- Purchase Cost by Date chart with date selector will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 发票管理页面 -->
+            <div id="invoice-page" class="page-content hidden">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                    <div>
+                        <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Invoice
+                            Management</h2>
+                        <p class="text-gray-500">Manage and track all invoices</p>
+                    </div>
+                    <div class="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
+                        <div class="relative w-full sm:w-auto">
+                            <input type="text" placeholder="Search invoices..." id="invoice-search"
+                                class="w-full sm:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B5A2B]/30 focus:border-[#8B5A2B] outline-none transition-all">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
+                                <i class="fa fa-search"></i>
+                            </span>
+                        </div>
+                        <button class="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
+                            id="create-invoice-btn">
+                            <i class="fa fa-plus"></i> Create Invoice
+                        </button>
+                    </div>
+                </div>
+
+
+                <!-- 修复的发票筛选区域 -->
+                <div class="card mb-6">
+                    <h3 class="font-semibold text-lg mb-4">Filter Criteria</h3>
+                    <div class="space-y-4">
+                        <!-- 第一行：日期范围和状态筛选 -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Issue Date</label>
+                                <div class="flex gap-2 items-center">
+                                    <input type="date" class="form-input flex-1" id="invoice-start-date" lang="en">
+                                    <span class="text-gray-500 text-sm whitespace-nowrap">to</span>
+                                    <input type="date" class="form-input flex-1" id="invoice-end-date" lang="en">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Invoice Status</label>
+                                <select class="form-input w-full" id="invoice-status-filter">
+                                    <option value="">All Statuses</option>
+                                    <option value="draft">draft</option>
+                                    <option value="issued">issued</option>
+                                    <option value="partly_paid">partly_paid</option>
+                                    <option value="paid">paid</option>
+                                    <option value="VOIDED">voided</option>
+                                    <option value="credited">credited</option>
+                                </select>
+                            </div>
                         </div>
 
-                        <div class="flex justify-between items-center mt-5">
-                            <p class="text-sm text-gray-500" id="invoice-pagination-info">Loading invoices...</p>
+                        <!-- 第二行：员工、订单ID和操作按钮 -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Amount Range </label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="filter-min-amount" placeholder="Min"
+                                        class="form-input w-full px-2" min="0">
+                                    <span class="text-gray-400">-</span>
+                                    <input type="number" id="filter-max-amount" placeholder="Max"
+                                        class="form-input w-full px-2" min="0">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Order ID</label>
+                                <input type="text" placeholder="Order ID" id="invoice-order-filter"
+                                    class="form-input w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Actions</label>
+                                <div class="flex gap-2">
+                                    <button class="btn-primary flex-1 py-2" id="invoice-search-btn">
+                                        <i class="fa fa-search mr-2"></i>Search
+                                    </button>
+                                    <button class="btn-secondary flex-1 py-2" id="invoice-reset-btn">
+                                        <i class="fa fa-refresh mr-2"></i>Reset
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 订单管理页面 -->
-                <div id="order-page" class="page-content hidden">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                        <div>
-                            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Order
-                                Management</h2>
-                            <p class="text-gray-500">Manage and track all customer orders</p>
-                        </div>
-                        <div class="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
-                            <div class="relative w-full sm:w-auto">
-                                <input type="text" placeholder="Search orders..." id="order-search"
-                                    class="w-full sm:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B5A2B]/30 focus:border-[#8B5A2B] outline-none transition-all">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
-                                    <i class="fa fa-search"></i>
-                                </span>
-                            </div>
-                            <button class="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
-                                id="refresh-orders-btn">
-                                <i class="fa fa-refresh"></i> Refresh
-                            </button>
-                        </div>
+
+
+                <div class="card">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                                        Invoice Number</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Order ID</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Customer</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Status</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Issue Date</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Due Date</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Amount</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                                        Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoice-table-body" class="bg-white divide-y divide-gray-200">
+                                <!-- Invoice data will be populated by JavaScript -->
+                            </tbody>
+                        </table>
                     </div>
 
-                    <!-- 修复的筛选区域 -->
-                    <div class="card mb-6">
-                        <h3 class="font-semibold text-lg mb-4">Filter Criteria</h3>
-                        <div class="space-y-4">
-                            <!-- 第一行：日期范围和状态筛选 -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
-                                    <div class="flex gap-2 items-center">
-                                        <input type="date" class="form-input flex-1" id="order-date-from" lang="en">
-                                        <span class="text-gray-500 text-sm whitespace-nowrap">to</span>
-                                        <input type="date" class="form-input flex-1" id="order-date-to" lang="en">
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Order Status</label>
-                                    <select class="form-input w-full" id="order-status-filter">
-                                        <option value="">All Statuses</option>
-                                        <option value="created">Created</option>
-                                        <option value="processing">Processing</option>
-                                        <option value="paid">Paid</option>
-                                        <option value="completed">Completed</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- 第二行：门店筛选和操作按钮 -->
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Store</label>
-                                    <select class="form-input w-full" id="order-store-filter">
-                                        <option value="">All Stores</option>
-                                        <option value="STORE-001">New York Store</option>
-                                        <option value="STORE-002">Boston Store</option>
-                                        <option value="STORE-003">Chicago Store</option>
-                                    </select>
-                                </div>
-                                <div class="md:col-span-2">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Actions</label>
-                                    <div class="flex gap-2">
-                                        <button class="btn-primary flex-1 py-2" id="order-search-btn">
-                                            <i class="fa fa-search mr-2"></i>Search
-                                        </button>
-                                        <button class="btn-secondary flex-1 py-2" id="order-reset-btn">
-                                            <i class="fa fa-refresh mr-2"></i>Reset
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="flex justify-between items-center mt-5">
+                        <p class="text-sm text-gray-500" id="invoice-pagination-info">Loading invoices...</p>
                     </div>
+                </div>
+            </div>
 
-                    <!-- 表格部分保持不变 -->
-                    <div class="card">
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead>
-                                    <tr>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
-                                            Order ID</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Store</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Customer</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Status</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Order Date</th>
-                                        <!-- 注意：这里缺少了"Payable Amount"列，需要根据实际需求添加 -->
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Notes</th>
-                                        <th
-                                            class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
-                                            Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="order-table-body" class="bg-white divide-y divide-gray-200">
-                                    <!-- Order data will be populated by JavaScript -->
-                                </tbody>
-                            </table>
+            <!-- 订单管理页面 -->
+            <div id="order-page" class="page-content hidden">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                    <div>
+                        <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-serif font-bold text-gray-800">Order
+                            Management</h2>
+                        <p class="text-gray-500">Manage and track all customer orders</p>
+                    </div>
+                    <div class="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
+                        <div class="relative w-full sm:w-auto">
+                            <input type="text" placeholder="Search orders..." id="order-search"
+                                class="w-full sm:w-64 px-4 py-2 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B5A2B]/30 focus:border-[#8B5A2B] outline-none transition-all">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
+                                <i class="fa fa-search"></i>
+                            </span>
+                        </div>
+                        <button class="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
+                            id="refresh-orders-btn">
+                            <i class="fa fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 修复的筛选区域 -->
+                <div class="card mb-6">
+                    <h3 class="font-semibold text-lg mb-4">Filter Criteria</h3>
+                    <div class="space-y-4">
+                        <!-- 第一行：日期范围和状态筛选 -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+                                <div class="flex gap-2 items-center">
+                                    <input type="date" class="form-input flex-1" id="order-date-from" lang="en">
+                                    <span class="text-gray-500 text-sm whitespace-nowrap">to</span>
+                                    <input type="date" class="form-input flex-1" id="order-date-to" lang="en">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Order Status</label>
+                                <select class="form-input w-full" id="order-status-filter">
+                                    <option value="">All Statuses</option>
+                                    <option value="created">Created</option>
+                                    <option value="processing">Processing</option>
+                                    <option value="paid">Paid</option>
+                                    <option value="completed">Completed</option>
+                                </select>
+                            </div>
                         </div>
 
-                        <div class="flex justify-between items-center mt-5">
-                            <p class="text-sm text-gray-500" id="order-pagination-info">Loading orders...</p>
+                        <!-- 第二行：门店筛选和操作按钮 -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Store</label>
+                                <select class="form-input w-full" id="order-store-filter">
+                                    <option value="">All Stores</option>
+                                    <option value="STORE-001">New York Store</option>
+                                    <option value="STORE-002">Boston Store</option>
+                                    <option value="STORE-003">Chicago Store</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Actions</label>
+                                <div class="flex gap-2">
+                                    <button class="btn-primary flex-1 py-2" id="order-search-btn">
+                                        <i class="fa fa-search mr-2"></i>Search
+                                    </button>
+                                    <button class="btn-secondary flex-1 py-2" id="order-reset-btn">
+                                        <i class="fa fa-refresh mr-2"></i>Reset
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </main>
-        </div>
+
+                <!-- 表格部分保持不变 -->
+                <div class="card">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                                        Order ID</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Store</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Customer</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Status</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Order Date</th>
+                                    <!-- 注意：这里缺少了"Payable Amount"列，需要根据实际需求添加 -->
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Notes</th>
+                                    <th
+                                        class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                                        Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="order-table-body" class="bg-white divide-y divide-gray-200">
+                                <!-- Order data will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex justify-between items-center mt-5">
+                        <p class="text-sm text-gray-500" id="order-pagination-info">Loading orders...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
 
     <!-- 引用 layout.js -->
@@ -498,43 +543,49 @@
 
     <!-- 页面初始化脚本 -->
     <script>
-        // 页面初始化
-        function initFinancePage() {
-            console.log('Finance page initialized');
+        // 1. 将函数改名，避免与 finance.js 中的 initFinancePage 冲突
+        function bootstrapFinancePage() {
+            console.log('[Bootstrap] Starting finance page initialization...');
 
-            // 初始化 layout.js 的布局
-            window.initLayout('finance', 'income-stats');
+            // 2. 强制初始化布局 (Header + Sidebar)
+            if (typeof window.initLayout === 'function') {
+                window.initLayout('finance', 'income-stats');
+            } else {
+                console.error("[Bootstrap] layout.js not loaded!");
+            }
 
-            // 尝试从sessionStorage获取最后访问的页面
-            const lastPage = sessionStorage.getItem('currentPage') || 'income-stats';
+            // 3. 强制展开侧边栏 (修复侧边栏可能被折叠的问题)
+            const sidebar = document.getElementById('layout-sidebar');
+            if (sidebar) {
+                sidebar.classList.remove('w-0', 'hidden');
+                sidebar.classList.add('w-64');
+            }
 
-            // 初始化默认页面
+            // 4. 加载页面特定内容 (图表等)
+            // 延迟一点点，确保 DOM 已经由 layout.js 渲染完毕
             setTimeout(() => {
-                switch (lastPage) {
-                    case 'income-stats':
-                        if (typeof initIncomeStatsCharts === 'function') {
-                            initIncomeStatsCharts();
-                        }
-                        break;
-                    case 'order':
-                        if (typeof initOrderPage === 'function') {
-                            initOrderPage();
-                        }
-                        break;
-                    case 'invoice':
-                        if (typeof initInvoicePage === 'function') {
-                            initInvoicePage();
-                        }
-                        break;
+                // 恢复之前的页面状态
+                const lastPage = sessionStorage.getItem('currentPage') || 'income-stats';
+
+                // 调用 finance.js 里的切换逻辑
+                if (typeof financeSwitchPage === 'function') {
+                    financeSwitchPage(lastPage);
                 }
-            }, 200);
+
+                // 确保图表初始化 (如果当前是 dashboard)
+                if (lastPage === 'income-stats' && typeof initIncomeStatsCharts === 'function') {
+                    initIncomeStatsCharts();
+                }
+            }, 100);
         }
 
-        // 当DOM加载完成后初始化财务页面
-        document.addEventListener('DOMContentLoaded', function () {
-            console.log('DOM loaded, initializing finance page...');
-            initFinancePage();
-        });
+        // 5. 绑定 DOM 加载事件
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bootstrapFinancePage);
+        } else {
+            // 如果 DOM 已经加载完了 (比如脚本加载慢了)，直接执行
+            bootstrapFinancePage();
+        }
     </script>
 </body>
 
