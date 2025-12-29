@@ -58,6 +58,7 @@ const MENU_CONFIG = {
         { id: 'inventory', icon: 'fa-cubes', text: 'Inventory Management', type: 'admin' },
         { id: 'staff', icon: 'fa-users', text: 'Staff Management', type: 'admin' },
         { id: 'user-management', icon: 'fa-user-cog', text: 'User Management', type: 'admin' },
+        { id: 'supplier-management', icon: 'fa-truck', text: 'Supplier Management', type: 'admin' },
         { id: 'notifications', icon: 'fa-bell', text: 'Notifications', type: 'admin' }
     ],
 
@@ -89,12 +90,12 @@ window.switchPage = function (pageId) {
 
     // 1. 优先获取目标元素并进行容错处理
     let targetPage = document.getElementById(`${pageId}-page`);
-    
+
     if (!targetPage) {
         console.warn(`[Router] Page "${pageId}-page" not found, falling back to home.`);
         pageId = 'home';
         targetPage = document.getElementById('home-page');
-        
+
         // 如果连 home 都没有，说明页面结构有问题，中断执行避免崩溃
         if (!targetPage) {
             console.error('[Router] Critical: Home page not found in DOM.');
@@ -119,7 +120,7 @@ window.switchPage = function (pageId) {
             // 根据父容器样式判断应用哪套高亮类
             const sidebarEl = el.closest('#sidebar');
             const isCustomerSidebar = sidebarEl && sidebarEl.classList.contains('bg-gradient-to-b');
-            
+
             if (isCustomerSidebar) {
                 el.classList.add('sidebar-item-active');
             } else {
