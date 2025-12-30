@@ -157,72 +157,12 @@ async function loadStaffData() {
     showLoading('staff-table-body');
     try {
         const employees = await fetchEmployeesAPI();
-        const staffCount = document.getElementById('staff-count');
-
         tableBody.innerHTML = '';
-
-        employees.forEach(employee => {
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50 transition-colors';
-            row.dataset.staffId = employee.employee_id;
-            row.dataset.employeeid = employee.employee_id;
-            row.dataset.userid = employee.user_id;
-            row.dataset.branchname = employee.store_name;
-            row.dataset.name = employee.full_name;
-            row.dataset.email = employee.email;
-            row.dataset.storeID = employee.store_id; // Fixed: Capital ID for filter compatibility
-
-            let positionClass = 'role-staff';
-            let positionName = 'Staff';
-            let normalizedPosition = 'staff'; // For filter compatibility
-
-            if (employee.job_title) {
-                if (employee.job_title.toLowerCase().includes('manager')) {
-                    positionClass = 'role-manager';
-                    positionName = 'Manager';
-                    normalizedPosition = 'manager';
-                } else if (employee.job_title.toLowerCase().includes('finance')) {
-                    positionClass = 'role-finance';
-                    positionName = 'Finance';
-                    normalizedPosition = 'finance';
-                }
-            }
-
-            row.dataset.position = normalizedPosition; // Lowercase normalized value for filter
-
-            row.innerHTML = `
-                <td class="px-4 py-4 text-sm font-medium">${escapeHtml(employee.employee_id)}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(employee.user_id)}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(employee.store_name)}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(employee.full_name)}</td>
-                <td class="px-4 py-4 text-sm">
-                    <span class="px-2 py-1 text-xs ${positionClass} rounded-full">
-                        ${escapeHtml(positionName)}
-                    </span>
-                </td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(employee.email)}</td>
-                <td class="px-4 py-4 text-sm">
-                    <div class="flex gap-2">
-                        <button class="text-primary hover:text-primary/80 edit-staff-btn" title="Edit">
-                            <i class="fa fa-edit"></i> Edit
-                        </button>
-                        <button class="text-red-600 hover:text-red-800 delete-staff" title="Delete">
-                            <i class="fa fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
-
-        if (staffCount) {
-            staffCount.textContent = String(employees.length);
+        if (typeof renderStaffTable === 'function') {
+            renderStaffTable(employees);
         }
 
-        // 使用正确的按钮监听器
-        setupStaffActionListeners();
-
-        // 删除 originalContent，防止 hideLoading 覆盖已渲染的数据
+        // ?????? originalContent?????????hideLoading ????????????????????????
         delete tableBody.dataset.originalContent;
     } catch (error) {
         console.error('Failed to load staff data:', error);
@@ -291,25 +231,11 @@ async function loadPricingData() {
     try {
         const books = await fetchBooksAPI();
         tableBody.innerHTML = '';
+        if (typeof renderPricingRows === 'function') {
+            renderPricingRows(books);
+        }
 
-        books.forEach(book => {
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50';
-            row.innerHTML = `
-                <td class="px-6 py-4">${escapeHtml(book.ISBN)}</td>
-                <td class="px-6 py-4">${escapeHtml(book.name)}</td>
-                <td class="px-6 py-4">${MANAGER_CURRENCY_LABEL} ${parseFloat(book.unit_price).toFixed(2)}</td>
-                <td class="px-6 py-4">
-                    <button onclick="editPricing(${book.sku_id}, '${escapeHtml(book.name)}', ${book.unit_price})"
-                        class="text-primary hover:text-primary-dark">
-                        <i class="fa fa-edit"></i> Edit Price
-                    </button>
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
-
-        // 删除 originalContent，防止 hideLoading 覆盖已渲染的数据
+        // ??? originalContent?????hideLoading ????????????
         delete tableBody.dataset.originalContent;
     } catch (error) {
         console.error('Failed to load pricing data:', error);
@@ -345,42 +271,57 @@ async function editPricing(skuId, bookName, currentPrice) {
 // Notifications
 // =============================================================================
 
+function renderNotificationsList(notifications) {
+    const list = document.getElementById('notifications-list');
+    if (!list) return;
+
+    list.innerHTML = '';
+
+    if (!notifications || notifications.length === 0) {
+        list.innerHTML = `
+            <div class="p-4 border border-gray-200 rounded-lg bg-white text-center text-gray-500">
+                No notifications found.
+            </div>
+        `;
+        return;
+    }
+
+    notifications.forEach(notif => {
+        const item = document.createElement('div');
+        item.className = 'p-4 border border-gray-200 rounded-lg bg-white';
+        item.innerHTML = `
+            <div class="flex justify-between items-start">
+                <div>
+                    <h4 class="font-semibold text-gray-900">${escapeHtml(notif.title)}</h4>
+                    <p class="text-sm text-gray-600 mt-1">${escapeHtml(notif.content)}</p>
+                    <p class="text-xs text-gray-500 mt-2">
+                        Publish: ${escapeHtml(new Date(notif.publish_at).toLocaleString())}
+                        ${notif.expire_at ? ` | Expire: ${escapeHtml(new Date(notif.expire_at).toLocaleString())}` : ''}
+                    </p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="deleteNotification(${notif.announcement_id})" class="text-red-600 hover:text-red-800">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        list.appendChild(item);
+    });
+}
+
 async function loadNotifications() {
     try {
         const notifications = await fetchNotificationsAPI();
-
-        const list = document.getElementById('notifications-list');
-        if (!list) return;
-
-        list.innerHTML = '';
-
-        notifications.forEach(notif => {
-            const item = document.createElement('div');
-            item.className = 'p-4 border border-gray-200 rounded-lg bg-white';
-            item.innerHTML = `
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h4 class="font-semibold text-gray-900">${escapeHtml(notif.title)}</h4>
-                        <p class="text-sm text-gray-600 mt-1">${escapeHtml(notif.content)}</p>
-                        <p class="text-xs text-gray-500 mt-2">
-                            Publish: ${escapeHtml(new Date(notif.publish_at).toLocaleString())}
-                            ${notif.expire_at ? ` | Expire: ${escapeHtml(new Date(notif.expire_at).toLocaleString())}` : ''}
-                        </p>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="deleteNotification(${notif.announcement_id})" class="text-red-600 hover:text-red-800">
-                            <i class="fa fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-            list.appendChild(item);
-        });
+        if (typeof renderNotificationsList === 'function') {
+            renderNotificationsList(notifications);
+        }
     } catch (error) {
         console.error('Failed to load notifications:', error);
         showMessage('Failed to load notifications: ' + error.message, 'error');
     }
 }
+
 
 async function sendNotification() {
     const titleInput = document.getElementById('notification-subject');
@@ -452,59 +393,10 @@ async function loadUserManagementData() {
     showLoading('user-management-table-body');
     try {
         const users = await fetchUsersAPI();
-        tableBody.innerHTML = '';
+        if (typeof renderUserManagementRows === 'function') {
+            renderUserManagementRows(users);
+        }
 
-        users.forEach(user => {
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50 transition-colors';
-            row.dataset.userId = user.user_id;
-            row.dataset.userData = JSON.stringify(user);
-
-            // 账户状态样式
-            let statusClass = '';
-            let statusText = '';
-            if (user.account_status === 'active') {
-                statusClass = 'bg-green-100 text-green-800';
-                statusText = 'Active';
-            } else if (user.account_status === 'inactive') {
-                statusClass = 'bg-red-100 text-red-800';
-                statusText = 'Inactive';
-            } else if (user.account_status === 'suspended') {
-                statusClass = 'bg-yellow-100 text-yellow-800';
-                statusText = 'Suspended';
-            }
-
-            // 用户类型样式
-            const typeBadge = getUserTypeBadge(user.user_type);
-
-            row.innerHTML = `
-                <td class="px-4 py-4 text-sm font-medium">${escapeHtml(user.user_id)}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(user.username)}</td>
-                <td class="px-4 py-4 text-sm">
-                    <span class="px-2 py-1 text-xs ${typeBadge.className} rounded-full">${escapeHtml(typeBadge.label)}</span>
-                </td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(user.full_name || 'N/A')}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(user.email || 'N/A')}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(new Date(user.create_date).toLocaleDateString())}</td>
-                <td class="px-4 py-4 text-sm">${user.last_log_date ? escapeHtml(new Date(user.last_log_date).toLocaleDateString()) : 'Never'}</td>
-                <td class="px-4 py-4 text-sm">
-                    <div class="flex gap-2">
-                        <button class="text-primary hover:text-primary/80 edit-user-btn" title="Edit User">
-                            <i class="fa fa-edit"></i> Edit
-                        </button>
-                        <button class="text-red-600 hover:text-red-800 delete-user-btn" title="Delete User">
-                            <i class="fa fa-trash"></i>
-                        </button>
-                        <button class="text-blue-600 hover:text-blue-800 reset-password-btn" title="Reset Password">
-                            <i class="fa fa-key"></i>
-                        </button>
-                    </div>
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
-
-        // 添加事件监听器
         addUserActionButtonListeners();
 
         // 删除 originalContent，防止 hideLoading 覆盖已渲染的数据
@@ -519,6 +411,19 @@ async function loadUserManagementData() {
 }
 
 function addUserActionButtonListeners() {
+    const tableBody = document.getElementById('user-management-table-body');
+    if (tableBody && tableBody.dataset.emailListenerAttached !== 'true') {
+        tableBody.dataset.emailListenerAttached = 'true';
+        tableBody.addEventListener('click', (event) => {
+            const cell = event.target.closest('.user-email-cell');
+            if (!cell) return;
+            const email = cell.dataset.email || '';
+            if (email) {
+                alert(`Email: ${email}`);
+            }
+        });
+    }
+
     // Edit buttons
     document.querySelectorAll('#user-management-table-body .edit-user-btn').forEach(button => {
         button.addEventListener('click', function () {
@@ -650,6 +555,78 @@ async function deleteUser(userId) {
 
 let managerReplenishmentCache = [];
 
+function renderReplenishmentRows(requests) {
+    const tableBody = document.getElementById('replenishment-table-body');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = '';
+
+    if (!requests || requests.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-4 py-6 text-center text-gray-500">
+                    No replenishment requests found.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    requests.forEach(request => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50';
+        row.dataset.requestId = request.request_id;
+
+        const requestDate = request.request_date ? new Date(request.request_date) : null;
+        const requestDateText = requestDate && !Number.isNaN(requestDate.getTime())
+            ? requestDate.toLocaleString()
+            : (request.request_date || 'N/A');
+
+        const statusClass = request.status === 'approved'
+            ? 'bg-green-100 text-green-800'
+            : request.status === 'rejected'
+                ? 'bg-red-100 text-red-800'
+                : request.status === 'completed'
+                    ? 'bg-blue-100 text-blue-800'
+                    : 'bg-yellow-100 text-yellow-800';
+
+        row.innerHTML = `
+            <td class="px-4 py-4 text-sm font-medium">${escapeHtml(request.request_id)}</td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(request.store_name)}</td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(requestDateText)}</td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(request.sku_count)}</td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(request.total_quantity)}</td>
+            <td class="px-4 py-4 text-sm">
+                <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${escapeHtml(request.status)}</span>
+            </td>
+            <td class="px-4 py-4 text-sm">
+                <div class="flex gap-2">
+                    <button class="text-primary hover:text-primary/80 view-request-btn" title="View Details">
+                        <i class="fa fa-eye"></i>
+                    </button>
+                    ${request.status === 'pending' ? `
+                    <button class="text-green-600 hover:text-green-800 approve-request-btn" title="Approve">
+                        <i class="fa fa-check"></i>
+                    </button>
+                    <button class="text-red-600 hover:text-red-800 reject-request-btn" title="Reject">
+                        <i class="fa fa-times"></i>
+                    </button>
+                    ` : ''}
+                    ${request.status === 'approved' ? `
+                    <button class="text-blue-600 hover:text-blue-800 complete-request-btn" title="Mark Completed">
+                        <i class="fa fa-check-circle"></i>
+                    </button>
+                    ` : ''}
+                </div>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+
+    wireRequestActionButtons();
+}
+
+
 async function loadReplenishmentRequests() {
     const tableBody = document.getElementById('replenishment-table-body');
     if (!tableBody) return;
@@ -671,78 +648,12 @@ async function loadReplenishmentRequests() {
 
         const requests = await fetchReplenishmentRequestsAPI(filters);
         managerReplenishmentCache = requests;
-        tableBody.innerHTML = '';
 
-        if (!requests || requests.length === 0) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="px-4 py-6 text-center text-gray-500">
-                        No replenishment requests found.
-                    </td>
-                </tr>
-            `;
-            updateReplenishmentPagination(0);
-            delete tableBody.dataset.originalContent;
-            return;
+        if (typeof renderReplenishmentRows === 'function') {
+            renderReplenishmentRows(requests);
         }
 
-        requests.forEach(request => {
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50';
-            row.dataset.requestId = request.request_id;
-
-            const requestDate = request.request_date ? new Date(request.request_date) : null;
-            const requestDateText = requestDate && !Number.isNaN(requestDate.getTime())
-                ? requestDate.toLocaleString()
-                : (request.request_date || 'N/A');
-
-            const statusClass = request.status === 'approved'
-                ? 'bg-green-100 text-green-800'
-                : request.status === 'rejected'
-                    ? 'bg-red-100 text-red-800'
-                    : request.status === 'completed'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-yellow-100 text-yellow-800';
-
-            row.innerHTML = `
-                <td class="px-4 py-4 text-sm font-medium">${escapeHtml(request.request_id)}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(request.store_name)}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(requestDateText)}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(request.sku_count)}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(request.total_quantity)}</td>
-                <td class="px-4 py-4 text-sm">
-                    <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${escapeHtml(request.status)}</span>
-                </td>
-                <td class="px-4 py-4 text-sm">
-                    <div class="flex gap-2">
-                        <button class="text-primary hover:text-primary/80 view-request-btn" title="View Details">
-                            <i class="fa fa-eye"></i>
-                        </button>
-                        ${request.status === 'pending' ? `
-                        <button class="text-green-600 hover:text-green-800 approve-request-btn" title="Approve">
-                            <i class="fa fa-check"></i>
-                        </button>
-                        <button class="text-red-600 hover:text-red-800 reject-request-btn" title="Reject">
-                            <i class="fa fa-times"></i>
-                        </button>
-                        ` : ''}
-                        ${request.status === 'approved' ? `
-                        <button class="text-blue-600 hover:text-blue-800 complete-request-btn" title="Mark Completed">
-                            <i class="fa fa-check-circle"></i>
-                        </button>
-                        ` : ''}
-                    </div>
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
-
-        wireRequestActionButtons();
-
-        // 更新分页信息
-        updateReplenishmentPagination(requests.length);
-
-        // 删除 originalContent，防止 hideLoading 覆盖已渲染的数据
+        // ?? originalContent??? hideLoading ????????
         delete tableBody.dataset.originalContent;
     } catch (error) {
         console.error('Failed to load replenishment requests:', error);
@@ -752,6 +663,7 @@ async function loadReplenishmentRequests() {
         hideLoading('replenishment-table-body');
     }
 }
+
 
 function wireRequestActionButtons() {
     document.querySelectorAll('#replenishment-table-body .view-request-btn').forEach(button => {
@@ -895,32 +807,8 @@ async function loadStockOverviewByBranch(branchId = 'all') {
         const storeId = branchId === 'all' ? null : branchId;
         const inventory = await fetchInventoryByStoreAPI(storeId);
 
-        const tableBody = document.getElementById('stock-branch-table-body');
-        const totalCount = document.getElementById('branch-total-count');
-        if (!tableBody) return;
-
-        tableBody.innerHTML = '';
-
-        inventory.forEach(item => {
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50';
-            row.innerHTML = `
-                <td class="px-4 py-4 text-sm font-medium">${escapeHtml(item.sku_id)}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(item.book_name)}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(item.store_name)}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(item.total_quantity)}</td>
-                <td class="px-4 py-4 text-sm">${item.last_inbound_date ? escapeHtml(new Date(item.last_inbound_date).toLocaleDateString()) : 'N/A'}</td>
-                <td class="px-4 py-4 text-sm">
-                    <span class="px-2 py-1 text-xs rounded-full ${item.stock_status === 'High' ? 'stock-high' :
-                    item.stock_status === 'Medium' ? 'stock-medium' : 'stock-low'
-                }">${escapeHtml(item.stock_status)}</span>
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
-
-        if (totalCount) {
-            totalCount.textContent = String(inventory.length);
+        if (typeof renderStockByBranchRows === 'function') {
+            renderStockByBranchRows(inventory);
         }
     } catch (error) {
         console.error('Failed to load inventory by branch:', error);
@@ -1213,7 +1101,7 @@ async function performUserSearch(searchTerm) {
                     <span class="px-2 py-1 text-xs ${typeBadge.className} rounded-full">${escapeHtml(typeBadge.label)}</span>
                 </td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(user.full_name || 'N/A')}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(user.email || 'N/A')}</td>
+                <td class="px-4 py-4 text-sm user-email-cell" title="${escapeHtml(user.email || 'N/A')}" data-email="${escapeHtml(user.email || '')}">${escapeHtml(user.email || 'N/A')}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(new Date(user.create_date).toLocaleDateString())}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(new Date(user.last_log_date).toLocaleDateString())}</td>
                 <td class="px-4 py-4 text-sm">
@@ -1400,9 +1288,11 @@ function renderUserManagementRows(users) {
                 <span class="px-2 py-1 text-xs ${typeBadge.className} rounded-full">${escapeHtml(typeBadge.label)}</span>
             </td>
             <td class="px-4 py-4 text-sm">${escapeHtml(user.full_name || 'N/A')}</td>
-            <td class="px-4 py-4 text-sm">${escapeHtml(user.email || 'N/A')}</td>
-            <td class="px-4 py-4 text-sm">${escapeHtml(createdAt)}</td>
-            <td class="px-4 py-4 text-sm">${escapeHtml(lastLogin)}</td>
+            <td class="px-4 py-4 text-sm w-48 max-w-xs truncate user-email-cell" title="${escapeHtml(user.email || 'N/A')}" data-email="${escapeHtml(user.email || '')}">
+                ${escapeHtml(user.email || 'N/A')}
+            </td>
+            <td class="px-4 py-4 text-sm whitespace-nowrap">${escapeHtml(createdAt)}</td>
+            <td class="px-4 py-4 text-sm whitespace-nowrap">${escapeHtml(lastLogin)}</td>
             <td class="px-4 py-4 text-sm">
                 <div class="flex gap-2">
                     <button class="text-primary hover:text-primary/80 edit-user-btn" title="Edit User">
@@ -1458,7 +1348,6 @@ function renderPricingRows(books) {
 
 function renderStockByBranchRows(inventory) {
     const tableBody = document.getElementById('stock-branch-table-body');
-    const totalCount = document.getElementById('branch-total-count');
     const branchCount = document.getElementById('branch-stock-count');
     if (!tableBody) return;
 
@@ -1470,7 +1359,6 @@ function renderStockByBranchRows(inventory) {
                 <td colspan="6" class="px-4 py-8 text-center text-gray-500">No inventory found.</td>
             </tr>
         `;
-        if (totalCount) totalCount.textContent = '0';
         if (branchCount) branchCount.textContent = '0';
         return;
     }
@@ -1493,7 +1381,6 @@ function renderStockByBranchRows(inventory) {
         tableBody.appendChild(row);
     });
 
-    if (totalCount) totalCount.textContent = String(inventory.length);
     if (branchCount) branchCount.textContent = String(inventory.length);
 }
 

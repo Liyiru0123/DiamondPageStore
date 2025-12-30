@@ -1187,3 +1187,694 @@ SELECT '4. FULLTEXT 搜索索引' AS '';
 SELECT '5. Dashboard 数据修复' AS '';
 SELECT '' AS '';
 SELECT '============================================================' AS '';
+
+-- ============================================================================
+-- BEGIN manager_employee_email_migration.sql
+-- ============================================================================
+-- Migration: change employees.phone to employees.email
+-- NOTE: Update existing data after running this change if needed.
+
+USE book_store;
+
+ALTER TABLE employees
+    CHANGE COLUMN phone email VARCHAR(100) NOT NULL;
+-- ============================================================================
+-- END manager_employee_email_migration.sql
+-- ============================================================================
+
+
+-- ============================================================================
+-- BEGIN manager_fix_dashboard_data.sql
+-- ============================================================================
+-- ============================================================================
+-- Dashboard 数据修复脚本
+-- 修复问题：
+-- 1. 分类销售百分比超过 100%（多分类书籍重复计算）
+-- 2. 支付方式百分比超过 100%（JOIN 重复）
+-- 3. 店铺收入严重虚高（员工和库存批次 JOIN 导致笛卡尔积）
+-- 4. 支付金额全部为 0
+-- ============================================================================
+
+USE book_store;
+
+-- ============================================================================
+-- 1. 修复视图：分类销售百分比（按分类数量平均分配）
+-- ============================================================================
+
+DROP VIEW IF EXISTS vw_manager_sales_by_category;
+
+CREATE VIEW vw_manager_sales_by_category AS
+SELECT
+    c.category_id,
+    c.name AS category_name,
+    COUNT(DISTINCT o.order_id) AS orders_count,
+    COALESCE(SUM(oi.quantity), 0) AS total_quantity_sold,
+    COALESCE(SUM(
+        (oi.quantity * s.unit_price) /
+        NULLIF((SELECT COUNT(*) FROM book_categories bc2 WHERE bc2.ISBN = b.ISBN), 0)
+    ), 0) AS total_sales,
+    AVG(s.unit_price) AS avg_price,
+    COUNT(DISTINCT b.ISBN) AS books_in_category,
+    ROUND(
+        COALESCE(SUM(
+            (oi.quantity * s.unit_price) /
+            NULLIF((SELECT COUNT(*) FROM book_categories bc2 WHERE bc2.ISBN = b.ISBN), 0)
+        ), 0) /
+        NULLIF((SELECT SUM(oi2.quantity * s2.unit_price)
+                FROM order_items oi2
+                JOIN skus s2 ON oi2.sku_id = s2.sku_id
+                JOIN orders o2 ON oi2.order_id = o2.order_id
+                WHERE o2.order_status IN ('paid', 'finished')), 0) * 100, 2
+    ) AS revenue_percentage
+FROM catagories c
+JOIN book_categories bc ON c.category_id = bc.category_id
+JOIN books b ON bc.ISBN = b.ISBN
+JOIN skus s ON b.ISBN = s.ISBN
+LEFT JOIN order_items oi ON s.sku_id = oi.sku_id
+LEFT JOIN orders o ON oi.order_id = o.order_id AND o.order_status IN ('paid', 'finished')
+GROUP BY c.category_id, c.name
+ORDER BY total_sales DESC;
+
+SELECT '✓ View vw_manager_sales_by_category updated' AS status;
+
+-- ============================================================================
+-- 1.2 修复视图：支付方式分析百分比（去除重复 JOIN）
+-- ============================================================================
+
+DROP VIEW IF EXISTS vw_manager_payment_analysis;
+
+CREATE VIEW vw_manager_payment_analysis AS
+SELECT
+    payment_method,
+    COUNT(*) AS payment_count,
+    COALESCE(SUM(amount), 0) AS total_amount,
+    ROUND(AVG(amount), 2) AS avg_amount,
+    MIN(amount) AS min_amount,
+    MAX(amount) AS max_amount,
+    (SELECT COUNT(DISTINCT o.store_id)
+     FROM payment_allocations pa
+     JOIN invoices inv ON pa.invoice_id = inv.invoice_id
+     JOIN orders o ON inv.order_id = o.order_id
+     WHERE pa.payment_id IN (SELECT payment_id FROM payments p2 WHERE p2.payment_method = p.payment_method)
+    ) AS stores_count,
+    DATE(MIN(create_date)) AS first_payment_date,
+    DATE(MAX(create_date)) AS last_payment_date,
+    ROUND(
+        COALESCE(SUM(amount), 0) /
+        NULLIF((SELECT SUM(amount) FROM payments), 0) * 100, 2
+    ) AS percentage_of_total
+FROM payments p
+GROUP BY payment_method
+ORDER BY total_amount DESC;
+
+SELECT '✓ View vw_manager_payment_analysis updated' AS status;
+
+-- ============================================================================
+-- 1.3 修复视图：店铺绩效（移除 JOIN 导致的收入重复计算）
+-- ============================================================================
+
+DROP VIEW IF EXISTS vw_manager_store_performance;
+
+CREATE VIEW vw_manager_store_performance AS
+SELECT
+    st.store_id,
+    st.name AS store_name,
+    st.status,
+    st.telephone,
+    COUNT(DISTINCT o.order_id) AS total_orders,
+    COALESCE(SUM(CASE WHEN o.order_status IN ('paid', 'finished') THEN oi.quantity * s.unit_price ELSE 0 END), 0) AS revenue,
+    COUNT(DISTINCT o.member_id) AS unique_customers,
+    (SELECT COUNT(*) FROM employees e WHERE e.store_id = st.store_id) AS staff_count,
+    (SELECT ROUND(AVG(performance), 2) FROM employees e WHERE e.store_id = st.store_id) AS avg_employee_performance,
+    (SELECT COALESCE(SUM(quantity * unit_cost), 0) FROM inventory_batches ib WHERE ib.store_id = st.store_id) AS inventory_value,
+    (SELECT COALESCE(SUM(quantity), 0) FROM inventory_batches ib WHERE ib.store_id = st.store_id) AS total_inventory,
+    ROUND(
+        COALESCE(SUM(CASE WHEN o.order_status IN ('paid', 'finished') THEN oi.quantity * s.unit_price ELSE 0 END), 0) /
+        NULLIF((SELECT COUNT(*) FROM employees e WHERE e.store_id = st.store_id), 0), 2
+    ) AS revenue_per_employee,
+    RANK() OVER (ORDER BY SUM(CASE WHEN o.order_status IN ('paid', 'finished') THEN oi.quantity * s.unit_price ELSE 0 END) DESC) AS revenue_rank
+FROM stores st
+LEFT JOIN orders o ON st.store_id = o.store_id
+LEFT JOIN order_items oi ON o.order_id = oi.order_id
+LEFT JOIN skus s ON oi.sku_id = s.sku_id
+GROUP BY st.store_id, st.name, st.status, st.telephone
+ORDER BY revenue DESC;
+
+SELECT '✓ View vw_manager_store_performance updated' AS status;
+
+-- ============================================================================
+-- 2. 修复支付金额（根据订单项目计算实际金额）
+-- ============================================================================
+
+-- 先备份当前的 payments 表（可选）
+-- CREATE TABLE payments_backup AS SELECT * FROM payments;
+
+-- 更新支付金额：根据订单金额计算
+UPDATE payments p
+SET p.amount = (
+    SELECT COALESCE(SUM(oi.quantity * s.unit_price), 0)
+    FROM payment_allocations pa
+    JOIN invoices inv ON pa.invoice_id = inv.invoice_id
+    JOIN orders o ON inv.order_id = o.order_id
+    JOIN order_items oi ON o.order_id = oi.order_id
+    JOIN skus s ON oi.sku_id = s.sku_id
+    WHERE pa.payment_id = p.payment_id
+    AND o.order_status = 'paid'
+)
+WHERE p.amount = 0 OR p.amount IS NULL;
+
+SELECT
+    '✓ Payment amounts updated' AS status,
+    COUNT(*) AS updated_count,
+    COALESCE(SUM(amount), 0) AS total_amount
+FROM payments;
+
+-- ============================================================================
+-- 3. 同步更新 payment_allocations 表的 allocated_amount
+-- ============================================================================
+
+UPDATE payment_allocations pa
+JOIN invoices inv ON pa.invoice_id = inv.invoice_id
+JOIN orders o ON inv.order_id = o.order_id
+JOIN (
+    SELECT oi.order_id, SUM(oi.quantity * s.unit_price) AS order_total
+    FROM order_items oi
+    JOIN skus s ON oi.sku_id = s.sku_id
+    GROUP BY oi.order_id
+) AS order_totals ON o.order_id = order_totals.order_id
+SET pa.allocated_amount = order_totals.order_total
+WHERE pa.allocated_amount = 0 OR pa.allocated_amount IS NULL;
+
+SELECT
+    '✓ Payment allocations updated' AS status,
+    COUNT(*) AS updated_count,
+    COALESCE(SUM(allocated_amount), 0) AS total_allocated
+FROM payment_allocations;
+
+-- ============================================================================
+-- 4. 验证修复结果
+-- ============================================================================
+
+-- 检查支付方式统计
+SELECT
+    '=== Payment Analysis ===' AS section,
+    payment_method,
+    COUNT(*) AS payment_count,
+    COALESCE(SUM(amount), 0) AS total_amount,
+    ROUND(AVG(amount), 2) AS avg_amount
+FROM payments
+GROUP BY payment_method
+ORDER BY total_amount DESC;
+
+-- 检查分类销售百分比
+SELECT
+    '=== Category Sales ===' AS section,
+    category_name,
+    total_sales,
+    revenue_percentage
+FROM vw_manager_sales_by_category
+ORDER BY total_sales DESC
+LIMIT 5;
+
+-- 检查订单和支付关联
+SELECT
+    '=== Order Payment Summary ===' AS section,
+    o.order_id,
+    o.order_status,
+    COALESCE(SUM(oi.quantity * s.unit_price), 0) AS order_total,
+    p.payment_id,
+    p.payment_method,
+    p.amount AS payment_amount
+FROM orders o
+LEFT JOIN order_items oi ON o.order_id = oi.order_id
+LEFT JOIN skus s ON oi.sku_id = s.sku_id
+LEFT JOIN invoices inv ON o.order_id = inv.order_id
+LEFT JOIN payment_allocations pa ON inv.invoice_id = pa.invoice_id
+LEFT JOIN payments p ON pa.payment_id = p.payment_id
+WHERE o.order_status = 'paid'
+GROUP BY o.order_id, o.order_status, p.payment_id, p.payment_method, p.amount
+ORDER BY o.order_id
+LIMIT 10;
+
+SELECT '✓ All fixes applied successfully!' AS final_status;
+-- ============================================================================
+-- END manager_fix_dashboard_data.sql
+-- ============================================================================
+
+
+-- ============================================================================
+-- BEGIN manager_fix_missing_fulltext_indexes.sql
+-- ============================================================================
+-- ==================================================
+-- 修复缺失的 FULLTEXT 索引
+-- Fix Missing FULLTEXT Indexes for Search Functionality
+-- ==================================================
+
+USE book_store;
+
+-- 说明：
+-- 员工管理和用户管理的搜索正常，说明以下索引已存在：
+-- - users.username
+-- - employees.(first_name, last_name)
+-- - members.(first_name, last_name)
+--
+-- Stock Overview 和 Pricing 搜索报错，说明以下索引缺失：
+-- - books.(name, introduction, publisher, language)
+-- - authors.(first_name, last_name)
+-- - catagories.name
+
+-- ==================================================
+-- 1. Books 表 - 图书信息搜索
+-- ==================================================
+-- 检查索引是否存在
+SELECT 'Checking books table indexes...' AS Status;
+
+-- 删除旧索引（如果存在）
+SET @drop_books = (
+    SELECT COUNT(*)
+    FROM information_schema.statistics
+    WHERE table_schema = 'book_store'
+    AND table_name = 'books'
+    AND index_name = 'ft_books_text'
+);
+
+SET @sql_drop_books = IF(
+    @drop_books > 0,
+    'ALTER TABLE books DROP INDEX ft_books_text',
+    'SELECT "Index ft_books_text does not exist, skipping drop" AS Message'
+);
+
+PREPARE stmt FROM @sql_drop_books;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 创建新索引
+SELECT 'Creating FULLTEXT index on books table...' AS Status;
+ALTER TABLE books
+ADD FULLTEXT INDEX ft_books_text (name, introduction, publisher, language);
+
+SELECT 'Books FULLTEXT index created successfully!' AS Status;
+
+-- ==================================================
+-- 2. Authors 表 - 作者名称搜索
+-- ==================================================
+SELECT 'Checking authors table indexes...' AS Status;
+
+-- 删除旧索引（如果存在）
+SET @drop_authors = (
+    SELECT COUNT(*)
+    FROM information_schema.statistics
+    WHERE table_schema = 'book_store'
+    AND table_name = 'authors'
+    AND index_name = 'ft_authors_name'
+);
+
+SET @sql_drop_authors = IF(
+    @drop_authors > 0,
+    'ALTER TABLE authors DROP INDEX ft_authors_name',
+    'SELECT "Index ft_authors_name does not exist, skipping drop" AS Message'
+);
+
+PREPARE stmt FROM @sql_drop_authors;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 创建新索引
+SELECT 'Creating FULLTEXT index on authors table...' AS Status;
+ALTER TABLE authors
+ADD FULLTEXT INDEX ft_authors_name (first_name, last_name);
+
+SELECT 'Authors FULLTEXT index created successfully!' AS Status;
+
+-- ==================================================
+-- 3. Catagories 表 - 分类名称搜索
+-- ==================================================
+SELECT 'Checking catagories table indexes...' AS Status;
+
+-- 删除旧索引（如果存在）
+SET @drop_categories = (
+    SELECT COUNT(*)
+    FROM information_schema.statistics
+    WHERE table_schema = 'book_store'
+    AND table_name = 'catagories'
+    AND index_name = 'ft_categories_name'
+);
+
+SET @sql_drop_categories = IF(
+    @drop_categories > 0,
+    'ALTER TABLE catagories DROP INDEX ft_categories_name',
+    'SELECT "Index ft_categories_name does not exist, skipping drop" AS Message'
+);
+
+PREPARE stmt FROM @sql_drop_categories;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 创建新索引
+SELECT 'Creating FULLTEXT index on catagories table...' AS Status;
+ALTER TABLE catagories
+ADD FULLTEXT INDEX ft_categories_name (name);
+
+SELECT 'Catagories FULLTEXT index created successfully!' AS Status;
+
+-- ==================================================
+-- 验证所有索引
+-- ==================================================
+SELECT '======================================' AS '';
+SELECT 'FULLTEXT Indexes Verification' AS '';
+SELECT '======================================' AS '';
+
+SELECT
+    table_name AS '表名',
+    index_name AS '索引名',
+    GROUP_CONCAT(column_name ORDER BY seq_in_index) AS '索引字段'
+FROM information_schema.statistics
+WHERE table_schema = 'book_store'
+AND index_type = 'FULLTEXT'
+AND table_name IN ('books', 'authors', 'catagories', 'users', 'employees', 'members', 'suppliers')
+GROUP BY table_name, index_name
+ORDER BY table_name, index_name;
+
+-- ==================================================
+-- 完成
+-- ==================================================
+SELECT '======================================' AS '';
+SELECT '✅ All FULLTEXT indexes have been created successfully!' AS Status;
+SELECT 'Stock Overview 和 Pricing 的搜索功能现在应该可以正常使用了' AS Message;
+SELECT '======================================' AS '';
+-- ============================================================================
+-- END manager_fix_missing_fulltext_indexes.sql
+-- ============================================================================
+
+
+-- ============================================================================
+-- BEGIN manager_fulltext_indexes(报错忽略).sql
+-- ============================================================================
+-- Full-text indexes for manager search endpoints.
+-- Run once in the target database. Some indexes may already exist.
+
+ALTER TABLE users
+ADD FULLTEXT INDEX ft_users_username (username);
+
+ALTER TABLE employees
+ADD FULLTEXT INDEX ft_employees_name (first_name, last_name);
+
+ALTER TABLE members
+ADD FULLTEXT INDEX ft_members_name (first_name, last_name);
+
+ALTER TABLE suppliers
+ADD FULLTEXT INDEX ft_suppliers_text (name, address, email);
+
+ALTER TABLE books
+ADD FULLTEXT INDEX ft_books_text (name, introduction, publisher, language);
+
+ALTER TABLE authors
+ADD FULLTEXT INDEX ft_authors_name (first_name, last_name);
+
+ALTER TABLE catagories
+ADD FULLTEXT INDEX ft_categories_name (name);
+-- ============================================================================
+-- END manager_fulltext_indexes(报错忽略).sql
+-- ============================================================================
+
+
+-- ============================================================================
+-- BEGIN manager_supplier_procedures.sql
+-- ============================================================================
+-- ============================================================================
+-- 供应商管理存储过程
+-- Supplier Management Stored Procedures
+-- ============================================================================
+
+USE book_store;
+
+DELIMITER $$
+
+-- ============================================================================
+-- 1. 添加供应商（使用事务）
+-- ============================================================================
+DROP PROCEDURE IF EXISTS sp_manager_add_supplier$$
+CREATE PROCEDURE sp_manager_add_supplier(
+    IN p_name VARCHAR(100),
+    IN p_phone VARCHAR(20),
+    IN p_email VARCHAR(100),
+    IN p_address VARCHAR(200),
+    OUT p_result_code INT,
+    OUT p_result_message VARCHAR(255),
+    OUT p_supplier_id INT
+)
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Failed to add supplier';
+        SET p_supplier_id = NULL;
+        ROLLBACK;
+    END;
+
+    -- 开始事务
+    START TRANSACTION;
+
+    -- 验证必填字段
+    IF p_name IS NULL OR TRIM(p_name) = '' THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Supplier name is required';
+        SET p_supplier_id = NULL;
+        ROLLBACK;
+    ELSEIF p_phone IS NULL OR TRIM(p_phone) = '' THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Phone number is required';
+        SET p_supplier_id = NULL;
+        ROLLBACK;
+    -- 验证手机号格式（只允许数字）
+    ELSEIF p_phone REGEXP '[^0-9]' THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Phone number must contain only digits';
+        SET p_supplier_id = NULL;
+        ROLLBACK;
+    -- 验证手机号长度（INT UNSIGNED 最大10位）
+    ELSEIF CHAR_LENGTH(p_phone) > 10 THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Phone number is too long (max 10 digits)';
+        SET p_supplier_id = NULL;
+        ROLLBACK;
+    -- 检查供应商名称是否已存在
+    ELSEIF EXISTS (SELECT 1 FROM suppliers WHERE name = p_name) THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Supplier name already exists';
+        SET p_supplier_id = NULL;
+        ROLLBACK;
+    -- 检查手机号是否已存在
+    ELSEIF EXISTS (SELECT 1 FROM suppliers WHERE phone = p_phone) THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Phone number already exists';
+        SET p_supplier_id = NULL;
+        ROLLBACK;
+    ELSE
+        -- 插入新供应商
+        INSERT INTO suppliers (name, phone, email, address)
+        VALUES (p_name, p_phone, p_email, p_address);
+
+        -- 获取新插入的供应商ID
+        SET p_supplier_id = LAST_INSERT_ID();
+        SET p_result_code = 1;
+        SET p_result_message = 'Success: Supplier added successfully';
+
+        COMMIT;
+    END IF;
+END$$
+
+-- ============================================================================
+-- 2. 更新供应商信息（使用事务）
+-- ============================================================================
+DROP PROCEDURE IF EXISTS sp_manager_update_supplier$$
+CREATE PROCEDURE sp_manager_update_supplier(
+    IN p_supplier_id INT,
+    IN p_name VARCHAR(100),
+    IN p_phone VARCHAR(20),
+    IN p_email VARCHAR(100),
+    IN p_address VARCHAR(200),
+    OUT p_result_code INT,
+    OUT p_result_message VARCHAR(255)
+)
+BEGIN
+    DECLARE v_existing_name VARCHAR(100);
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Failed to update supplier';
+        ROLLBACK;
+    END;
+
+    -- 开始事务
+    START TRANSACTION;
+
+    -- 验证供应商是否存在
+    IF NOT EXISTS (SELECT 1 FROM suppliers WHERE supplier_id = p_supplier_id) THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Supplier not found';
+        ROLLBACK;
+    ELSE
+        -- 如果更新名称，检查新名称是否与其他供应商重复
+        IF p_name IS NOT NULL AND TRIM(p_name) != '' THEN
+            SELECT name INTO v_existing_name
+            FROM suppliers
+            WHERE name = p_name AND supplier_id != p_supplier_id
+            LIMIT 1;
+
+            IF v_existing_name IS NOT NULL THEN
+                SET p_result_code = 0;
+                SET p_result_message = 'Error: Supplier name already exists';
+                ROLLBACK;
+            ELSE
+                -- 更新供应商信息
+                UPDATE suppliers
+                SET
+                    name = COALESCE(NULLIF(p_name, ''), name),
+                    phone = COALESCE(NULLIF(p_phone, ''), phone),
+                    email = COALESCE(NULLIF(p_email, ''), email),
+                    address = COALESCE(NULLIF(p_address, ''), address)
+                WHERE supplier_id = p_supplier_id;
+
+                SET p_result_code = 1;
+                SET p_result_message = 'Success: Supplier updated successfully';
+                COMMIT;
+            END IF;
+        ELSE
+            -- 不更新名称，直接更新其他字段
+            UPDATE suppliers
+            SET
+                phone = COALESCE(NULLIF(p_phone, ''), phone),
+                email = COALESCE(NULLIF(p_email, ''), email),
+                address = COALESCE(NULLIF(p_address, ''), address)
+            WHERE supplier_id = p_supplier_id;
+
+            SET p_result_code = 1;
+            SET p_result_message = 'Success: Supplier updated successfully';
+            COMMIT;
+        END IF;
+    END IF;
+END$$
+
+-- ============================================================================
+-- 3. 删除供应商（使用事务，检查关联）
+-- ============================================================================
+DROP PROCEDURE IF EXISTS sp_manager_delete_supplier$$
+CREATE PROCEDURE sp_manager_delete_supplier(
+    IN p_supplier_id INT,
+    OUT p_result_code INT,
+    OUT p_result_message VARCHAR(255)
+)
+BEGIN
+    DECLARE v_purchase_count INT;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Failed to delete supplier';
+        ROLLBACK;
+    END;
+
+    -- 开始事务
+    START TRANSACTION;
+
+    -- 验证供应商是否存在
+    IF NOT EXISTS (SELECT 1 FROM suppliers WHERE supplier_id = p_supplier_id) THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Supplier not found';
+        ROLLBACK;
+    ELSE
+        -- 检查是否有关联的采购单
+        SELECT COUNT(*) INTO v_purchase_count
+        FROM purchases
+        WHERE supplier_id = p_supplier_id;
+
+        IF v_purchase_count > 0 THEN
+            SET p_result_code = 0;
+            SET p_result_message = CONCAT('Error: Cannot delete supplier with ', v_purchase_count, ' associated purchase(s)');
+            ROLLBACK;
+        ELSE
+            -- 删除供应商
+            DELETE FROM suppliers WHERE supplier_id = p_supplier_id;
+
+            SET p_result_code = 1;
+            SET p_result_message = 'Success: Supplier deleted successfully';
+            COMMIT;
+        END IF;
+    END IF;
+END$$
+
+DELIMITER ;
+
+-- 验证存储过程创建
+SELECT 'Supplier management procedures created successfully' AS message;
+-- ============================================================================
+-- END manager_supplier_procedures.sql
+-- ============================================================================
+
+
+-- ============================================================================
+-- BEGIN manager_user_procedures.sql
+-- ============================================================================
+-- ============================================================================
+-- 用户管理存储过程
+-- User Management Stored Procedures
+-- ============================================================================
+
+USE book_store;
+
+DELIMITER $$
+
+-- ============================================================================
+-- 重置用户密码（使用事务）
+-- ============================================================================
+DROP PROCEDURE IF EXISTS sp_manager_reset_user_password$$
+CREATE PROCEDURE sp_manager_reset_user_password(
+    IN p_user_id INT,
+    OUT p_result_code INT,
+    OUT p_result_message VARCHAR(255)
+)
+BEGIN
+    DECLARE v_default_password_hash VARCHAR(50);
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Failed to reset password';
+        ROLLBACK;
+    END;
+
+    -- 开始事务
+    START TRANSACTION;
+
+    -- 验证用户是否存在
+    IF NOT EXISTS (SELECT 1 FROM users WHERE user_id = p_user_id) THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: User not found';
+        ROLLBACK;
+    ELSE
+        -- 设置默认密码为 "Password@123"
+        -- 注意：在实际生产环境中应该使用更安全的哈希算法（如 bcrypt）
+        -- 这里为了演示目的使用简单的密码
+        SET v_default_password_hash = 'Password@123';
+
+        -- 更新用户密码
+        UPDATE users
+        SET password_hash = v_default_password_hash
+        WHERE user_id = p_user_id;
+
+        SET p_result_code = 1;
+        SET p_result_message = 'Success: Password has been reset to default (Password@123)';
+        COMMIT;
+    END IF;
+END$$
+
+DELIMITER ;
+
+-- 验证存储过程创建
+SELECT 'User management procedures created successfully' AS message;
+-- ============================================================================
+-- END manager_user_procedures.sql
+-- ============================================================================
+

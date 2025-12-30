@@ -15,42 +15,11 @@ async function loadSupplierData() {
         const suppliers = await fetchSuppliersAPI();
 
         tableBody.innerHTML = '';
+        if (typeof renderSupplierResults === 'function') {
+            renderSupplierResults(suppliers);
+        }
 
-        suppliers.forEach(supplier => {
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50 transition-colors';
-            row.dataset.supplierId = supplier.supplier_id;
-            row.dataset.supplierName = supplier.supplier_name.toLowerCase();
-            row.dataset.supplierPhone = supplier.phone;
-            row.dataset.supplierAddress = (supplier.address || '').toLowerCase();
-
-            row.innerHTML = `
-                <td class="px-4 py-4 text-sm font-medium text-gray-900">${escapeHtml(supplier.supplier_id)}</td>
-                <td class="px-4 py-4 text-sm text-gray-900">${escapeHtml(supplier.supplier_name)}</td>
-                <td class="px-4 py-4 text-sm text-gray-700">${escapeHtml(supplier.phone)}</td>
-                <td class="px-4 py-4 text-sm text-gray-700 max-w-xs truncate" title="${escapeHtml(supplier.address || 'N/A')}">${escapeHtml(supplier.address || 'N/A')}</td>
-                <td class="px-4 py-4 text-sm text-gray-700">${escapeHtml(supplier.email || 'N/A')}</td>
-                <td class="px-4 py-4 text-sm">
-                    <div class="flex gap-2">
-                        <button class="text-primary hover:text-primary/80 edit-supplier-btn" title="Edit">
-                            <i class="fa fa-edit"></i>
-                        </button>
-                        <button class="text-blue-600 hover:text-blue-800 view-supplier-btn" title="View Details">
-                            <i class="fa fa-eye"></i>
-                        </button>
-                        <button class="text-red-600 hover:text-red-800 delete-supplier-btn" title="Delete">
-                            <i class="fa fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
-
-        // 绑定按钮事件
-        addSupplierActionButtonListeners();
-
-        // 删除 originalContent
+        // ?? originalContent
         delete tableBody.dataset.originalContent;
     } catch (error) {
         console.error('Failed to load supplier data:', error);
