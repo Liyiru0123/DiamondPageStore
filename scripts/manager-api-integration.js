@@ -412,45 +412,51 @@ async function loadUserManagementData() {
 
 function addUserActionButtonListeners() {
     const tableBody = document.getElementById('user-management-table-body');
-    if (tableBody && tableBody.dataset.emailListenerAttached !== 'true') {
-        tableBody.dataset.emailListenerAttached = 'true';
+
+    // 使用事件委托，只添加一次监听器
+    if (tableBody && tableBody.dataset.listenersAttached !== 'true') {
+        tableBody.dataset.listenersAttached = 'true';
+
         tableBody.addEventListener('click', (event) => {
+            // Email cell click
             const cell = event.target.closest('.user-email-cell');
-            if (!cell) return;
-            const email = cell.dataset.email || '';
-            if (email) {
-                alert(`Email: ${email}`);
+            if (cell) {
+                const email = cell.dataset.email || '';
+                if (email) {
+                    alert(`Email: ${email}`);
+                }
+                return;
+            }
+
+            // Edit button click
+            const editBtn = event.target.closest('.edit-user-btn');
+            if (editBtn) {
+                const row = editBtn.closest('tr');
+                const userData = JSON.parse(row.dataset.userData);
+                openEditUserModal(userData);
+                return;
+            }
+
+            // Delete button click
+            const deleteBtn = event.target.closest('.delete-user-btn');
+            if (deleteBtn) {
+                const row = deleteBtn.closest('tr');
+                const userId = row.dataset.userId;
+                deleteUser(userId);
+                return;
+            }
+
+            // Reset Password button click
+            const resetBtn = event.target.closest('.reset-password-btn');
+            if (resetBtn) {
+                const row = resetBtn.closest('tr');
+                const userId = row.dataset.userId;
+                const username = row.cells[1].textContent;
+                resetUserPassword(userId, username);
+                return;
             }
         });
     }
-
-    // Edit buttons
-    document.querySelectorAll('#user-management-table-body .edit-user-btn').forEach(button => {
-        button.addEventListener('click', function () {
-            const row = this.closest('tr');
-            const userData = JSON.parse(row.dataset.userData);
-            openEditUserModal(userData);
-        });
-    });
-
-    // Delete buttons
-    document.querySelectorAll('#user-management-table-body .delete-user-btn').forEach(button => {
-        button.addEventListener('click', function () {
-            const row = this.closest('tr');
-            const userId = row.dataset.userId;
-            deleteUser(userId);
-        });
-    });
-
-    // Reset Password buttons
-    document.querySelectorAll('#user-management-table-body .reset-password-btn').forEach(button => {
-        button.addEventListener('click', function () {
-            const row = this.closest('tr');
-            const userId = row.dataset.userId;
-            const username = row.cells[1].textContent;
-            resetUserPassword(userId, username);
-        });
-    });
 }
 
 // 打开编辑用户模态框
@@ -1310,7 +1316,8 @@ function renderUserManagementRows(users) {
         tableBody.appendChild(row);
     });
 
-    addUserActionButtonListeners();
+    // 不需要在这里调用 addUserActionButtonListeners()
+    // 因为使用了事件委托，监听器只需要添加一次
 }
 
 function renderPricingRows(books) {
