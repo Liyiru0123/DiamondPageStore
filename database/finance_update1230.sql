@@ -124,6 +124,8 @@ DELIMITER ;
 RENAME TABLE `vm_finance_order_settlement` TO `vw_finance_order_settlement`;
 
 
+
+DROP PROCEDURE IF EXISTS `sp_finance_overview`
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_finance_overview`(OUT `p_current_month` DECIMAL(12,2), OUT `p_last_month` DECIMAL(12,2), OUT `p_growth_percent` DECIMAL(8,2), OUT `p_total_orders` INT)
 BEGIN
@@ -179,7 +181,10 @@ select `o`.`order_id` AS `order_id`,`o`.`store_id` AS `store_id`,`st`.`name` AS 
 
 
 
+
+
 -- 对订单细节的更改
+DROP PROCEDURE IF EXISTS `sp_finance_order_detail`
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_finance_order_detail`(IN `p_order_id` INT)
 BEGIN

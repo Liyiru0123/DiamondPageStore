@@ -221,12 +221,18 @@ function formatDateTime(value) {
     });
 }
 
-async function initIncomeStatsCharts() {
+async function initIncomeStatsCharts(startDate, endDate) {
     try {
+        const currentStoreId = currentFinanceUser ? currentFinanceUser.store_id : null;
+        
+        const now = new Date();
+        const defaultEnd = endDate || formatDateInput(now);
+        const defaultStart = startDate || formatDateInput(new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000));
+    
         const overview = await fetchFinanceOverview();
         renderTotalRevenueCard(overview);
 
-        const paymentSummary = await fetchPaymentMethodSummary();
+        const paymentSummary = await fetchPaymentMethodSummary(defaultStart, defaultEnd, currentStoreId);
         initPaymentMethodPieChart(paymentSummary);
 
         await renderRevenueByDateChart();
@@ -263,6 +269,78 @@ function renderTotalRevenueCard(data) {
 }
 
 function initPaymentMethodPieChart(summaryRows) {
+    // 1. 打印数据到控制台，让你能亲眼看到到底有没有数据
+    console.log("饼图接收到的数据:", summaryRows);
+
+    const paymentMethodCtx = document.getElementById('payment-method-pie-chart');
+    if (!paymentMethodCtx) return;
+
+    const ctx = paymentMethodCtx.getContext('2d');
+    if (!ctx) return;
+
+    // 2. 安全读取数据（处理 null 或 undefined）
+    const safeRows = summaryRows || [];
+    
+    // 3. 智能匹配字段名（不管后端是大写还是小写）
+    const labels = safeRows.map(row => row.payment_method || row.paymentMethod || 'Unknown');
+    // 如果你在 SP 里改成了 COUNT(*)，数值就是整数；如果是金额，就是浮点数
+    let data = safeRows.map(row => Number(row.amount || row.AMOUNT || 0));
+    
+    let backgroundColors = ['#774b30', '#a9805b', '#9f5933', '#d2b48c', '#e5e7eb'];
+
+    // 4. 【关键修改】处理“无数据”的情况
+    // 计算总数值
+    const totalValue = data.reduce((a, b) => a + b, 0);
+
+    // 如果没数据，或者数据总和是 0 (比如全是 0 块钱)
+    if (labels.length === 0 || totalValue === 0) {
+        console.warn(" 饼图数据为空，显示默认灰色圆盘");
+        labels.length = 0;
+        data.length = 0;
+        
+        labels.push('No Data');
+        data.push(1); // 💡 设为 1，这样才能画出一个圆
+        backgroundColors = ['#E5E7EB']; // 灰色
+    }
+
+    if (paymentMethodPieChart) {
+        paymentMethodPieChart.destroy();
+    }
+
+    paymentMethodPieChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: backgroundColors.slice(0, labels.length),
+                borderWidth: 2,
+                borderColor: '#fff',
+                hoverOffset: 20
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: 20 },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label;
+                            const value = context.raw;
+                            if (label === 'No Data') return 'No Transaction Data';
+                            return `${label}: ${value}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+/*function initPaymentMethodPieChart(summaryRows) {
     const paymentMethodCtx = document.getElementById('payment-method-pie-chart');
     if (!paymentMethodCtx) return;
 
@@ -333,8 +411,8 @@ function initPaymentMethodPieChart(summaryRows) {
                 }
             }
         }
-    });
-}
+    });*/
+
 
 // scripts/finance.js (修改后的部分)
 // 只需要修改 renderRevenueByDateChart 和 renderPurchaseCostByDateChart 这两个函数
@@ -346,8 +424,14 @@ async function renderRevenueByDateChart(startDate, endDate) {
     const now = new Date();
     const defaultEnd = endDate || formatDateInput(now);
     const defaultStart = startDate || formatDateInput(new Date(now.getTime() - 13 * 24 * 60 * 60 * 1000));
+    
+    // [新增] 获取当前登录用户的 store_id
+    const currentStoreId = currentFinanceUser ? currentFinanceUser.store_id : null;
+    
+    // const rows = await fetchRevenueByDate(defaultStart, defaultEnd,currentStoreId);
+    let rows = await fetchRevenueByDate(defaultStart, defaultEnd, currentStoreId);
+    if (!Array.isArray(rows)) rows = []; // 双重保险：确保它是数组
 
-    const rows = await fetchRevenueByDate(defaultStart, defaultEnd);
     const labels = rows.map(row => row.order_day);
     const values = rows.map(row => Number(row.revenue || 0));
 
@@ -439,8 +523,13 @@ async function renderPurchaseCostByDateChart(startDate, endDate) {
     const now = new Date();
     const defaultEnd = endDate || formatDateInput(now);
     const defaultStart = startDate || formatDateInput(new Date(now.getTime() - 13 * 24 * 60 * 60 * 1000));
-
-    const rows = await fetchPurchaseCostByDate(defaultStart, defaultEnd);
+    
+    
+    const currentStoreId = currentFinanceUser ? currentFinanceUser.store_id : null;
+    
+    //const rows = await fetchPurchaseCostByDate(defaultStart, defaultEnd,currentStoreId);
+    let rows = await fetchPurchaseCostByDate(defaultStart, defaultEnd, currentStoreId);
+    if (!Array.isArray(rows)) rows = []; // 双重保险
     const labels = rows.map(row => row.cost_day);
     const values = rows.map(row => Number(row.cost || 0));
 
