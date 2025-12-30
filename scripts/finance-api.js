@@ -75,6 +75,9 @@ async function fetchOrderList(filters = {}) {
     if (filters.storeId) params.append('store_id', filters.storeId);
     if (filters.startDate) params.append('start_date', filters.startDate);
     if (filters.endDate) params.append('end_date', filters.endDate);
+    
+    // 【新增】确保将 orderId 传给后端
+    if (filters.orderId) params.append('order_id', filters.orderId);
     const url = FINANCE_API_CONFIG.endpoints.orders.list + (params.toString() ? '&' + params.toString() : '');
     const res = await financeApiRequest(url);
     return res.data;
@@ -95,6 +98,12 @@ async function createInvoiceForOrder(orderId) {
 
 async function fetchInvoiceList(filters = {}) {
     const params = new URLSearchParams();
+
+    // 自动注入当前登录用户的 store_id
+    if (window.currentFinanceUser && window.currentFinanceUser.store_id) {
+        params.append('store_id', window.currentFinanceUser.store_id);
+    }
+
     if (filters.search) params.append('search', filters.search);
     if (filters.status) params.append('status', filters.status);
     if (filters.orderId) params.append('order_id', filters.orderId);

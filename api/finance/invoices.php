@@ -24,6 +24,9 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 try {
     switch ($action) {
         case 'list':
+            //获取当前登录用户的分店 ID
+            session_start();
+            $current_store_id = isset($_SESSION['store_id']) ? $_SESSION['store_id'] : 0;
             // 1. 接收基础参数
             $search = isset($_GET['search']) ? $_GET['search'] : null;
             $status = isset($_GET['status']) ? $_GET['status'] : null;
@@ -38,9 +41,8 @@ try {
             $minAmount = (isset($_GET['min_amount']) && $_GET['min_amount'] !== '') ? (float)$_GET['min_amount'] : null;
             $maxAmount = (isset($_GET['max_amount']) && $_GET['max_amount'] !== '') ? (float)$_GET['max_amount'] : null;
 
-            // 3. 调用存储过程 (注意这里现在是 7 个参数)
-            $stmt = $conn->prepare('CALL sp_finance_invoice_list(:search, :status, :order_id, :start_date, :end_date, :min_amount, :max_amount)');
-            
+            // 3. 调用存储过程 (注意这里现在是 8 个参数)
+            $stmt = $conn->prepare('CALL sp_finance_invoice_list(:search, :status, :order_id, :start_date, :end_date, :min_amount, :max_amount, :store_id)');
             $stmt->execute([
                 ':search'     => $search,
                 ':status'     => $status,
@@ -48,7 +50,8 @@ try {
                 ':start_date' => $start,
                 ':end_date'   => $end,
                 ':min_amount' => $minAmount, // 传入最小金额
-                ':max_amount' => $maxAmount  // 传入最大金额
+                ':max_amount' => $maxAmount,  // 传入最大金额
+                ':store_id'   => $current_store_id//当前员工所在店铺
             ]);
             
             $rows = $stmt->fetchAll();
@@ -89,8 +92,13 @@ try {
             $stmt->execute([':invoice_id' => $invoiceId]);
 
             $invoice = $stmt->fetch();
-            $stmt->nextRowset();
-            $payments = $stmt->fetchAll();
+            // $stmt->nextRowset();
+            // $payments = $stmt->fetchAll();
+
+            $payments = []; 
+            if ($stmt->nextRowset()) {
+                $payments = $stmt->fetchAll();
+            }
 
             echo json_encode(['success' => true, 'data' => ['invoice' => $invoice, 'payments' => $payments]]);
             break;
