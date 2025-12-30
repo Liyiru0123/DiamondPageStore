@@ -96,7 +96,7 @@ function renderStaffTable(employees) {
         row.dataset.userid = employee.user_id;
         row.dataset.branchname = employee.store_name;
         row.dataset.name = employee.full_name;
-        row.dataset.phone = employee.phone;
+        row.dataset.email = employee.email;
         row.dataset.storeID = employee.store_id;
 
         let positionClass = 'role-staff';
@@ -128,7 +128,7 @@ function renderStaffTable(employees) {
                     ${escapeHtml(positionName)}
                 </span>
             </td>
-            <td class="px-4 py-4 text-sm">${escapeHtml(employee.phone)}</td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(employee.email)}</td>
             <td class="px-4 py-4 text-sm">
                 <div class="flex gap-2">
                     <button class="text-primary hover:text-primary/80 edit-staff-btn" title="Edit">
@@ -169,7 +169,7 @@ async function loadStaffData() {
             row.dataset.userid = employee.user_id;
             row.dataset.branchname = employee.store_name;
             row.dataset.name = employee.full_name;
-            row.dataset.phone = employee.phone;
+            row.dataset.email = employee.email;
             row.dataset.storeID = employee.store_id; // Fixed: Capital ID for filter compatibility
 
             let positionClass = 'role-staff';
@@ -200,7 +200,7 @@ async function loadStaffData() {
                         ${escapeHtml(positionName)}
                     </span>
                 </td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(employee.phone)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(employee.email)}</td>
                 <td class="px-4 py-4 text-sm">
                     <div class="flex gap-2">
                         <button class="text-primary hover:text-primary/80 edit-staff-btn" title="Edit">
@@ -258,7 +258,7 @@ function setupStaffActionListeners() {
                 branchName: row.dataset.branchname,
                 name: row.dataset.name,
                 position: row.dataset.position,
-                phone: row.dataset.phone,
+                email: row.dataset.email,
                 storeID: row.dataset.storeid
             };
             openEditStaffModal(staffData);
@@ -484,7 +484,7 @@ async function loadUserManagementData() {
                     <span class="px-2 py-1 text-xs ${typeBadge.className} rounded-full">${escapeHtml(typeBadge.label)}</span>
                 </td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(user.full_name || 'N/A')}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(user.phone || 'N/A')}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(user.email || 'N/A')}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(new Date(user.create_date).toLocaleDateString())}</td>
                 <td class="px-4 py-4 text-sm">${user.last_log_date ? escapeHtml(new Date(user.last_log_date).toLocaleDateString()) : 'Never'}</td>
                 <td class="px-4 py-4 text-sm">
@@ -1136,7 +1136,7 @@ async function performStaffSearch(searchTerm) {
                         ${escapeHtml(employee.job_title || 'Staff')}
                     </span>
                 </td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(employee.phone)}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(employee.email)}</td>
                 <td class="px-4 py-4 text-sm">
                     <div class="flex gap-2">
                         <button class="text-primary hover:text-primary/80 edit-staff" title="Edit">
@@ -1213,7 +1213,7 @@ async function performUserSearch(searchTerm) {
                     <span class="px-2 py-1 text-xs ${typeBadge.className} rounded-full">${escapeHtml(typeBadge.label)}</span>
                 </td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(user.full_name || 'N/A')}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(user.phone || 'N/A')}</td>
+                <td class="px-4 py-4 text-sm">${escapeHtml(user.email || 'N/A')}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(new Date(user.create_date).toLocaleDateString())}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(new Date(user.last_log_date).toLocaleDateString())}</td>
                 <td class="px-4 py-4 text-sm">
@@ -1400,7 +1400,7 @@ function renderUserManagementRows(users) {
                 <span class="px-2 py-1 text-xs ${typeBadge.className} rounded-full">${escapeHtml(typeBadge.label)}</span>
             </td>
             <td class="px-4 py-4 text-sm">${escapeHtml(user.full_name || 'N/A')}</td>
-            <td class="px-4 py-4 text-sm">${escapeHtml(user.phone || 'N/A')}</td>
+            <td class="px-4 py-4 text-sm">${escapeHtml(user.email || 'N/A')}</td>
             <td class="px-4 py-4 text-sm">${escapeHtml(createdAt)}</td>
             <td class="px-4 py-4 text-sm">${escapeHtml(lastLogin)}</td>
             <td class="px-4 py-4 text-sm">

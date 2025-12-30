@@ -34,7 +34,7 @@ CREATE PROCEDURE sp_manager_add_employee(
     IN p_last_name VARCHAR(50),
     IN p_store_id INT,
     IN p_job_title_id INT,
-    IN p_phone VARCHAR(20),
+    IN p_email VARCHAR(100),
     IN p_performance DECIMAL(5,2),
     OUT p_result_code INT,
     OUT p_result_message VARCHAR(255),
@@ -71,14 +71,14 @@ BEGIN
         SET p_result_message = 'Validation failed: Job title does not exist';
         SET p_employee_id = NULL;
         ROLLBACK;
-    ELSEIF EXISTS (SELECT 1 FROM employees WHERE phone = p_phone) THEN
+    ELSEIF EXISTS (SELECT 1 FROM employees WHERE email = p_email) THEN
         SET p_result_code = 0;
-        SET p_result_message = 'Validation failed: Phone number already exists';
+        SET p_result_message = 'Validation failed: Email already exists';
         SET p_employee_id = NULL;
         ROLLBACK;
     ELSE
-        INSERT INTO employees (user_id, first_name, last_name, store_id, job_title_id, phone, performance)
-        VALUES (p_user_id, p_first_name, p_last_name, p_store_id, p_job_title_id, p_phone, COALESCE(p_performance, 75));
+        INSERT INTO employees (user_id, first_name, last_name, store_id, job_title_id, email, performance)
+        VALUES (p_user_id, p_first_name, p_last_name, p_store_id, p_job_title_id, p_email, COALESCE(p_performance, 75));
 
         SET p_employee_id = LAST_INSERT_ID();
         SET p_result_code = 1;
@@ -95,7 +95,7 @@ CREATE PROCEDURE sp_manager_update_employee(
     IN p_last_name VARCHAR(50),
     IN p_store_id INT,
     IN p_job_title_id INT,
-    IN p_phone VARCHAR(20),
+    IN p_email VARCHAR(100),
     IN p_performance DECIMAL(5,2),
     OUT p_result_code INT,
     OUT p_result_message VARCHAR(255)
@@ -122,9 +122,9 @@ BEGIN
         SET p_result_code = 0;
         SET p_result_message = 'Validation failed: Job title does not exist';
         ROLLBACK;
-    ELSEIF EXISTS (SELECT 1 FROM employees WHERE phone = p_phone AND employee_id != p_employee_id) THEN
+    ELSEIF EXISTS (SELECT 1 FROM employees WHERE email = p_email AND employee_id != p_employee_id) THEN
         SET p_result_code = 0;
-        SET p_result_message = 'Validation failed: Phone number already exists';
+        SET p_result_message = 'Validation failed: Email already exists';
         ROLLBACK;
     ELSEIF p_user_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM users WHERE user_id = p_user_id AND user_types = 'employee') THEN
         SET p_result_code = 0;
@@ -141,7 +141,7 @@ BEGIN
             last_name = p_last_name,
             store_id = p_store_id,
             job_title_id = p_job_title_id,
-            phone = p_phone,
+            email = p_email,
             performance = p_performance
         WHERE employee_id = p_employee_id;
 

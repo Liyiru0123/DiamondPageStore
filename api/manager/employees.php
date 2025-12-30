@@ -201,21 +201,20 @@ function addEmployee($conn) {
     }
 
     if (!$data || !isset($data['user_id']) || !isset($data['first_name']) || !isset($data['last_name']) ||
-        !isset($data['store_id']) || !isset($data['job_title_id']) || !isset($data['phone'])) {
+        !isset($data['store_id']) || !isset($data['job_title_id']) || !isset($data['email'])) {
         http_response_code(400);
         echo json_encode([
             'success' => false,
-            'message' => 'Missing required fields: user_id, first_name, last_name, store_id, job_title_id, phone'
+            'message' => 'Missing required fields: user_id, first_name, last_name, store_id, job_title_id, email'
         ]);
         return;
     }
 
-    // Validate phone format (basic format: digits, spaces, hyphens, parentheses, plus sign)
-    if (!preg_match('/^[\d\s\-\(\)\+]+$/', $data['phone']) || strlen($data['phone']) < 7 || strlen($data['phone']) > 20) {
+    if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
         http_response_code(400);
         echo json_encode([
             'success' => false,
-            'message' => 'Invalid phone number format'
+            'message' => 'Invalid email format'
         ]);
         return;
     }
@@ -234,7 +233,7 @@ function addEmployee($conn) {
     }
 
     $sql = "CALL sp_manager_add_employee(
-        :user_id, :first_name, :last_name, :store_id, :job_title_id, :phone, :performance,
+        :user_id, :first_name, :last_name, :store_id, :job_title_id, :email, :performance,
         @result_code, @result_message, @employee_id
     )";
 
@@ -244,7 +243,7 @@ function addEmployee($conn) {
     $stmt->bindParam(':last_name', $data['last_name'], PDO::PARAM_STR);
     $stmt->bindParam(':store_id', $data['store_id'], PDO::PARAM_INT);
     $stmt->bindParam(':job_title_id', $data['job_title_id'], PDO::PARAM_INT);
-    $stmt->bindParam(':phone', $data['phone'], PDO::PARAM_STR);
+    $stmt->bindParam(':email', $data['email'], PDO::PARAM_STR);
 
     $performance = isset($data['performance']) ? $data['performance'] : null;
     $stmt->bindParam(':performance', $performance, PDO::PARAM_STR);
@@ -286,21 +285,20 @@ function updateEmployee($conn) {
     }
 
     if (!$data || !isset($data['employee_id']) || !isset($data['first_name']) || !isset($data['last_name']) ||
-        !isset($data['store_id']) || !isset($data['job_title_id']) || !isset($data['phone'])) {
+        !isset($data['store_id']) || !isset($data['job_title_id']) || !isset($data['email'])) {
         http_response_code(400);
         echo json_encode([
             'success' => false,
-            'message' => 'Missing required fields: employee_id, first_name, last_name, store_id, job_title_id, phone'
+            'message' => 'Missing required fields: employee_id, first_name, last_name, store_id, job_title_id, email'
         ]);
         return;
     }
 
-    // Validate phone format (basic format: digits, spaces, hyphens, parentheses, plus sign)
-    if (!preg_match('/^[\d\s\-\(\)\+]+$/', $data['phone']) || strlen($data['phone']) < 7 || strlen($data['phone']) > 20) {
+    if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
         http_response_code(400);
         echo json_encode([
             'success' => false,
-            'message' => 'Invalid phone number format'
+            'message' => 'Invalid email format'
         ]);
         return;
     }
@@ -319,7 +317,7 @@ function updateEmployee($conn) {
     }
 
     $sql = "CALL sp_manager_update_employee(
-        :employee_id, :user_id, :first_name, :last_name, :store_id, :job_title_id, :phone, :performance,
+        :employee_id, :user_id, :first_name, :last_name, :store_id, :job_title_id, :email, :performance,
         @result_code, @result_message
     )";
 
@@ -331,7 +329,7 @@ function updateEmployee($conn) {
     $stmt->bindParam(':last_name', $data['last_name'], PDO::PARAM_STR);
     $stmt->bindParam(':store_id', $data['store_id'], PDO::PARAM_INT);
     $stmt->bindParam(':job_title_id', $data['job_title_id'], PDO::PARAM_INT);
-    $stmt->bindParam(':phone', $data['phone'], PDO::PARAM_STR);
+    $stmt->bindParam(':email', $data['email'], PDO::PARAM_STR);
 
     $performance = isset($data['performance']) ? $data['performance'] : null;
     $stmt->bindParam(':performance', $performance, PDO::PARAM_STR);
@@ -452,7 +450,7 @@ function searchEmployees($conn) {
             WHERE (
                 MATCH(e.first_name, e.last_name) AGAINST (:kw1b IN NATURAL LANGUAGE MODE)
                 OR MATCH(u.username) AGAINST (:kw2b IN NATURAL LANGUAGE MODE)
-                OR CAST(e.phone AS CHAR) LIKE :kw_like1
+                OR e.email LIKE :kw_like1
                 OR CAST(v.employee_id AS CHAR) LIKE :kw_like2
                 OR CAST(v.user_id AS CHAR) LIKE :kw_like3
             )

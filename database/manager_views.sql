@@ -14,7 +14,7 @@ SELECT
     e.first_name,
     e.last_name,
     CONCAT(e.first_name, ' ', e.last_name) AS full_name,
-    e.phone,
+    e.email,
     e.performance,
     e.store_id,
     s.name AS store_name,

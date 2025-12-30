@@ -436,7 +436,7 @@ function initEventListeners() {
                 branchName: row.dataset.branchname || row.cells[2]?.textContent,
                 name: row.dataset.name || row.cells[3]?.textContent,
                 position: row.dataset.position || 'staff',
-                phone: row.dataset.phone || row.cells[5]?.textContent,
+                email: row.dataset.email || row.cells[5]?.textContent,
                 storeID: row.dataset.storeid || ''
             };
             openEditStaffModal(staffData);
@@ -562,7 +562,7 @@ function searchStaff(searchTerm) {
         item.userID.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.branchName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.phone.toLowerCase().includes(searchTerm.toLowerCase())
+        item.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return filtered;
@@ -646,7 +646,7 @@ function updateStaffTable(data) {
             <td class="px-4 py-4 text-sm">
                 <span class="px-2 py-1 text-xs ${roleClass} rounded-full">${staff.position}</span>
             </td>
-            <td class="px-4 py-4 text-sm">${staff.phone}</td>
+            <td class="px-4 py-4 text-sm">${staff.email}</td>
             <td class="px-4 py-4 text-sm">
                 <div class="flex gap-2">
                     <button class="text-primary hover:text-primary/80 edit-staff" title="Edit">
@@ -764,14 +764,14 @@ async function addNewStaff() {
             password: document.getElementById('staff-password').value,
             firstName: document.getElementById('staff-first-name').value.trim(),
             lastName: document.getElementById('staff-last-name').value.trim(),
-            phone: document.getElementById('phone-number').value.trim(),
+            email: document.getElementById('staff-email').value.trim(),
             storeID: document.getElementById('store-id').value,
             jobTitleID: document.getElementById('job-title-id').value,
             performance: document.getElementById('staff-performance').value.trim()
         };
 
         if (!formData.username || !formData.password || !formData.firstName || !formData.lastName ||
-            !formData.phone || !formData.storeID || !formData.jobTitleID) {
+            !formData.email || !formData.storeID || !formData.jobTitleID) {
             alert('Please fill in all required fields');
             return;
         }
@@ -782,8 +782,8 @@ async function addNewStaff() {
             return;
         }
 
-        if (!/^[\d\s\-\(\)\+]+$/.test(formData.phone) || formData.phone.length < 7 || formData.phone.length > 20) {
-            alert('Please enter a valid phone number');
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+            alert('Please enter a valid email address (example: name@example.com).');
             return;
         }
 
@@ -814,7 +814,7 @@ async function addNewStaff() {
             last_name: formData.lastName,
             store_id: parseInt(formData.storeID, 10),
             job_title_id: parseInt(formData.jobTitleID, 10),
-            phone: formData.phone,
+            email: formData.email,
             performance: performanceValue
         };
 
@@ -850,7 +850,7 @@ function openEditStaffModal(staffData) {
     document.getElementById('edit-branch').value = staffData.branchName;
     document.getElementById('edit-name').value = staffData.name;
     document.getElementById('edit-position').value = staffData.position;
-    document.getElementById('edit-phone').value = staffData.phone;
+    document.getElementById('edit-email').value = staffData.email;
 
     modal.classList.remove('hidden');
 }
@@ -870,17 +870,17 @@ async function updateStaff() {
             branchName: document.getElementById('edit-branch').value,
             name: document.getElementById('edit-name').value.trim(),
             position: document.getElementById('edit-position').value,
-            phone: document.getElementById('edit-phone').value.trim()
+            email: document.getElementById('edit-email').value.trim()
         };
 
         if (!formData.employeeID || !formData.userID || !formData.branchName ||
-            !formData.name || !formData.position || !formData.phone) {
+            !formData.name || !formData.position || !formData.email) {
             alert('Please fill in all required fields');
             return;
         }
 
-        if (!/^[\d\s\-\(\)\+]+$/.test(formData.phone) || formData.phone.length < 7 || formData.phone.length > 20) {
-            alert('Please enter a valid phone number');
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+            alert('Please enter a valid email address (example: name@example.com).');
             return;
         }
 
@@ -920,7 +920,7 @@ async function updateStaff() {
             last_name: lastName,
             store_id: storeId,
             job_title_id: jobTitleId,
-            phone: formData.phone,
+            email: formData.email,
             performance: null
         };
 

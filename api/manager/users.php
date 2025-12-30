@@ -96,9 +96,9 @@ function listUsers($conn) {
                 END AS full_name,
                 CASE
                     WHEN m.member_id IS NOT NULL THEN m.email
-                    WHEN e.employee_id IS NOT NULL THEN e.phone
+                    WHEN e.employee_id IS NOT NULL THEN e.email
                     ELSE NULL
-                END AS phone
+                END AS email
             FROM users u
             LEFT JOIN members m ON u.user_id = m.user_id
             LEFT JOIN employees e ON u.user_id = e.user_id
@@ -144,9 +144,9 @@ function getUserDetail($conn) {
                 END AS full_name,
                 CASE
                     WHEN m.member_id IS NOT NULL THEN m.email
-                    WHEN e.employee_id IS NOT NULL THEN e.phone
+                    WHEN e.employee_id IS NOT NULL THEN e.email
                     ELSE NULL
-                END AS phone
+                END AS email
             FROM users u
             LEFT JOIN members m ON u.user_id = m.user_id
             LEFT JOIN employees e ON u.user_id = e.user_id
@@ -530,9 +530,9 @@ function searchUsers($conn) {
                 END AS full_name,
                 CASE
                     WHEN m.member_id IS NOT NULL THEN m.email
-                    WHEN e.employee_id IS NOT NULL THEN e.phone
+                    WHEN e.employee_id IS NOT NULL THEN e.email
                     ELSE NULL
-                END AS phone,
+                END AS email,
                 (COALESCE(MATCH(u.username) AGAINST (:kw1a IN NATURAL LANGUAGE MODE), 0) +
                  COALESCE(MATCH(m.first_name, m.last_name) AGAINST (:kw2a IN NATURAL LANGUAGE MODE), 0) +
                  COALESCE(MATCH(e.first_name, e.last_name) AGAINST (:kw3a IN NATURAL LANGUAGE MODE), 0)) AS relevance_score
@@ -546,7 +546,7 @@ function searchUsers($conn) {
                 OR u.user_types LIKE :kw_like1
                 OR CAST(u.user_id AS CHAR) LIKE :kw_like2
                 OR CAST(m.email AS CHAR) LIKE :kw_like3
-                OR CAST(e.phone AS CHAR) LIKE :kw_like4
+                OR e.email LIKE :kw_like4
             )
             ORDER BY relevance_score DESC, u.user_id DESC";
     $stmt = $conn->prepare($sql);
