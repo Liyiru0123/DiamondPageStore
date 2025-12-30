@@ -6,6 +6,8 @@ let favorites = [];    // 用户收藏列表 (由 API 填充)
 let cart = [];         // 购物车列表 (由本地存储 + 后端计价同步)
 let ordersCache = [];  // 订单列表缓存
 let pendingPayIds = []; // 待支付订单 ID 组
+let searchTimer = null;
+let isSearching = false;
 
 const App = {
   async init() {
@@ -58,33 +60,54 @@ document.addEventListener('DOMContentLoaded', () => App.init());
 // ========== 核心业务逻辑：图书渲染 ==========
 
 const bookCardTemplate = (book) => {
+  // 1. 逻辑变量准备
   const isFav = favorites.some(f => String(f.isbn) === String(book.isbn));
+
+  // 兼容不同的后端字段名 (stock/stock_count, favCount/fav_count)
   const realStock = book.stock_count !== undefined ? book.stock_count : (book.stock || 0);
   const fCount = book.fav_count !== undefined ? book.fav_count : (book.favCount || 0);
+  const isOutOfStock = realStock <= 0;
 
   return `
-    <div class="book-card-item bg-white rounded-xl shadow-sm border border-brown-light/20 hover:border-brown transition-all duration-300 cursor-pointer" 
-        data-isbn="${book.isbn}" data-id="${book.id}">
+    <div class="book-card-item bg-white rounded-xl shadow-sm border border-brown-light/20 hover:shadow-md transition-all duration-300 group cursor-pointer" 
+        data-id="${book.id}" data-isbn="${book.isbn}">
       <div class="p-5">
-        <div class="flex justify-between items-start mb-2">
-          <h3 class="font-bold text-brown-dark line-clamp-2 flex-1">${book.title}</h3>
-          <div class="flex flex-col items-center ml-2">
-             <button class="favorite-btn text-gray-400 hover:text-red-500" data-isbn="${book.isbn}">
+        <!-- 标题与收藏 -->
+        <div class="flex justify-between items-start gap-2 mb-2">
+          <h3 class="font-bold text-lg text-brown-dark line-clamp-2 flex-1">${book.title}</h3>
+          <div class="flex flex-col items-center">
+             <button class="favorite-btn text-gray-400 hover:text-red-500 transition-colors" data-isbn="${book.isbn}">
                 <i class="fa ${isFav ? 'fa-heart text-red-500' : 'fa-heart-o'} text-xl"></i>
              </button>
-             <span class="fav-count-display text-[10px] text-gray-400" data-isbn="${book.isbn}">${fCount}</span>
+             <span class="fav-count-display text-[10px] mt-1 text-gray-400" data-isbn="${book.isbn}">${fCount}</span>
           </div>
         </div>
-        <div class="text-sm text-gray-500 mb-4">
-          <p>Author: ${book.author_name || book.author || 'N/A'}</p>
-          <p class="text-[10px] ${realStock > 0 ? 'text-green-600' : 'text-red-500'}">
-            ● ${realStock > 0 ? 'In Stock: ' + realStock : 'Out of Stock'}
+
+        <!-- 基本信息 -->
+        <div class="text-sm text-gray-600 mb-3 space-y-1">
+          <p><span class="font-medium text-gray-400">Author:</span> ${book.author_name || book.author || 'Unknown'}</p>
+          <p><span class="font-medium text-gray-400">Store:</span> ${book.storeName || 'Unknown'}</p>
+          
+          <!-- 库存实时显示 -->
+          <p class="text-[10px] ${isOutOfStock ? 'text-red-500 font-bold' : 'text-green-600'}">
+            <i class="fa ${isOutOfStock ? 'fa-times-circle' : 'fa-check-circle'}"></i> 
+            ${isOutOfStock ? 'Out of Stock' : `In Stock: ${realStock}`}
           </p>
         </div>
-        <div class="flex items-center justify-between">
-          <span class="text-lg font-bold text-brown">¥${Number(book.price).toFixed(2)}</span>
-          <button class="addCartBtn bg-brown text-white px-3 py-1.5 rounded-full text-xs hover:bg-brown-dark" 
-                  data-id="${book.id}">+ Cart</button>
+
+        <!-- 书籍简介 -->
+        <p class="text-xs text-gray-500 line-clamp-3 mb-4 italic h-[3rem]">
+          "${book.description || 'No introduction available for this book.'}"
+        </p>
+
+        <!-- 价格与购买按钮 -->
+        <div class="flex items-center justify-between pt-4 border-t border-brown-light/10">
+          <span class="text-xl font-bold text-brown">¥${Number(book.price).toFixed(2)}</span>
+          
+          <button class="addCartBtn ${isOutOfStock ? 'bg-gray-300 cursor-not-allowed' : 'bg-brown hover:bg-brown-dark'} text-white px-4 py-1.5 rounded-full text-sm flex items-center gap-2 transition-colors"
+               data-id="${book.id}" ${isOutOfStock ? 'disabled' : ''}>
+            <i class="fa ${isOutOfStock ? 'fa-ban' : 'fa-plus'}"></i> Cart
+          </button>
         </div>
       </div>
     </div>
@@ -108,25 +131,46 @@ async function renderCategoryBooks(category) {
   }
 }
 
-async function searchBooks(keyword) {
-  if (!keyword) return showAlert("Please enter keywords");
-  switchPage('search');
+async function searchBooks(keyword = "") {
+  // 1. 只有不在搜索页时才切换，防止死循环
+  const searchPage = document.getElementById('search-page');
+  if (searchPage && searchPage.classList.contains('hidden')) {
+    if (typeof switchPage === 'function') switchPage('search');
+  }
+
   const container = document.getElementById('search-results');
+  if (!container) return;
+
+  // 2. 显示加载中
   container.innerHTML = `<div class="col-span-full py-20 text-center"><i class="fa fa-spinner fa-spin text-3xl text-brown"></i></div>`;
 
   try {
     const filters = {
-      priceRange: document.getElementById('price-filter')?.value,
-      language: document.getElementById('language-filter')?.value,
-      sortBy: document.getElementById('sort-filter')?.value
+      priceRange: document.getElementById('price-filter')?.value || 'all',
+      language: document.getElementById('language-filter')?.value || 'all',
+      sortBy: document.getElementById('sort-filter')?.value || 'default'
     };
+
     const books = await searchBooksAPI(keyword, filters);
+
+    // 3. 统一处理结果渲染
+    if (!books || books.length === 0) {
+      container.innerHTML = `<div class="col-span-full text-center py-20"><p class="text-gray-400">No books matched your criteria.</p></div>`;
+      document.getElementById('no-results')?.classList.remove('hidden');
+      return; // 结束执行
+    }
+
+    // 4. 有结果时的逻辑
     allBooks = books;
-    container.innerHTML = books.length ? books.map(b => bookCardTemplate(b)).join('') : '';
-    document.getElementById('no-results').classList.toggle('hidden', books.length > 0);
+    container.innerHTML = books.map(b => bookCardTemplate(b)).join('');
+    document.getElementById('no-results')?.classList.add('hidden');
     bindDynamicEvents();
+
   } catch (e) {
-    showAlert("Search failed");
+    if (e.name === 'AbortError') return; // 静默忽略被取消的请求
+
+    console.error("Search Error:", e);
+    container.innerHTML = `<p class="col-span-full text-center py-20 text-red-500">API Error: ${e.message}</p>`;
   }
 }
 
@@ -165,7 +209,7 @@ async function toggleFavorite(isbn) {
 function updateFavoriteUIState(isbn, isAdded, count) {
   const isbnStr = String(isbn);
   document.querySelectorAll(`.favorite-btn[data-isbn="${isbnStr}"] i`).forEach(icon => {
-    icon.className = isAdded ? 'fa fa-heart text-red-500' : 'fa fa-heart-o text-xl';
+    icon.className = isAdded ? 'fa fa-heart text-red-500 text-xl' : 'fa fa-heart-o text-xl';
   });
   if (count !== null) {
     document.querySelectorAll(`.fav-count-display[data-isbn="${isbnStr}"]`).forEach(el => {
@@ -176,7 +220,7 @@ function updateFavoriteUIState(isbn, isAdded, count) {
   if (detailIsbn === isbnStr) {
     const detailFavBtnIcon = document.querySelector('#add-to-favorite i');
     const detailFavCount = document.getElementById('detail-fav-count');
-    if (detailFavBtnIcon) detailFavBtnIcon.className = isAdded ? 'fa fa-heart text-red-500' : 'fa fa-heart-o text-xl';
+    if (detailFavBtnIcon) detailFavBtnIcon.className = isAdded ? 'fa fa-heart text-red-500 text-xl' : 'fa fa-heart-o text-xl';
     if (detailFavCount && count !== null) detailFavCount.textContent = count.toLocaleString();
   }
 }
@@ -257,7 +301,7 @@ async function updateCartUI() {
   } catch (e) {
     // 容错处理：如果计价接口失败，依然显示列表，让用户能删除物品
     console.error("Cart Pricing Error:", e);
-    cartList.innerHTML = `<p class="text-center py-5 text-orange-500">Pricing sync failed. You can still modify items.</p>` + 
+    cartList.innerHTML = `<p class="text-center py-5 text-orange-500">Pricing sync failed. You can still modify items.</p>` +
       cart.map(item => `
         <div class="flex items-center justify-between p-4 bg-gray-50 mb-2 rounded">
           <span>${item.title} (x${item.quantity})</span>
@@ -368,16 +412,16 @@ function renderOrderCard(order) {
 
 function openProfileModal() {
   const user = JSON.parse(localStorage.getItem('current_user') || '{}');
-  
+
   // 1. 设置用户名
   document.getElementById('profile-username').value = user.username || '';
-  
+
   // 2. 设置邮箱
-  document.getElementById('profile-email').value = user.email || ''; 
-  
+  document.getElementById('profile-email').value = user.email || '';
+
   // 3. 重置密码框
   document.getElementById('profile-password').value = '';
-  
+
   // 4. 显示弹窗
   document.getElementById('profile-modal').classList.remove('hidden');
 }
@@ -416,28 +460,28 @@ function bindEvents() {
   // 绑定 Profile Form 提交事件 (新增部分)
   const profileForm = document.getElementById('profile-form');
   if (profileForm) {
-      profileForm.addEventListener('submit', handleProfileUpdate);
+    profileForm.addEventListener('submit', handleProfileUpdate);
   }
 
   document.addEventListener('click', (e) => {
     // A. 侧边栏菜单点击
     const sidebarItem = e.target.closest('.sidebar-item');
     if (sidebarItem) {
-        const targetPage = sidebarItem.dataset.page;
-        if (typeof switchPage === 'function') switchPage(targetPage);
-        return;
+      const targetPage = sidebarItem.dataset.page;
+      if (typeof switchPage === 'function') switchPage(targetPage);
+      return;
     }
 
     // B. 修复购物车图标点击：
     // 逻辑：点击带 .fa-shopping-cart 的图标，或者 ID 包含 cart 的按钮
     const cartTrigger = e.target.closest('.fa-shopping-cart, [id*="cart"], [class*="cart"]');
     if (cartTrigger) {
-        // 排除掉“加入购物车”按钮本身，只处理跳转按钮
-        if (!cartTrigger.classList.contains('addCartBtn') && !cartTrigger.classList.contains('cart-op')) {
-            console.log("[Navigation] Jumping to cart...");
-            if (typeof switchPage === 'function') switchPage('cart');
-            return;
-        }
+      // 排除掉“加入购物车”按钮本身，只处理跳转按钮
+      if (!cartTrigger.classList.contains('addCartBtn') && !cartTrigger.classList.contains('cart-op')) {
+        console.log("[Navigation] Jumping to cart...");
+        if (typeof switchPage === 'function') switchPage('cart');
+        return;
+      }
     }
 
     // C. 资料与退出
@@ -449,7 +493,7 @@ function bindEvents() {
   document.querySelectorAll('.close-profile').forEach(btn => {
     btn.onclick = () => document.getElementById('profile-modal').classList.add('hidden');
   });
-  
+
   // 【新增】购物车内操作的事件委托 (处理动态生成的加减按钮)
   document.getElementById('cart-list')?.addEventListener('click', (e) => {
     const btn = e.target.closest('.cart-op');
@@ -472,8 +516,44 @@ function bindEvents() {
     updateCartUI();
   });
 
+  const performSearch = async (val) => {
+    if (isSearching) return;
+
+    try {
+      isSearching = true;
+      console.log("[Search] Triggered with value:", val);
+      await searchBooks(val);
+    } finally {
+      setTimeout(() => { isSearching = false; }, 300)
+    }
+  }
+
+  const doSearch = () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      const input = document.getElementById('search-input');
+      performSearch(input ? input.value.trim() : "")
+    }, 300); // 停顿300毫秒才真正发起搜索
+  };
+
   document.getElementById('do-search-btn')?.addEventListener('click', () => {
-    searchBooks(document.getElementById('search-input').value.trim());
+    const val = document.getElementById('search-input')?.value.trim();
+    performSearch(val);
+  });
+
+  document.getElementById('search-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      performSearch(e.target.value.trim());
+    }
+  });
+
+  const filterIds = ['price-filter', 'language-filter', 'sort-filter'];
+  filterIds.forEach(id => {
+    document.getElementById(id)?.addEventListener('change', () => {
+      console.log(`[Filter] ${id} changed.`);
+      doSearch();
+    });
   });
 
   document.querySelectorAll('.category-btn').forEach(btn => {
@@ -527,16 +607,27 @@ function bindEvents() {
       .map(cb => cb.dataset.id);
     if (selectedIds.length > 0) openPaymentModal(selectedIds);
   });
+
+  // 【新增】Learn More 按钮点击
+  const learnMoreBtn = document.querySelector('#home-page button');
+  if (learnMoreBtn && learnMoreBtn.textContent.includes('Learn More')) {
+    learnMoreBtn.addEventListener('click', openAnnouncements);
+  }
+
+  // 【新增】关闭公告弹窗
+  document.getElementById('close-announcement')?.addEventListener('click', () => {
+    document.getElementById('announcement-modal').classList.add('hidden');
+  });
 }
 
 function bindDynamicEvents() {
-  document.querySelectorAll('.book-card-item').forEach(card => {
-    card.onclick = (e) => {
-      if (e.target.closest('.addCartBtn, .favorite-btn')) return;
-      const isbn = card.dataset.isbn;
-      if (window.openBookDetail) window.openBookDetail(isbn);
-    };
-  });
+  //document.querySelectorAll('.book-card-item').forEach(card => {
+  //  card.onclick = (e) => {
+  //    if (e.target.closest('.addCartBtn, .favorite-btn')) return;
+  //    const isbn = card.dataset.isbn;
+  //    if (window.showBookDetail) window.showBookDetail(isbn);
+  //  };
+  //});
   document.querySelectorAll('.addCartBtn').forEach(btn => {
     btn.onclick = (e) => { e.stopPropagation(); addToCart(btn.dataset.id); };
   });
@@ -590,6 +681,7 @@ async function updateFavoritesUI() {
   try {
     const data = await fetchFavorites();
     favorites = Array.isArray(data) ? data : [];
+    allBooks = favorites;
     if (favorites.length === 0) {
       container.innerHTML = `<div class="col-span-full text-center py-20"><p class="text-gray-400">No favorites yet.</p></div>`;
       return;
@@ -619,7 +711,7 @@ function showAlert(message) {
 document.addEventListener('click', (e) => {
   // 查找被点击的元素是否在书籍卡片内
   const card = e.target.closest('.book-card-item');
-  
+
   // 核心判断：
   // 1. 必须点中了卡片 
   // 2. 不能是点中了卡片里的“+ Cart”按钮
@@ -627,53 +719,89 @@ document.addEventListener('click', (e) => {
   if (card && !e.target.closest('.addCartBtn, .favorite-btn')) {
     const isbn = card.getAttribute('data-isbn');
     console.log("[Detail] Card clicked, ISBN:", isbn);
-    
-    if (window.openBookDetail) {
-      window.openBookDetail(isbn);
+    const bookData = allBooks.find(b => String(b.isbn) === String(isbn));
+
+    if (window.showBookDetail) {
+      if (bookData) { window.showBookDetail(bookData); }
+      else { window.showBookDetail({ isbn: isbn, title: 'Loading...' }); }
     } else {
       // 如果报错说没定义，说明 book-detail.js 里的函数没挂载到全局
-      console.error("Function openBookDetail not found! Check book-detail.js");
+      console.error("Function showBookDetail not found! Check book-detail.js");
     }
   }
 });
 
 // 新增处理个人信息函数
 async function handleProfileUpdate(e) {
-    e.preventDefault();
-    
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Saving...";
+  e.preventDefault();
 
-    const username = document.getElementById('profile-username').value;
-    const contact = document.getElementById('profile-email').value; // 这里对应 "Email / Contact" 输入框
-    const password = document.getElementById('profile-password').value;
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Saving...";
 
-    try {
-        await updateProfileAPI({ username, contact, password });
-        
-        // 更新成功后：
-        // 1. 更新本地存储的用户名
-        const currentUser = JSON.parse(localStorage.getItem('current_user') || '{}');
-        currentUser.username = username;
-        localStorage.setItem('current_user', JSON.stringify(currentUser));
-        
-        // 2. 更新界面显示
-        const nameDisplay = document.getElementById('display-user-name');
-        if (nameDisplay) nameDisplay.textContent = username;
-        
-        // 3. 提示并关闭弹窗
-        showAlert("Profile updated successfully!");
-        document.getElementById('profile-modal').classList.add('hidden');
-        
-        // 4. 如果修改了密码，建议重置输入框
-        document.getElementById('profile-password').value = '';
+  const username = document.getElementById('profile-username').value;
+  const contact = document.getElementById('profile-email').value; // 这里对应 "Email / Contact" 输入框
+  const password = document.getElementById('profile-password').value;
 
-    } catch (error) {
-        showAlert(error.message || "Failed to update profile");
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
+  try {
+    await updateProfileAPI({ username, contact, password });
+
+    // 更新成功后：
+    // 1. 更新本地存储的用户名
+    const currentUser = JSON.parse(localStorage.getItem('current_user') || '{}');
+    currentUser.username = username;
+    localStorage.setItem('current_user', JSON.stringify(currentUser));
+
+    // 2. 更新界面显示
+    const nameDisplay = document.getElementById('display-user-name');
+    if (nameDisplay) nameDisplay.textContent = username;
+
+    // 3. 提示并关闭弹窗
+    showAlert("Profile updated successfully!");
+    document.getElementById('profile-modal').classList.add('hidden');
+
+    // 4. 如果修改了密码，建议重置输入框
+    document.getElementById('profile-password').value = '';
+
+  } catch (error) {
+    showAlert(error.message || "Failed to update profile");
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+  }
+}
+
+async function openAnnouncements() {
+  const container = document.getElementById('announcement-list');
+  const modal = document.getElementById('announcement-modal');
+  if (!container || !modal) return;
+
+  // 1. 先显示弹窗并展示加载状态
+  modal.classList.remove('hidden');
+  container.innerHTML = `<div class="text-center py-10"><i class="fa fa-spinner fa-spin text-2xl text-brown"></i></div>`;
+
+  try {
+    // 2. 从 API 获取真实数据
+    const data = await fetchAnnouncements();
+    const list = Array.isArray(data) ? data : [];
+
+    if (list.length === 0) {
+      container.innerHTML = '<p class="text-center py-10 text-gray-400">No announcements found.</p>';
+      return;
     }
+
+    // 3. 渲染数据（保持你原有的样式完全不动）
+    container.innerHTML = list.map(ann => `
+      <div class="p-4 bg-brown-cream/30 border-l-4 border-brown rounded-r-lg mb-3">
+        <div class="flex justify-between items-center mb-1">
+          <h4 class="font-bold text-brown-dark">${ann.title}</h4>
+          <span class="text-xs text-gray-500">${new Date(ann.date || ann.created_at).toLocaleDateString()}</span>
+        </div>
+        <p class="text-sm text-gray-700">${ann.content}</p>
+      </div>
+    `).join('');
+  } catch (e) {
+    container.innerHTML = `<p class="text-center py-10 text-red-500">Failed to load announcements.</p>`;
+  }
 }

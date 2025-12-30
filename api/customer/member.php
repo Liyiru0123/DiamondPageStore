@@ -74,7 +74,7 @@ function getMemberInfo($conn) {
                 'firstName' => $row['first_name'],
                 'lastName' => $row['last_name'],
                 'username' => $row['username'],
-                'phone' => $row['phone'],
+                //'phone' => $row['phone'],
                 'points' => (int)$row['points'],
                 'address' => $row['address'],
                 'birthday' => $row['birthday'],
