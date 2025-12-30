@@ -41,28 +41,33 @@ async function fetchFinanceOverview() {
     return res.data;
 }
 
-async function fetchPaymentMethodSummary(startDate, endDate) {
+async function fetchPaymentMethodSummary(startDate, endDate,storeId) {
     const params = new URLSearchParams();
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
+    if (storeId) params.append('store_id', storeId);
+    
     const url = FINANCE_API_CONFIG.endpoints.paymentMethods + (params.toString() ? '&' + params.toString() : '');
     const res = await financeApiRequest(url);
     return res.data;
 }
 
-async function fetchRevenueByDate(startDate, endDate) {
+async function fetchRevenueByDate(startDate, endDate,storeId) {
     const params = new URLSearchParams();
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
+    if (storeId) params.append('store_id', storeId);
+    
     const url = FINANCE_API_CONFIG.endpoints.revenueByDate + (params.toString() ? '&' + params.toString() : '');
     const res = await financeApiRequest(url);
     return res.data;
 }
 
-async function fetchPurchaseCostByDate(startDate, endDate) {
+async function fetchPurchaseCostByDate(startDate, endDate,storeId) {
     const params = new URLSearchParams();
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
+    if (storeId) params.append('store_id', storeId);
     const url = FINANCE_API_CONFIG.endpoints.purchaseCostByDate + (params.toString() ? '&' + params.toString() : '');
     const res = await financeApiRequest(url);
     return res.data;

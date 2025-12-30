@@ -15,6 +15,7 @@ customer:
 
 database:
   密码需替换为hash形式
+【ywt：作业要求上说最好账号都是同一个密码，我们干脆就简化下吧】
 
 manager:
   Inventory & Pricing 中价格管理，加的书不会被加到数据库中
@@ -23,5 +24,5 @@ manager:
 
 finance:
 xian:我这里看的finance界面加载不出来数据，一直在loading【ywt：已经加载出来了】
-可以看一下有哪些按钮不需要了可以进行删除：例如create invoice这种【ywt：明天删】
+可以看一下有哪些按钮不需要了可以进行删除：例如create invoice这种【ywt：明天删】【已修改完毕1230】
 

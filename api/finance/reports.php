@@ -44,9 +44,10 @@ try {
         case 'payment_methods':
             $start = isset($_GET['start_date']) ? $_GET['start_date'] : null;
             $end = isset($_GET['end_date']) ? $_GET['end_date'] : null;
+            $store_id = isset($_GET['store_id']) ? $_GET['store_id'] : null;
 
-            $stmt = $conn->prepare('CALL sp_finance_payment_method_summary(:start_date, :end_date)');
-            $stmt->execute([':start_date' => $start, ':end_date' => $end]);
+            $stmt = $conn->prepare('CALL sp_finance_payment_method_summary(:start_date, :end_date, :store_id)');
+            $stmt->execute([':start_date' => $start, ':end_date' => $end, ':store_id'   => $store_id]);
             $rows = $stmt->fetchAll();
 
             echo json_encode(['success' => true, 'data' => $rows]);
@@ -55,9 +56,15 @@ try {
         case 'revenue_by_date':
             $start = isset($_GET['start_date']) ? $_GET['start_date'] : null;
             $end = isset($_GET['end_date']) ? $_GET['end_date'] : null;
-
-            $stmt = $conn->prepare('CALL sp_finance_revenue_by_date(:start_date, :end_date)');
-            $stmt->execute([':start_date' => $start, ':end_date' => $end]);
+            $store_id = isset($_GET['store_id']) ? $_GET['store_id'] : null;
+            $stmt = $conn->prepare('CALL sp_finance_revenue_by_date(:start_date, :end_date, :store_id)');
+            //$stmt = $conn->prepare('CALL sp_finance_revenue_by_date(:start_date, :end_date, :store_id)');
+            //$stmt->execute([':start_date' => $start, ':end_date' => $end, ':store_id' => $store_id]);
+            $stmt->execute([
+                ':start_date' => $start, 
+                ':end_date' => $end, 
+                ':store_id' => $store_id
+            ]);
             $rows = $stmt->fetchAll();
 
             echo json_encode(['success' => true, 'data' => $rows]);
@@ -66,9 +73,10 @@ try {
         case 'purchase_cost_by_date':
             $start = isset($_GET['start_date']) ? $_GET['start_date'] : null;
             $end = isset($_GET['end_date']) ? $_GET['end_date'] : null;
-
-            $stmt = $conn->prepare('CALL sp_finance_purchase_cost_by_date(:start_date, :end_date)');
-            $stmt->execute([':start_date' => $start, ':end_date' => $end]);
+            $store_id = isset($_GET['store_id']) ? $_GET['store_id'] : null;
+            
+            $stmt = $conn->prepare('CALL sp_finance_purchase_cost_by_date(:start_date, :end_date, :store_id)');
+            $stmt->execute([':start_date' => $start, ':end_date' => $end, ':store_id' => $store_id]);
             $rows = $stmt->fetchAll();
 
             echo json_encode(['success' => true, 'data' => $rows]);
