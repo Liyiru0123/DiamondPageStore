@@ -1,8 +1,64 @@
 // scripts/finance.js
-const CURRENCY_SYMBOL = '\uFFE5';
+const CURRENCY_SYMBOL = '\u00A3';
+
+// 🟢 1. 全局变量存储当前财务/管理人员信息
+let currentFinanceUser = {
+    store_id: null,
+    store_name: '',
+    user_id: null,
+    full_name: ''
+};
+
+/**
+ * 🟢 2. 获取当前登录人员信息并同步 UI
+ * 替代之前的 syncStoreAndUserInfo
+ */
+async function initFinanceSession() {
+    try {
+        // 请求后端获取当前 Session 中的用户信息
+        const response = await fetch('../api/staff/get_current_staff.php'); 
+        const result = await response.json();
+
+        if (result.success) {
+            // 成功后存储到全局变量
+            currentFinanceUser = result.data;
+            
+            // 更新 Header 中的分店名和用户名
+            const headerStoreEl = document.getElementById('header-store-name');
+            if (headerStoreEl) headerStoreEl.textContent = currentFinanceUser.store_name;
+            
+            const headerUserEl = document.getElementById('header-user-name');
+            if (headerUserEl) headerUserEl.textContent = currentFinanceUser.full_name || currentFinanceUser.username;
+
+            console.log("[Finance] Session sync successful:", currentFinanceUser.store_name);
+            
+            // 🟢 3. 只有获取到 store_id 后，才开始加载业务数据
+            // 您可以根据需要将 store_id 传入过滤器
+            loadInvoiceList();
+            initIncomeStatsCharts();
+        } else {
+            // --- 权限/Session 失效处理 ---
+            console.warn("Session invalid:", result.message);
+            handleAuthFailure();
+        }
+    } catch (error) {
+        console.error('Finance Session Init Failed:', error);
+        // 兜底方案：如果 API 失败，尝试读取 localStorage
+        syncStoreAndUserInfo(); 
+    }
+}
+
+// 统一的退出/失效处理
+function handleAuthFailure() {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('current_user');
+    localStorage.removeItem('user_role');
+    alert("Session expired. Please login again.");
+    window.location.href = 'login.html';
+}
 
 // ==========================================
-// 补丁：放在文件最前面
+// 补丁：显示发票
 // ==========================================
 window.showLoading = function(containerId, message = 'Loading...') {
     const container = document.getElementById(containerId);
@@ -470,40 +526,136 @@ function initOrderPage() {
     loadOrderList();
 }
 
+
 function initOrderFilters() {
+    // 1. 绑定搜索按钮
+    const searchBtn = document.getElementById('order-search-btn');
+    if (searchBtn) {
+        searchBtn.addEventListener('click', filterOrders);
+    }
+
+    // 2. 绑定重置按钮
+    const resetBtn = document.getElementById('order-reset-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', resetOrderFilters);
+    }
+
+    // 3. 绑定刷新按钮 (你的 HTML 里没有这个按钮，所以这里必须加 if 判断)
+    const refreshBtn = document.getElementById('refresh-orders-btn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => loadOrderList());
+    } else {
+        console.log("[Finance] Fix: No refresh button found - skipping safely.");
+    }
+
+    // 4. 绑定回车搜索
+    const searchInput = document.getElementById('order-search');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter') filterOrders();
+        });
+    }
+}
+
+/**
+ * 核心补丁：获取订单列表 API
+ * 负责把前端的 filters 参数准确地传给 PHP
+ */
+async function fetchOrderList(filters = {}) {
+    try {
+        // 1. 使用 URLSearchParams 自动处理参数拼接 (比手写字符串拼更安全)
+        const params = new URLSearchParams();
+        
+        // 必填项：告诉 PHP 我们要列表
+        params.append('action', 'list');
+        
+        // 2. 只有当参数有值时才传给后端
+        if (filters.search) params.append('search', filters.search);
+        if (filters.status) params.append('status', filters.status);
+        
+        // 注意：前端叫 startDate，PHP 接收 start_date
+        if (filters.startDate) params.append('start_date', filters.startDate); 
+        if (filters.endDate) params.append('end_date', filters.endDate);
+        
+        if (filters.orderId) params.append('order_id', filters.orderId);
+
+        // 🟢 【关键】：把 store_id 传过去！
+        // 兼容两种写法，确保万无一失
+        const storeId = filters.store_id || filters.storeId;
+        if (storeId) {
+            params.append('store_id', storeId);
+        }
+
+        // 3. 发送请求
+        // 假设你的 PHP 路径是这个，如果不对请自行调整
+        const url = `../api/finance/orders.php?${params.toString()}`;
+        console.log("Fetching orders from:", url); // 方便你调试看 URL 对不对
+
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            return result.data; // 返回订单数组
+        } else {
+            console.error('API Error:', result.message);
+            return [];
+        }
+    } catch (error) {
+        console.error('Fetch error:', error);
+        return []; // 出错返回空数组防止页面崩坏
+    }
+}
+
+/*function initOrderFilters() {
     document.getElementById('order-search-btn').addEventListener('click', filterOrders);
     document.getElementById('order-reset-btn').addEventListener('click', resetOrderFilters);
     document.getElementById('refresh-orders-btn').addEventListener('click', () => loadOrderList());
     document.getElementById('order-search').addEventListener('keypress', e => {
         if (e.key === 'Enter') filterOrders();
     });
-}
+}*/
+
 
 async function filterOrders() {
     const filters = {
+        // 顶部搜索框
         search: document.getElementById('order-search').value.trim(),
+        // 筛选栏状态
         status: document.getElementById('order-status-filter').value,
-        storeId: document.getElementById('order-store-filter').value,
+        // 筛选栏订单 ID (对应刚才修改的 ID)
+        orderId: document.getElementById('order-id-input').value.trim(),
         startDate: document.getElementById('order-date-from').value,
         endDate: document.getElementById('order-date-to').value
     };
 
+    console.log("Filtering orders with:", filters);
     await loadOrderList(filters);
 }
 
 async function resetOrderFilters() {
     document.getElementById('order-search').value = '';
     document.getElementById('order-status-filter').value = '';
-    document.getElementById('order-store-filter').value = '';
+    document.getElementById('order-id-input').value = ''; // 重置新的输入框
     document.getElementById('order-date-from').value = '';
     document.getElementById('order-date-to').value = '';
 
     await loadOrderList();
 }
 
+
 async function loadOrderList(filters = {}) {
     const container = document.getElementById('order-table-body');
     if (!container) return;
+    
+    // 只要当前用户有 store_id，就强制把它加到筛选条件里传给 PHP
+    if (currentFinanceUser && currentFinanceUser.store_id) {
+        filters.store_id = currentFinanceUser.store_id; 
+    }
     
     try {
         // 显示加载状态
@@ -558,7 +710,7 @@ function renderOrderList(orders) {
     if (!orders || orders.length === 0) {
         container.innerHTML = `
             <tr>
-                <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                <td colspan="6" class="px-4 py-8 text-center text-gray-500">
                     No orders found matching your criteria.
                 </td>
             </tr>
@@ -572,58 +724,64 @@ function renderOrderList(orders) {
     
     orders.forEach(order => {
         let statusClass = 'bg-gray-100 text-gray-800';
-        let statusText = order.orderStatus;
-        switch (order.orderStatus) {
-            case 'created':
-                statusClass = 'order-created';
-                statusText = 'Created';
-                break;
-            case 'processing':
-                statusClass = 'order-processing';
-                statusText = 'Processing';
-                break;
-            case 'paid':
-                statusClass = 'order-paid';
-                statusText = 'Paid';
-                break;
-            case 'completed':
-                statusClass = 'order-completed';
-                statusText = 'Completed';
-                break;
+        const status = (order.orderStatus || '').toLowerCase();
+        
+        switch (status) {
+            case 'created':   statusClass = 'order-created'; break;
+            case 'paid':      statusClass = 'order-paid'; break;
+            case 'finished':  statusClass = 'order-completed'; break;
+            case 'cancelled': statusClass = 'bg-red-100 text-red-600'; break;
+            case 'refunded':  statusClass = 'bg-orange-100 text-orange-600'; break;
+            case 'processing':statusClass = 'order-processing'; break;
         }
 
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 transition-colors';
-        row.dataset.orderId = order.orderId;
+        // 日期格式化 (截取 YYYY-MM-DD)
+        const formatDate = (dateString) => {
+            if (!dateString) return '-';
+            return dateString.substring(0, 10); 
+        };
 
-        // 使用innerHTML创建行
-        row.innerHTML = `
-            <td class="px-4 py-4 text-sm font-medium">${order.orderId}</td>
-            <td class="px-4 py-4 text-sm">${order.storeName}</td>
+        // 【修改】优化名字显示逻辑
+        // 如果 memberName 为空或者全是空格，显示 Guest
+        const displayName = (order.memberName && order.memberName.trim() !== '') 
+                        ? order.memberName 
+                        : 'Guest';
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-50 transition-colors border-b border-gray-100';
+
+        // 构建严格对应的 6 列 HTML
+        tr.innerHTML = `
+            <td class="px-4 py-4 text-sm font-medium text-gray-900">
+                #${order.orderId}
+            </td>
             <td class="px-4 py-4 text-sm">
                 <div class="flex flex-col">
-                    <span class="font-medium">${order.memberId}</span>
-                    <span class="text-xs text-gray-500">${order.memberName}</span>
+                    <span class="font-medium text-gray-900">${displayName || 'Guest'}</span>
+        
                 </div>
             </td>
             <td class="px-4 py-4 text-sm">
-                <span class="px-2 py-1 text-xs ${statusClass} rounded-full">${statusText}</span>
+                <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${statusClass}">
+                    ${status.toUpperCase()}
+                </span>
             </td>
-            <td class="px-4 py-4 text-sm">${formatDateTime(order.orderDate)}</td>
-            <td class="px-4 py-4 text-sm truncate max-w-xs" title="${order.note || 'No note'}">
-                ${order.note ? (order.note.length > 30 ? order.note.substring(0, 30) + '...' : order.note) : 'None'}
+            <td class="px-4 py-4 text-sm text-gray-500">
+                ${formatDate(order.orderDate)}
+            </td>
+            <td class="px-4 py-4 text-sm font-bold text-gray-900">
+                ${formatCurrency(order.payableAmount)}
             </td>
             <td class="px-4 py-4 text-sm">
-                <div class="flex gap-2">
-                    <button class="text-[#8B5A2B] hover:text-[#8B5A2B]/80 view-order" data-order="${order.orderId}" title="View Details">
-                        <i class="fa fa-eye"></i>
-                    </button>
-                </div>
+                <button class="text-[#8B5A2B] hover:text-[#774b30] transition-colors view-order" 
+                        data-order="${order.orderId}" title="View Details">
+                    <i class="fa fa-eye text-lg"></i>
+                </button>
             </td>
         `;
-        
-        fragment.appendChild(row);
+        fragment.appendChild(tr);
     });
+        
+
 
     // 一次性插入所有行
     container.appendChild(fragment);
@@ -658,6 +816,7 @@ function renderInvoiceList(invoices) {
                 </td>
             </tr>
         `;
+        updateInvoicePaginationInfo(0);
         return;
     }
 
@@ -672,10 +831,10 @@ function renderInvoiceList(invoices) {
         // --- A. 数据格式化处理 ---
         
         // 金额格式化 (保留2位小数，处理 undefined)
-        const formatMoney = (amount) => {
+        /*const formatMoney = (amount) => {
             const num = parseFloat(amount || 0);
             return '$' + num.toFixed(2);
-        };
+        };*/
 
         // 日期格式化 (截取 YYYY-MM-DD)
         const formatDate = (dateString) => {
@@ -741,12 +900,12 @@ function renderInvoiceList(invoices) {
             </td>
 
             <td class="px-4 py-4 text-sm font-medium text-gray-900">
-                ${formatMoney(invoice.invoiceAmount)}
+                ${formatCurrency(invoice.invoiceAmount)}
             </td>
 
 
             <td class="px-4 py-4 text-sm">
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-6">
                     <button class="text-blue-600 hover:text-blue-800 transition-colors view-invoice" 
                             title="View Details"
                             onclick="window.viewInvoiceDetail(${invoice.invoiceId})">
@@ -760,10 +919,7 @@ function renderInvoiceList(invoices) {
                         <i class="fa fa-ban"></i>
                     </button>
                     
-                    <button class="text-gray-500 hover:text-gray-700 transition-colors print-invoice"
-                            title="Print">
-                        <i class="fa fa-print"></i>
-                    </button>
+                    
                 </div>
             </td>
         `;
@@ -773,10 +929,50 @@ function renderInvoiceList(invoices) {
 
     // 4. 一次性插入 DOM
     container.appendChild(fragment);
+    updateInvoicePaginationInfo(invoices.length)
     //激活按钮事件
     setTimeout(() => {
         addInvoiceEventListeners();
     }, 0);
+}
+
+/**
+ * 从后端获取订单详情
+ * @param {string|number} orderId 
+ */
+async function fetchOrderDetail(orderId) {
+    try {
+        // 1. 这里的路径请根据你实际的项目结构确认
+        // 参考你之前的代码，可能是 '../api/finance/orders.php' 或者单纯的 'orders.php'
+        const response = await fetch(`../api/finance/orders.php?action=detail&order_id=${orderId}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            
+            // PHP 返回的是 { success: true, data: { order: {...}, items: [...] } }
+            // 但是 showOrderDetailModal 期望的是一个包含 items 的大对象
+            
+            const orderData = result.data.order;
+            
+            // 把 items 数组手动塞进 order 对象里
+            orderData.items = result.data.items || []; 
+            
+            return orderData;
+        } else {
+            console.error('API Error:', result.message);
+            alert('Server error: ' + result.message);
+            return null;
+        }
+    } catch (error) {
+        console.error('Fetch error:', error);
+        alert('Failed to fetch order details. See console for error.');
+        return null;
+    }
 }
 
 function updateOrderPaginationInfo(totalOrders) {
@@ -816,15 +1012,38 @@ function showOrderDetailModal(order) {
         existingModal.remove();
     }
 
+    /*
+    const orderId = order.order_id || 'N/A';
+    const memberName = order.member_name || 'N/A';
+    const memberId = order.member_id || 'N/A';
+    const storeName = order.store_name || 'N/A';
+    const orderDate = order.order_date ? formatDateTime(order.orderDate) : 'N/A';
+    const paymentMethod = order.payment_method || 'Not specified';
+    const note = order.note || 'No note';
+    const shippingAddress = order.shipping_address || 'Not specified';
+
+    // 计算各项数据，确保有默认值
+    const grossAmount = Number(order.gross_amount) || 0;
+    const discountRate = Number(order.discount_rate) || 0;
+    const discountedAmount = Number(order.discounted_amount) || 0;
+    const redeemedPoints = Number(order.redeemed_points) || 0;
+    const pointsDiscountAmount = Number(order.points_discountAmount) || 0;
+    const payableAmount = Number(order.payable_amount) || 0;
+    const paidAmount = Number(order.paid_amount) || 0;
+    const itemCount = Number(order.item_count) || 0;
+    const totalQuantity = Number(order.total_quantity) || 0;
+*/
+
     // 确保数据存在，使用安全访问
+    
     const orderId = order.orderId || 'N/A';
     const memberName = order.memberName || 'N/A';
     const memberId = order.memberId || 'N/A';
     const storeName = order.storeName || 'N/A';
     const orderDate = order.orderDate ? formatDateTime(order.orderDate) : 'N/A';
-    const paymentMethod = order.paymentMethod || 'Not specified';
+    // const paymentMethod = order.paymentMethod || 'Not specified';
     const note = order.note || 'No note';
-    const shippingAddress = order.shippingAddress || 'Not specified';
+    //const shippingAddress = order.shippingAddress || 'Not specified';
 
     // 计算各项数据，确保有默认值
     const grossAmount = Number(order.grossAmount) || 0;
@@ -837,6 +1056,7 @@ function showOrderDetailModal(order) {
     const itemCount = Number(order.itemCount) || 0;
     const totalQuantity = Number(order.totalQuantity) || 0;
 
+    
     // 创建弹窗HTML - 修复标题中的undefined
     const modalHTML = `
         <div id="order-detail-modal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -870,10 +1090,7 @@ function showOrderDetailModal(order) {
                                         <p class="text-sm text-gray-500">Order Date</p>
                                         <p class="font-medium">${orderDate}</p>
                                     </div>
-                                    <div class="bg-gray-50 p-4 rounded-lg">
-                                        <p class="text-sm text-gray-500">Payment Method</p>
-                                        <p class="font-medium">${paymentMethod}</p>
-                                    </div>
+                                    
                                 </div>
                                 
                                 <!-- 订单金额详情卡片 -->
@@ -899,16 +1116,6 @@ function showOrderDetailModal(order) {
                                         <div class="flex justify-between items-center border-b pb-2">
                                             <span class="text-gray-700">Points Discount</span>
                                             <span class="font-medium">${formatCurrency(pointsDiscountAmount)}</span>
-                                        </div>
-                                        <div class="flex justify-between items-center border-b pb-2 text-lg font-semibold">
-                                            <span class="text-[#8B5A2B]">Payable Amount</span>
-                                            <span class="text-[#8B5A2B]">${formatCurrency(payableAmount)}</span>
-                                        </div>
-                                        <div class="flex justify-between items-center">
-                                            <span class="text-gray-700">Paid Amount</span>
-                                            <span class="font-medium ${paidAmount >= payableAmount ? 'text-green-600' : 'text-orange-600'}">
-                                                ${formatCurrency(paidAmount)}
-                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -973,15 +1180,7 @@ function showOrderDetailModal(order) {
                                 </div>
                                 ` : ''}
                                 
-                                <!-- 配送地址 -->
-                                ${shippingAddress !== 'Not specified' ? `
-                                <div class="mb-6">
-                                    <h4 class="font-semibold text-lg mb-2 text-[#8B5A2B]">Shipping Address</h4>
-                                    <div class="bg-gray-50 p-4 rounded-lg">
-                                        <p class="text-gray-700">${shippingAddress}</p>
-                                    </div>
-                                </div>
-                                ` : ''}
+                                
                             </div>
                         </div>
                     </div>
@@ -1162,12 +1361,12 @@ function updateInvoicePaginationInfo(totalInvoices) {
 }
 
 function addInvoiceEventListeners() {
-    document.querySelectorAll('.view-invoice').forEach(btn => {
+    /*document.querySelectorAll('.view-invoice').forEach(btn => {
         btn.addEventListener('click', async () => {
             const invoiceId = btn.getAttribute('data-invoice');
-            await viewInvoiceDetails(invoiceId);
+            await window.viewInvoiceDetail(invoiceId);
         });
-    });
+    });*/
 
 
 
@@ -1179,19 +1378,6 @@ function addInvoiceEventListeners() {
     });
 }
 
-/*async function viewInvoiceDetails(invoiceId) {
-    try {
-        const data = await fetchInvoiceDetail(invoiceId);
-        if (data) {
-            showInvoiceDetailModal(data);
-        } else {
-            alert(`Invoice ${invoiceId} not found.`);
-        }
-    } catch (error) {
-        console.error('Failed to load invoice detail:', error);
-        alert('Failed to load invoice detail.');
-    }
-}*/
 
 
 window.viewInvoiceDetail = async function(invoiceId) {
@@ -1214,39 +1400,27 @@ window.viewInvoiceDetail = async function(invoiceId) {
     }
 };
 
-// 创建发票详情弹窗
+
+
 function showInvoiceDetailModal(invoice) {
-    // 如果已经存在弹窗，先移除
+    // 1. 移除已存在的弹窗
     const existingModal = document.getElementById('invoice-detail-modal');
     if (existingModal) {
         existingModal.remove();
     }
 
-    // 确保数据存在，使用安全访问
-    const invoiceId = invoice.invoiceId || 'N/A';
-    const invoiceNumber = invoice.invoiceNumber || invoiceId;
-    const orderId = invoice.orderId || 'N/A';
-    const memberName = invoice.memberName || 'N/A';
-    const memberId = invoice.memberId || 'N/A';
-    const storeName = invoice.storeName || 'N/A';
+    // 2. 数据安全处理 (匹配数据库下划线字段名)
+    const invoiceId = invoice.invoice_id || 'N/A';
+    const invoiceNumber = invoice.invoice_number || invoiceId;
+    const orderId = invoice.order_id || 'N/A';
+    const memberName = invoice.member_name || 'N/A';
+    const memberId = invoice.member_id || 'N/A';
+    const storeName = invoice.store_name || 'N/A';
+    const invoiceAmount = Number(invoice.invoice_amount) || 0;
+    const issuedAt = invoice.issue_date ? formatDateTime(invoice.issue_date) : 'N/A';
+    const dueDate = invoice.due_date ? formatDateTime(invoice.due_date) : 'N/A';
 
-    // 获取员工信息
-    const createdByEmployee = employeeData[invoice.createdBy] || { name: invoice.createdBy || 'Unknown', role: 'Unknown' };
-
-    // 计算余额
-    const invoiceAmount = Number(invoice.invoiceAmount) || 0;
-    const paidAmount = Number(invoice.paidAmount) || 0;
-    const balanceAmount = Number(invoice.balanceAmount) || (invoiceAmount - paidAmount);
-
-    // 确保日期数据存在
-    const issuedAt = invoice.issuedAt ? formatDateTime(invoice.issuedAt) : 'N/A';
-    const dueDate = invoice.dueDate ? formatDateTime(invoice.dueDate) : 'N/A';
-    const lastPaidAt = invoice.lastPaidAt ? formatDateTime(invoice.lastPaidAt) : 'Not paid yet';
-    const createdAt = invoice.createdAt ? formatDateTime(invoice.createdAt) : 'N/A';
-    const updatedAt = invoice.updatedAt ? formatDateTime(invoice.updatedAt) : 'N/A';
-    const notes = invoice.notes || '';
-
-    // 创建弹窗HTML - 修复标题中的undefined
+    // 3. 构建精简后的 HTML
     const modalHTML = `
         <div id="invoice-detail-modal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -1257,15 +1431,12 @@ function showInvoiceDetailModal(invoice) {
                         <div class="sm:flex sm:items-start">
                             <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
                                 <div class="flex justify-between items-center mb-6">
-                                    <h3 class="text-xl font-serif font-bold text-[#8B5A2B]" id="modal-title">
-                                        Invoice Details
-                                    </h3>
+                                    <h3 class="text-xl font-serif font-bold text-[#8B5A2B]" id="modal-title">Invoice Details</h3>
                                     <button type="button" class="invoice-modal-close text-gray-400 hover:text-gray-500">
                                         <i class="fa fa-times text-xl"></i>
                                     </button>
                                 </div>
                                 
-                                <!-- 基本信息 -->
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                                     <div class="bg-gray-50 p-4 rounded-lg">
                                         <p class="text-sm text-gray-500">Invoice Number</p>
@@ -1273,7 +1444,7 @@ function showInvoiceDetailModal(invoice) {
                                     </div>
                                     <div class="bg-gray-50 p-4 rounded-lg">
                                         <p class="text-sm text-gray-500">Order ID</p>
-                                        <p class="font-medium">${orderId}</p>
+                                        <p class="font-medium">#${orderId}</p>
                                     </div>
                                     <div class="bg-gray-50 p-4 rounded-lg">
                                         <p class="text-sm text-gray-500">Customer</p>
@@ -1285,28 +1456,16 @@ function showInvoiceDetailModal(invoice) {
                                     </div>
                                 </div>
                                 
-                                <!-- 金额信息卡片 -->
                                 <div class="bg-[#F5E6D3] p-6 rounded-lg mb-6">
                                     <h4 class="font-semibold text-lg mb-4 text-[#8B5A2B]">Invoice Amount Details</h4>
                                     <div class="space-y-3">
-                                        <div class="flex justify-between items-center border-b pb-2">
-                                            <span class="text-gray-700">Invoice Amount</span>
-                                            <span class="font-medium">${formatCurrency(invoiceAmount)}</span>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-700 font-bold">Invoice Amount</span>
+                                            <span class="font-bold text-lg">${formatCurrency(invoiceAmount)}</span>
                                         </div>
-                                        <div class="flex justify-between items-center border-b pb-2">
-                                            <span class="text-gray-700">Paid Amount</span>
-                                            <span class="font-medium ${paidAmount >= invoiceAmount ? 'text-green-600' : 'text-orange-600'}">
-                                                ${formatCurrency(paidAmount)}
-                                            </span>
                                         </div>
-                                        <div class="flex justify-between items-center border-b pb-2 text-lg font-semibold">
-                                            <span class="text-[#8B5A2B]">Balance Amount</span>
-                                            <span class="text-[#8B5A2B]">${formatCurrency(balanceAmount)}</span>
-                                        </div>
-                                    </div>
                                 </div>
                                 
-                                <!-- 日期和时间信息 -->
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                                     <div class="bg-gray-50 p-4 rounded-lg">
                                         <p class="text-sm text-gray-500">Issue Date</p>
@@ -1316,103 +1475,12 @@ function showInvoiceDetailModal(invoice) {
                                         <p class="text-sm text-gray-500">Due Date</p>
                                         <p class="font-medium">${dueDate}</p>
                                     </div>
-                                    <div class="bg-gray-50 p-4 rounded-lg">
-                                        <p class="text-sm text-gray-500">Last Paid At</p>
-                                        <p class="font-medium">${lastPaidAt}</p>
-                                    </div>
-                                    <div class="bg-gray-50 p-4 rounded-lg">
-                                        <p class="text-sm text-gray-500">Status</p>
-                                        <p class="font-medium">
-                                            <span class="px-2 py-1 text-xs ${invoice.status === 'UNPAID' ? 'invoice-unpaid' : invoice.status === 'PARTIAL' ? 'invoice-partial' : invoice.status === 'PAID' ? 'invoice-paid' : invoice.status === 'OVERDUE' ? 'invoice-overdue' : 'invoice-void'} rounded-full">
-                                                ${invoice.status || 'UNKNOWN'}
-                                            </span>
-                                        </p>
-                                    </div>
                                 </div>
-                                
-                                <!-- 审计信息 -->
-                                <div class="mb-6">
-                                    <h4 class="font-semibold text-lg mb-3 text-[#8B5A2B]">Audit Information</h4>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div class="bg-gray-50 p-4 rounded-lg">
-                                            <p class="text-sm text-gray-500">Created By</p>
-                                            <p class="font-medium">${createdByEmployee.name} (${createdByEmployee.role})</p>
-                                            <p class="text-xs text-gray-500">${invoice.createdBy || 'N/A'}</p>
-                                        </div>
-                                        <div class="bg-gray-50 p-4 rounded-lg">
-                                            <p class="text-sm text-gray-500">Created At</p>
-                                            <p class="font-medium">${createdAt}</p>
-                                        </div>
-                                        <div class="bg-gray-50 p-4 rounded-lg">
-                                            <p class="text-sm text-gray-500">Updated At</p>
-                                            <p class="font-medium">${updatedAt}</p>
-                                        </div>
-                                    </div>
                                 </div>
-                                
-                                <!-- 发票项目 -->
-                                ${invoice.items && invoice.items.length > 0 ? `
-                                <div class="mb-6">
-                                    <h4 class="font-semibold text-lg mb-3 text-[#8B5A2B]">Invoice Items</h4>
-                                    <div class="border rounded-lg overflow-hidden">
-                                        <table class="min-w-full divide-y divide-gray-200">
-                                            <thead class="bg-gray-100">
-                                                <tr>
-                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price</th>
-                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="bg-white divide-y divide-gray-200">
-                                                ${invoice.items.map(item => {
-        const description = item.description || 'N/A';
-        const quantity = item.quantity || 0;
-        const unitPrice = Number(item.unitPrice) || 0;
-        const subtotal = Number(item.subtotal) || 0;
-        return `
-                                                        <tr>
-                                                            <td class="px-4 py-3 text-sm">${description}</td>
-                                                            <td class="px-4 py-3 text-sm">${quantity}</td>
-                                                            <td class="px-4 py-3 text-sm">${formatCurrency(unitPrice)}</td>
-                                                            <td class="px-4 py-3 text-sm font-medium">${formatCurrency(subtotal)}</td>
-                                                        </tr>
-                                                    `;
-    }).join('')}
-                                                <tr class="bg-gray-50">
-                                                    <td colspan="3" class="px-4 py-3 text-right font-medium">Subtotal</td>
-                                                    <td class="px-4 py-3 font-medium">${formatCurrency(Number(invoice.subtotal) || 0)}</td>
-                                                </tr>
-                                                <tr class="bg-gray-50">
-                                                    <td colspan="3" class="px-4 py-3 text-right font-medium">Tax (${Number(invoice.taxRate) || 0}%)</td>
-                                                    <td class="px-4 py-3 font-medium">${formatCurrency(Number(invoice.taxAmount) || 0)}</td>
-                                                </tr>
-                                                <tr class="bg-gray-100">
-                                                    <td colspan="3" class="px-4 py-3 text-right font-bold text-lg">Total</td>
-                                                    <td class="px-4 py-3 font-bold text-lg text-[#8B5A2B]">${formatCurrency(invoiceAmount)}</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                                ` : '<p class="text-gray-500 mb-6">No items found for this invoice.</p>'}
-                                
-                                <!-- 备注 -->
-                                ${notes ? `
-                                <div class="mb-6">
-                                    <h4 class="font-semibold text-lg mb-2 text-[#8B5A2B]">Notes</h4>
-                                    <div class="bg-gray-50 p-4 rounded-lg">
-                                        <p class="text-gray-700">${notes}</p>
-                                    </div>
-                                </div>
-                                ` : ''}
-                            </div>
                         </div>
                     </div>
                     <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                        <button type="button" class="invoice-modal-close btn-primary w-full sm:w-auto sm:ml-3">
-                            Close
-                        </button>
+                        <button type="button" class="invoice-modal-close btn-primary w-full sm:w-auto sm:ml-3">Close</button>
                     </div>
                 </div>
             </div>
@@ -1493,12 +1561,8 @@ window.voidInvoice = async function(invoiceId) {
 // 打印/导出PDF函数
 async function printInvoice(invoiceId) {
     try {
-        const invoice = await fetchInvoiceDetail(invoiceId);
-        if (!invoice) {
-            alert('Invoice not found.');
-            return;
-        }
-
+        // 1. 复用 fetchInvoiceDetail 获取数据
+        const data = await fetchInvoiceDetail(invoiceId);
         // 创建一个打印友好的窗口
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
@@ -1646,7 +1710,39 @@ async function receivePayment(invoiceId, balance) {
     }
 }
 
+/**
+ * 身份与分店信息同步补丁
+ * 作用：从本地缓存提取登录信息，替换 layout.js 预留的 "Loading..."
+ */
+function syncStoreAndUserInfo() {
+    try {
+        // 1. 获取登录时由 login.js 存储的用户对象
+        const userJson = localStorage.getItem('current_user');
+        if (!userJson) {
+            console.warn("No user info found in localStorage.");
+            return;
+        }
+
+        const user = JSON.parse(userJson);
+        
+        // 2. 替换分店名称 (对应 layout.js 第 513 行预留的 ID)
+        const storeNameEl = document.getElementById('header-store-name');
+        if (storeNameEl && user.store_name) {
+            storeNameEl.textContent = user.store_name; 
+        }
+
+        // 3. 替换用户姓名 (对应 layout.js 第 533 行预留的 ID)
+        const userNameEl = document.getElementById('header-user-name');
+        if (userNameEl && user.username) {
+            userNameEl.textContent = user.username;
+        }
+    } catch (e) {
+        console.error("Failed to sync user info:", e);
+    }
+}
+
 function initFinancePage() {
+    syncStoreAndUserInfo();
     addStatusStyles();
 
     document.querySelectorAll('.sidebar-link[data-page]').forEach(link => {
