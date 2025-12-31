@@ -50,6 +50,9 @@
   <!-- Tailwind 自定义配置 -->
   <style type="text/tailwindcss">
     @layer utilities {
+      .border-primary { border-color: #805a4f; }
+      .bg-primary { background-color: #805a4f; }
+      .text-primary { color: #5d4037; }
       .content-auto { content-visibility: auto; }
       .sidebar-item { @apply flex items-center gap-3 px-4 py-3 text-white transition-all duration-200 cursor-pointer; }
       .sidebar-item-public-hover { @apply hover:bg-brown-dark/70; }
@@ -57,6 +60,33 @@
       .sidebar-item-active { @apply bg-brown-dark border-l-4 border-white; }
       .header-icon { @apply w-10 h-10 flex items-center justify-center rounded-full hover:bg-brown-light/20 transition-colors cursor-pointer; }
       .page-transition { @apply transition-all duration-300; }
+      .pagination-buttons button { @apply transition-all duration-200 shadow-sm;}
+    }
+  </style>
+  <style>
+    /* 分页按钮样式定制 */
+    #category-pagination button,
+    #search-pagination button {
+      @apply w-10 h-10 flex items-center justify-center rounded-lg border border-brown-light/30 text-brown transition-all duration-200;
+    }
+
+    #category-pagination button:hover:not(:disabled),
+    #search-pagination button:hover:not(:disabled) {
+      @apply bg-brown text-white border-brown shadow-md;
+    }
+
+    #category-pagination button.active,
+    #search-pagination button.active {
+      @apply bg-brown text-white border-brown font-bold;
+    }
+
+    #category-pagination button:disabled,
+    #search-pagination button:disabled {
+      @apply opacity-30 cursor-not-allowed bg-gray-100;
+    }
+
+    .pagination-buttons {
+      @apply flex gap-2 items-center justify-center;
     }
   </style>
 
@@ -87,7 +117,8 @@
         </div>
         <!-- 顶部轮播 -->
         <div class="relative h-64 md:h-80 mb-10 rounded-xl overflow-hidden shadow-md">
-          <img src="../assets/images/customer-home-bg.jpg" alt="Membership Promotion" class="w-full h-full object-cover">
+          <img src="../assets/images/customer-home-bg.jpg" alt="Membership Promotion"
+            class="w-full h-full object-cover">
           <div class="absolute inset-0 bg-brown-dark/50 flex items-center">
             <div class="px-8 text-white">
               <h2 class="text-3xl font-bold mb-2">Members Exclusive: 20% Off</h2>
@@ -193,6 +224,11 @@
               data-hot="Yu Hua">Yu Hua</span>
           </div>
           <div id="search-results" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+          <div id="search-pagination-controls" class="mt-10 flex flex-col items-center gap-4">
+            <p class="pagination-info text-sm text-gray-500">Showing 0 to 0 of 0 books</p>
+            <div class="pagination-buttons flex gap-1 justify-center"></div>
+          </div>
+          <div id="search-pagination" class="mt-10 flex flex-col items-center gap-4"></div>
           <div id="no-results" class="hidden text-center py-10 text-gray-600">
             <i class="fa fa-search-minus text-4xl mb-3 text-brown-light"></i>
             <p>No related books found. Please try other keywords.</p>
@@ -322,6 +358,11 @@
 
         <!-- 分类书籍列表 -->
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 relative z-10" id="category-books"></div>
+        <div id="category-pagination-controls" class="mt-10 flex flex-col items-center gap-4">
+          <p class="pagination-info text-sm text-gray-500">Showing 0 to 0 of 0 books</p>
+          <div class="pagination-buttons flex gap-1 justify-center"></div>
+        </div>
+        <div id="category-pagination" class="mt-10 flex flex-col items-center gap-4"></div>
         <!-- 在分类筛选逻辑 div 之后插入 -->
         <div class="flex justify-end mb-6">
           <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-brown-light/30 shadow-sm">

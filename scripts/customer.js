@@ -8,6 +8,11 @@ let ordersCache = [];  // 订单列表缓存
 let pendingPayIds = []; // 待支付订单 ID 组
 let searchTimer = null;
 let isSearching = false;
+let categoryPagination = null;
+let searchPagination = null;
+const PAGE_SIZE = 16; // 每页显示16本 (4x4)
+let currentCategoryPage = 1;
+let currentSearchPage = 1;
 
 const App = {
   async init() {
@@ -114,35 +119,57 @@ const bookCardTemplate = (book) => {
   `;
 };
 
-async function renderCategoryBooks(category) {
+async function renderCategoryBooks(category, page = 1) {
   const container = document.getElementById('category-books');
+  const paginationContainer = 'category-pagination-controls'; // HTML里的ID
   const sortVal = document.getElementById('category-sort-filter')?.value || 'default';
   if (!container) return;
+  currentCategoryPage = page;
 
-  container.innerHTML = `<div class="col-span-full py-20 text-center"><i class="fa fa-spinner fa-spin text-3xl text-brown"></i></div>`;
+  if (page === 1) {
+    container.innerHTML = `<div class="col-span-full py-20 text-center"><i class="fa fa-spinner fa-spin text-3xl text-brown"></i></div>`;
+  }
 
   try {
     const books = await fetchBooks({ category: category !== 'all' ? category : undefined, sortBy: sortVal });
-    allBooks = books;
-    container.innerHTML = books.length ? books.map(b => bookCardTemplate(b)).join('') : '<p class="col-span-full text-center py-20 text-gray-400">No books found.</p>';
-    bindDynamicEvents();
+    allBooks = Array.isArray(books) ? books : [];
+    const pageData = getPaginatedData(allBooks, currentCategoryPage, PAGE_SIZE);
+
+    if (pageData.length === 0) {
+      container.innerHTML = '<p class="col-span-full text-center py-20 text-gray-400">No books found.</p>';
+    } else {
+      container.innerHTML = pageData.map(b => bookCardTemplate(b)).join('');
+      bindDynamicEvents(); // 重新绑定按钮事件
+    }
+
+    renderPaginationControls(
+      paginationContainer,
+      allBooks.length,
+      currentCategoryPage,
+      (newPage) => {
+        // 当点击页码时，递归调用自己，但传入新页码
+        renderCategoryBooks(category, newPage);
+        // 滚动到顶部
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      },
+      PAGE_SIZE
+    );
   } catch (e) {
+    console.error("Load Error:", e);
     container.innerHTML = `<p class="col-span-full text-center text-red-500">Failed to load category.</p>`;
   }
 }
 
-async function searchBooks(keyword = "") {
-  // 1. 只有不在搜索页时才切换，防止死循环
-  const searchPage = document.getElementById('search-page');
-  if (searchPage && searchPage.classList.contains('hidden')) {
-    if (typeof switchPage === 'function') switchPage('search');
-  }
-
+async function searchBooks(keyword = "", page = 1) {
   const container = document.getElementById('search-results');
   if (!container) return;
 
-  // 2. 显示加载中
-  container.innerHTML = `<div class="col-span-full py-20 text-center"><i class="fa fa-spinner fa-spin text-3xl text-brown"></i></div>`;
+  currentSearchPage = page;
+
+  // 只有在第一页搜索时显示加载
+  if (page === 1) {
+    container.innerHTML = `<div class="col-span-full py-20 text-center"><i class="fa fa-spinner fa-spin text-3xl text-brown"></i></div>`;
+  }
 
   try {
     const filters = {
@@ -151,26 +178,36 @@ async function searchBooks(keyword = "") {
       sortBy: document.getElementById('sort-filter')?.value || 'default'
     };
 
+    // 获取搜索结果
     const books = await searchBooksAPI(keyword, filters);
+    const searchAllBooks = Array.isArray(books) ? books : [];
 
-    // 3. 统一处理结果渲染
-    if (!books || books.length === 0) {
-      container.innerHTML = `<div class="col-span-full text-center py-20"><p class="text-gray-400">No books matched your criteria.</p></div>`;
-      document.getElementById('no-results')?.classList.remove('hidden');
-      return; // 结束执行
+    // 裁剪数据
+    const pageData = getPaginatedData(searchAllBooks, currentSearchPage, PAGE_SIZE);
+
+    if (pageData.length === 0) {
+      container.innerHTML = `<div class="col-span-full text-center py-20"><p class="text-gray-400">No books matched.</p></div>`;
+      return;
     }
 
-    // 4. 有结果时的逻辑
-    allBooks = books;
-    container.innerHTML = books.map(b => bookCardTemplate(b)).join('');
-    document.getElementById('no-results')?.classList.add('hidden');
+    // 渲染结果
+    container.innerHTML = pageData.map(b => bookCardTemplate(b)).join('');
     bindDynamicEvents();
 
-  } catch (e) {
-    if (e.name === 'AbortError') return; // 静默忽略被取消的请求
+    // 渲染分页按钮
+    renderPaginationControls(
+      'search-pagination-controls',
+      searchAllBooks.length,
+      currentSearchPage,
+      (newPage) => {
+        searchBooks(keyword, newPage);
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      },
+      PAGE_SIZE
+    );
 
-    console.error("Search Error:", e);
-    container.innerHTML = `<p class="col-span-full text-center py-20 text-red-500">API Error: ${e.message}</p>`;
+  } catch (e) {
+    container.innerHTML = `<p class="col-span-full text-center py-20 text-red-500">Search Error: ${e.message}</p>`;
   }
 }
 
