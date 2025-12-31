@@ -8,6 +8,15 @@ let ordersCache = [];  // 订单列表缓存
 let pendingPayIds = []; // 待支付订单 ID 组
 let searchTimer = null;
 let isSearching = false;
+let categoryPagination = null;
+let searchPagination = null;
+const PAGE_SIZE = 16; // 每页显示16本 (4x4)
+let currentCategoryPage = 1;
+let currentSearchPage = 1;
+let globalTimer = null;
+let currentOrderPage = 1;
+const ORDER_PAGE_SIZE = 4; // 每页显示4条
+let currentOrderStatus = 'all'; // 记录当前筛选的状态
 
 const App = {
   async init() {
@@ -114,35 +123,57 @@ const bookCardTemplate = (book) => {
   `;
 };
 
-async function renderCategoryBooks(category) {
+async function renderCategoryBooks(category, page = 1) {
   const container = document.getElementById('category-books');
+  const paginationContainer = 'category-pagination-controls'; // HTML里的ID
   const sortVal = document.getElementById('category-sort-filter')?.value || 'default';
   if (!container) return;
+  currentCategoryPage = page;
 
-  container.innerHTML = `<div class="col-span-full py-20 text-center"><i class="fa fa-spinner fa-spin text-3xl text-brown"></i></div>`;
+  if (page === 1) {
+    container.innerHTML = `<div class="col-span-full py-20 text-center"><i class="fa fa-spinner fa-spin text-3xl text-brown"></i></div>`;
+  }
 
   try {
     const books = await fetchBooks({ category: category !== 'all' ? category : undefined, sortBy: sortVal });
-    allBooks = books;
-    container.innerHTML = books.length ? books.map(b => bookCardTemplate(b)).join('') : '<p class="col-span-full text-center py-20 text-gray-400">No books found.</p>';
-    bindDynamicEvents();
+    allBooks = Array.isArray(books) ? books : [];
+    const pageData = getPaginatedData(allBooks, currentCategoryPage, PAGE_SIZE);
+
+    if (pageData.length === 0) {
+      container.innerHTML = '<p class="col-span-full text-center py-20 text-gray-400">No books found.</p>';
+    } else {
+      container.innerHTML = pageData.map(b => bookCardTemplate(b)).join('');
+      bindDynamicEvents(); // 重新绑定按钮事件
+    }
+
+    renderPaginationControls(
+      paginationContainer,
+      allBooks.length,
+      currentCategoryPage,
+      (newPage) => {
+        // 当点击页码时，递归调用自己，但传入新页码
+        renderCategoryBooks(category, newPage);
+        // 滚动到顶部
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      },
+      PAGE_SIZE
+    );
   } catch (e) {
+    console.error("Load Error:", e);
     container.innerHTML = `<p class="col-span-full text-center text-red-500">Failed to load category.</p>`;
   }
 }
 
-async function searchBooks(keyword = "") {
-  // 1. 只有不在搜索页时才切换，防止死循环
-  const searchPage = document.getElementById('search-page');
-  if (searchPage && searchPage.classList.contains('hidden')) {
-    if (typeof switchPage === 'function') switchPage('search');
-  }
-
+async function searchBooks(keyword = "", page = 1) {
   const container = document.getElementById('search-results');
   if (!container) return;
 
-  // 2. 显示加载中
-  container.innerHTML = `<div class="col-span-full py-20 text-center"><i class="fa fa-spinner fa-spin text-3xl text-brown"></i></div>`;
+  currentSearchPage = page;
+
+  // 只有在第一页搜索时显示加载
+  if (page === 1) {
+    container.innerHTML = `<div class="col-span-full py-20 text-center"><i class="fa fa-spinner fa-spin text-3xl text-brown"></i></div>`;
+  }
 
   try {
     const filters = {
@@ -151,26 +182,36 @@ async function searchBooks(keyword = "") {
       sortBy: document.getElementById('sort-filter')?.value || 'default'
     };
 
+    // 获取搜索结果
     const books = await searchBooksAPI(keyword, filters);
+    const searchAllBooks = Array.isArray(books) ? books : [];
 
-    // 3. 统一处理结果渲染
-    if (!books || books.length === 0) {
-      container.innerHTML = `<div class="col-span-full text-center py-20"><p class="text-gray-400">No books matched your criteria.</p></div>`;
-      document.getElementById('no-results')?.classList.remove('hidden');
-      return; // 结束执行
+    // 裁剪数据
+    const pageData = getPaginatedData(searchAllBooks, currentSearchPage, PAGE_SIZE);
+
+    if (pageData.length === 0) {
+      container.innerHTML = `<div class="col-span-full text-center py-20"><p class="text-gray-400">No books matched.</p></div>`;
+      return;
     }
 
-    // 4. 有结果时的逻辑
-    allBooks = books;
-    container.innerHTML = books.map(b => bookCardTemplate(b)).join('');
-    document.getElementById('no-results')?.classList.add('hidden');
+    // 渲染结果
+    container.innerHTML = pageData.map(b => bookCardTemplate(b)).join('');
     bindDynamicEvents();
 
-  } catch (e) {
-    if (e.name === 'AbortError') return; // 静默忽略被取消的请求
+    // 渲染分页按钮
+    renderPaginationControls(
+      'search-pagination-controls',
+      searchAllBooks.length,
+      currentSearchPage,
+      (newPage) => {
+        searchBooks(keyword, newPage);
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      },
+      PAGE_SIZE
+    );
 
-    console.error("Search Error:", e);
-    container.innerHTML = `<p class="col-span-full text-center py-20 text-red-500">API Error: ${e.message}</p>`;
+  } catch (e) {
+    container.innerHTML = `<p class="col-span-full text-center py-20 text-red-500">Search Error: ${e.message}</p>`;
   }
 }
 
@@ -339,6 +380,31 @@ async function handleCheckout() {
   }
 }
 
+async function handleCancelOrder(orderId) {
+  // 1. 二次确认
+  if (!confirm("Are you sure you want to cancel this order? This action cannot be undone.")) {
+    return;
+  }
+
+  try {
+    // 2. 调用 API，明确传递理由为 "Cancelled by user"
+    // 这样后端在存入 note 字段时就能区分是超时还是手动取消
+    const res = await cancelOrderAPI(orderId, "Cancelled by user");
+
+    if (res.success) {
+      showAlert("Order has been cancelled.");
+      renderOrdersUI(); // 刷新列表，按钮会消失，状态变更为 Cancelled
+    } else {
+      showAlert(res.message || "Failed to cancel order.", "error");
+    }
+  } catch (error) {
+    console.error("Cancel Order Error:", error);
+    showAlert("Connection error. Please try again later.");
+  }
+}
+
+window.handleCancelOrder = handleCancelOrder;
+
 function openPaymentModal(orderIds) {
   pendingPayIds = Array.isArray(orderIds) ? orderIds : [orderIds];
   const modal = document.getElementById('payment-modal');
@@ -361,34 +427,83 @@ function openPaymentModal(orderIds) {
   modal.classList.remove('hidden');
 }
 
-async function renderOrdersUI(filterStatus = 'all') {
+async function renderOrdersUI(filterStatus = 'all', page = 1) {
   const list = document.getElementById('orders-list');
+  const paginationContainer = 'orders-pagination-controls';
   if (!list) return;
+
+  // 如果切换了状态标签，重置页码为1
+  if (filterStatus !== currentOrderStatus) {
+    currentOrderPage = 1;
+    currentOrderStatus = filterStatus;
+  } else {
+    currentOrderPage = page;
+  }
+
   list.innerHTML = `<div class="text-center py-10"><i class="fa fa-spinner fa-spin text-2xl text-brown"></i></div>`;
 
   try {
-    const orders = await fetchOrders(filterStatus);
-    ordersCache = orders;
+    // 1. 获取该状态下的全部订单
+    const orders = await fetchOrders(currentOrderStatus);
+    ordersCache = orders; // 存入全局缓存，供支付逻辑使用
+
     if (orders.length === 0) {
       list.innerHTML = `<p class="text-center py-20 text-gray-400">No orders found.</p>`;
+      document.getElementById(paginationContainer).classList.add('hidden');
       document.getElementById('orders-footer')?.classList.add('hidden');
       return;
     }
+
+    // 2. 客户端分页处理
+    const totalItems = orders.length;
+    const startIndex = (currentOrderPage - 1) * ORDER_PAGE_SIZE;
+    const pageData = orders.slice(startIndex, startIndex + ORDER_PAGE_SIZE);
+
+    // 3. 渲染当前页的订单卡片
     document.getElementById('orders-footer')?.classList.remove('hidden');
-    list.innerHTML = orders.map(order => renderOrderCard(order)).join('');
-    updateOrderFooterUI();
+    list.innerHTML = pageData.map(order => renderOrderCard(order)).join('');
+
+    // 4. 显示/隐藏分页控件并更新
+    document.getElementById(paginationContainer).classList.remove('hidden');
+    renderPaginationControls(
+      paginationContainer,
+      totalItems,
+      currentOrderPage,
+      (newPage) => {
+        renderOrdersUI(currentOrderStatus, newPage);
+        // 滚动到订单区域顶部
+        document.getElementById('orders-page').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      },
+      ORDER_PAGE_SIZE
+    );
+
+    startCountdownLogic();
+    updateOrderFooterUI(); // 更新底部合计（注意：这里的合计是选中的，不受分页限制）
   } catch (e) {
     list.innerHTML = `<p class="text-center text-red-500">Failed to load orders.</p>`;
+    console.error(e);
   }
 }
 
 function renderOrderCard(order) {
   const statusMap = {
-    'created': { text: 'Pending', class: 'bg-orange-100 text-orange-700' },
+    'created': { text: 'Created', class: 'bg-orange-100 text-orange-700' },
     'paid': { text: 'Paid', class: 'bg-green-100 text-green-700' },
-    'cancelled': { text: 'Cancelled', class: 'bg-red-100 text-red-700' }
+    'cancelled': { text: 'Cancelled', class: 'bg-red-100 text-red-700' },
+    'refunded': { text: 'Refunded', class: 'bg-purple-100 text-purple-700' },
+    'finished': { text: 'Finished', class: 'bg-blue-100 text-blue-700' }
   };
   const st = statusMap[order.status] || statusMap.created;
+
+  let countdownPart = '';
+  if (order.status === 'created' && order.remainingSeconds > 0) {
+    countdownPart = `
+      <div class="mt-1 text-[11px] font-bold text-red-500">
+        <i class="fa fa-hourglass-half"></i> Expires in: 
+            <span class="countdown-timer" data-seconds="${order.remainingSeconds}">--:--</span>
+      </div>
+    `;
+  }
 
   return `
     <div class="border border-brown-light/20 rounded-xl p-5 shadow-sm bg-white mb-4">
@@ -396,18 +511,38 @@ function renderOrderCard(order) {
         <div class="flex items-center gap-3">
           <input type="checkbox" class="order-checkbox w-5 h-5 accent-brown" 
             ${order.status !== 'created' ? 'disabled' : ''} data-id="${order.orderId}">
-          <span class="text-xs font-bold text-gray-400">ID: ${order.orderId}</span>
+          <div>
+            <span class="text-xs font-bold text-gray-400">ID: ${order.orderId}</span>
+            ${countdownPart}
+          </div>
         </div>
         <span class="px-3 py-1 rounded-full text-xs font-bold ${st.class}">${st.text}</span>
+      </div>
+      <div class="bg-brown-cream/20 rounded-lg p-3 mb-4 border-l-4 border-brown/30">
+        <p class="text-sm text-brown-dark/80 italic">
+          <i class="fa fa-book mr-2"></i> ${order.summary || 'Items information loading...'}
+        </p>
       </div>
       <div class="flex justify-between items-end border-t pt-4">
         <span class="text-gray-500 text-sm">${new Date(order.date).toLocaleDateString()}</span>
         <div class="flex items-center gap-3">
           <span class="text-lg font-bold text-brown">¥${order.total.toFixed(2)}</span>
-          ${order.status === 'created' ? `<button onclick="openPaymentModal(['${order.orderId}'])" class="bg-brown text-white px-4 py-1.5 rounded-lg text-sm">Pay</button>` : ''}
+          ${order.status === 'created' ? `
+            <div class="flex gap-2">
+              <button onclick="handleCancelOrder('${order.orderId}')" 
+                class="border border-red-400 text-red-500 hover:bg-red-50 px-4 py-1.5 rounded-lg text-sm transition-colors">
+                Cancel
+              </button>
+              <button onclick="openPaymentModal(['${order.orderId}'])" 
+                class="bg-brown text-white px-4 py-1.5 rounded-lg text-sm hover:bg-brown-dark transition-all shadow-sm active:scale-95">
+                Pay Now
+              </button>
+            </div>
+          ` : ''}
         </div>
       </div>
-    </div>`;
+    </div>
+  `;
 }
 
 function openProfileModal() {
@@ -477,7 +612,7 @@ function bindEvents() {
     const cartTrigger = e.target.closest('.fa-shopping-cart, [id*="cart"], [class*="cart"]');
     if (cartTrigger) {
       // 排除掉“加入购物车”按钮本身，只处理跳转按钮
-      if (!cartTrigger.classList.contains('addCartBtn') && !cartTrigger.classList.contains('cart-op')) {
+      if (!cartTrigger.classList.contains('addCartBtn') && !cartTrigger.classList.contains('cart-op') && cartTrigger.id !== 'cart-go-home') {
         console.log("[Navigation] Jumping to cart...");
         if (typeof switchPage === 'function') switchPage('cart');
         return;
@@ -577,6 +712,13 @@ function bindEvents() {
     if (confirm("Clear cart?")) { cart = []; localStorage.removeItem('bookCart'); updateCartUI(); }
   });
 
+  document.getElementById('cart-go-home')?.addEventListener('click', () => {
+    console.log("[Navigation] Jumping to categories from empty cart...");
+    if (typeof switchPage === 'function') {
+      switchPage('categories'); // 跳转到分类页
+    }
+  });
+
   document.getElementById('proceed-checkout')?.addEventListener('click', handleCheckout);
 
   document.getElementById('select-all-orders')?.addEventListener('change', (e) => {
@@ -590,7 +732,9 @@ function bindEvents() {
         b.className = "order-status-btn bg-white text-brown border border-brown px-4 py-2 rounded-full text-sm hover:bg-brown-light/20 transition-colors";
       });
       btn.className = "order-status-btn bg-brown text-white px-4 py-2 rounded-full text-sm hover:bg-brown-dark transition-colors";
-      renderOrdersUI(btn.dataset.status);
+
+      // 执行渲染（逻辑里会处理重置页码）
+      renderOrdersUI(btn.dataset.status, 1);
     });
   });
 
@@ -804,4 +948,37 @@ async function openAnnouncements() {
   } catch (e) {
     container.innerHTML = `<p class="text-center py-10 text-red-500">Failed to load announcements.</p>`;
   }
+}
+
+function startCountdownLogic() {
+  // 如果已经有计时器在跑，先关掉，防止叠加
+  if (globalTimer) clearInterval(globalTimer);
+
+  globalTimer = setInterval(() => {
+    const timerElements = document.querySelectorAll('.countdown-timer');
+
+    // 如果页面上没有倒计时元素了，就停止计时器
+    if (timerElements.length === 0) {
+      clearInterval(globalTimer);
+      return;
+    }
+
+    timerElements.forEach(el => {
+      let remain = parseInt(el.dataset.seconds);
+
+      if (remain <= 0) {
+        el.textContent = "Expired";
+        el.classList.add('text-gray-400');
+        return;
+      }
+
+      remain--;
+      el.dataset.seconds = remain;
+
+      // 格式化为 MM:SS
+      const m = Math.floor(remain / 60);
+      const s = remain % 60;
+      el.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+    });
+  }, 1000);
 }

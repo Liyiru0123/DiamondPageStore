@@ -50,6 +50,9 @@
   <!-- Tailwind 自定义配置 -->
   <style type="text/tailwindcss">
     @layer utilities {
+      .border-primary { border-color: #805a4f; }
+      .bg-primary { background-color: #805a4f; }
+      .text-primary { color: #5d4037; }
       .content-auto { content-visibility: auto; }
       .sidebar-item { @apply flex items-center gap-3 px-4 py-3 text-white transition-all duration-200 cursor-pointer; }
       .sidebar-item-public-hover { @apply hover:bg-brown-dark/70; }
@@ -57,6 +60,33 @@
       .sidebar-item-active { @apply bg-brown-dark border-l-4 border-white; }
       .header-icon { @apply w-10 h-10 flex items-center justify-center rounded-full hover:bg-brown-light/20 transition-colors cursor-pointer; }
       .page-transition { @apply transition-all duration-300; }
+      .pagination-buttons button { @apply transition-all duration-200 shadow-sm;}
+    }
+  </style>
+  <style>
+    /* 分页按钮样式定制 */
+    #category-pagination button,
+    #search-pagination button {
+      @apply w-10 h-10 flex items-center justify-center rounded-lg border border-brown-light/30 text-brown transition-all duration-200;
+    }
+
+    #category-pagination button:hover:not(:disabled),
+    #search-pagination button:hover:not(:disabled) {
+      @apply bg-brown text-white border-brown shadow-md;
+    }
+
+    #category-pagination button.active,
+    #search-pagination button.active {
+      @apply bg-brown text-white border-brown font-bold;
+    }
+
+    #category-pagination button:disabled,
+    #search-pagination button:disabled {
+      @apply opacity-30 cursor-not-allowed bg-gray-100;
+    }
+
+    .pagination-buttons {
+      @apply flex gap-2 items-center justify-center;
     }
   </style>
 
@@ -87,7 +117,8 @@
         </div>
         <!-- 顶部轮播 -->
         <div class="relative h-64 md:h-80 mb-10 rounded-xl overflow-hidden shadow-md">
-          <img src="../assets/images/customer-home-bg.jpg" alt="Membership Promotion" class="w-full h-full object-cover">
+          <img src="../assets/images/customer-home-bg.jpg" alt="Membership Promotion"
+            class="w-full h-full object-cover">
           <div class="absolute inset-0 bg-brown-dark/50 flex items-center">
             <div class="px-8 text-white">
               <h2 class="text-3xl font-bold mb-2">Members Exclusive: 20% Off</h2>
@@ -180,19 +211,12 @@
             Search Results <span class="text-base text-gray-600 font-normal" id="search-keyword">(Please enter
               keywords)</span>
           </h2>
-          <div class="flex flex-wrap gap-2 mb-6">
-            <span class="text-sm text-gray-600">Popular Searches:</span>
-            <span
-              class="text-sm bg-brown-light/30 text-brown px-3 py-1 rounded-full cursor-pointer hover:bg-brown-light/50 transition-colors"
-              data-hot="The Three-Body Problem">The Three-Body Problem</span>
-            <span
-              class="text-sm bg-brown-light/30 text-brown px-3 py-1 rounded-full cursor-pointer hover:bg-brown-light/50 transition-colors"
-              data-hot="Sapiens: A Brief History of Humankind">Sapiens</span>
-            <span
-              class="text-sm bg-brown-light/30 text-brown px-3 py-1 rounded-full cursor-pointer hover:bg-brown-light/50 transition-colors"
-              data-hot="Yu Hua">Yu Hua</span>
-          </div>
           <div id="search-results" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+          <div id="search-pagination-controls" class="mt-10 flex flex-col items-center gap-4">
+            <p class="pagination-info text-sm text-gray-500">Showing 0 to 0 of 0 books</p>
+            <div class="pagination-buttons flex gap-1 justify-center"></div>
+          </div>
+          <div id="search-pagination" class="mt-10 flex flex-col items-center gap-4"></div>
           <div id="no-results" class="hidden text-center py-10 text-gray-600">
             <i class="fa fa-search-minus text-4xl mb-3 text-brown-light"></i>
             <p>No related books found. Please try other keywords.</p>
@@ -322,6 +346,11 @@
 
         <!-- 分类书籍列表 -->
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 relative z-10" id="category-books"></div>
+        <div id="category-pagination-controls" class="mt-10 flex flex-col items-center gap-4">
+          <p class="pagination-info text-sm text-gray-500">Showing 0 to 0 of 0 books</p>
+          <div class="pagination-buttons flex gap-1 justify-center"></div>
+        </div>
+        <div id="category-pagination" class="mt-10 flex flex-col items-center gap-4"></div>
         <!-- 在分类筛选逻辑 div 之后插入 -->
         <div class="flex justify-end mb-6">
           <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-brown-light/30 shadow-sm">
@@ -346,7 +375,7 @@
           <p class="text-gray-600 mb-6">Your cart is empty~</p>
           <button id="cart-go-home"
             class="bg-brown text-white px-6 py-2 rounded-md hover:bg-brown-dark transition-colors">
-            Browse Homepage
+            Browse Category
           </button>
         </div>
         <div id="cart-list" class="hidden space-y-4"></div>
@@ -378,18 +407,25 @@
             data-status="all">All Orders</button>
           <button
             class="order-status-btn bg-white text-brown border border-brown px-4 py-2 rounded-full text-sm hover:bg-brown-light/20 transition-colors"
-            data-status="created">Pending Payment</button>
+            data-status="created">Created</button>
           <button
             class="order-status-btn bg-white text-brown border border-brown px-4 py-2 rounded-full text-sm hover:bg-brown-light/20 transition-colors"
             data-status="paid">Paid</button>
           <button
             class="order-status-btn bg-white text-brown border border-brown px-4 py-2 rounded-full text-sm hover:bg-brown-light/20 transition-colors"
             data-status="cancelled">Cancelled</button>
+          <button
+            class="order-status-btn bg-white text-brown border border-brown px-4 py-2 rounded-full text-sm hover:bg-brown-light/20 transition-colors"
+            data-status="refunded">Refunded</button>
+          <button
+            class="order-status-btn bg-white text-brown border border-brown px-4 py-2 rounded-full text-sm hover:bg-brown-light/20 transition-colors"
+            data-status="finished">Finished</button>
         </div>
-        <div id="orders-list" class="space-y-6 pb-20">
-          <!-- 动态渲染订单卡片 -->
+        <div id="orders-list" class="space-y-6 pb-20"></div>
+        <div id="orders-pagination-controls" class="mt-8 mb-8 flex flex-col items-center gap-4">
+          <p class="pagination-info text-sm text-gray-500"></p>
+          <div class="pagination-buttons flex gap-1 justify-center"></div>
         </div>
-
         <!-- 任务 3.2 新增：订单页底部操作栏 -->
         <div id="orders-footer"
           class="hidden mt-8 pt-6 border-t border-brown-light/30 flex flex-col md:flex-row justify-between items-center gap-4 bg-brown-cream/30 p-4 rounded-lg">
@@ -590,15 +626,23 @@
             Loading book introduction...
           </p>
         </div>
-        <div class="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <p class="text-sm"><span class="font-medium text-brown-dark">Category:</span> <span id="detail-book-category"
-              class="text-gray-600">Fiction</span></p>
-          <p class="text-sm"><span class="font-medium text-brown-dark">Publisher:</span> <span
-              id="detail-book-publisher" class="text-gray-600">Publisher Co.</span></p>
-          <p class="text-sm"><span class="font-medium text-brown-dark">Language:</span> <span id="detail-book-language"
-              class="text-gray-600">English</span></p>
-          <p class="text-sm col-span-2"><span class="font-medium text-brown-dark">ISBN:</span> <span
-              id="detail-book-isbn" class="text-gray-600 text-xs">978-3-16-148410-0</span></p>
+        <div class="bg-gray-50 rounded-xl p-4 grid grid-cols-2 gap-y-3 gap-x-8 mb-6">
+          <div class="text-sm">
+            <span class="text-gray-500 font-medium">Category:</span>
+            <span id="detail-book-category" class="text-brown-dark italic ml-1">--</span>
+          </div>
+          <div class="text-sm">
+            <span class="text-gray-500 font-medium">Publisher:</span>
+            <span id="detail-book-publisher" class="text-brown-dark ml-1">--</span>
+          </div>
+          <div class="text-sm">
+            <span class="text-gray-500 font-medium">Language:</span>
+            <span id="detail-book-language" class="text-brown-dark ml-1">--</span>
+          </div>
+          <div class="text-sm">
+            <span class="text-gray-500 font-medium">ISBN:</span>
+            <span id="detail-book-isbn" class="text-brown-dark ml-1">--</span>
+          </div>
         </div>
       </div>
     </div>
