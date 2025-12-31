@@ -14,8 +14,10 @@ let currentStaff = {
     employee_id: null,
     name: ''
 };
-let globalBooks = [];
+let globalBooks = [];       // 当前显示的数据
 let globalOrders = [];      // 用于前端搜索和过滤的本地缓存
+let globalCategories = [];  // 存储类别列表
+let globalOrderStatuses = []; // 存储订单状态列表
 
 /**
  * ------------------------------------------------------------------
@@ -59,7 +61,9 @@ async function initStaffSession() {
             const headerUserEl = document.getElementById('header-user-name');
             if (headerUserEl) headerUserEl.textContent = currentStaff.full_name;
 
-            fetchInventory(currentStaff.store_id);
+            fetchCategories();  // 先加载类别
+            fetchOrderStatuses(); // 加载订单状态
+            fetchInventory();   // 加载库存（使用默认筛选）
             fetchOrders(currentStaff.store_id);
             fetchStockRequests(currentStaff.store_id);
 
@@ -157,30 +161,143 @@ const stockRequests = [
  * 3. 获取数据
  * ------------------------------------------------------------------
  */
-// A. 获取库存数据的函数
-async function fetchInventory(storeId) {
+// A. 获取库存数据的函数（带筛选参数）
+async function fetchInventory(filters = {}) {
+    const storeId = currentStaff.store_id;
     if (!storeId) return;
+    
     try {
-        // GET 请求可以通过 URL 参数传递 store_id
-        const response = await fetch(`../api/staff/get_inventory.php?store_id=${storeId}`);
+        // 构建查询参数
+        const params = new URLSearchParams({
+            store_id: storeId,
+            search: filters.search || '',
+            category: filters.category || '',
+            stock_level: filters.stock_level || '',
+            hide_zero: filters.hide_zero || false,
+            sort_by: filters.sort_by || 'title-asc'
+        });
+
+        const response = await fetch(`../api/staff/get_inventory.php?${params.toString()}`);
         const result = await response.json();
 
         if (result.success) {
             globalBooks = result.data;
+            
+            // 渲染库存列表
             renderInventory(globalBooks);
-            renderLowStockItems(globalBooks);
-            updateDashboardStats(globalBooks, globalOrders);
+            
+            // 更新总数显示
+            const totalCountEl = document.getElementById('total-inventory-count');
+            if (totalCountEl && result.total !== undefined) {
+                totalCountEl.textContent = result.total;
+            }
+            
+            // 只在初始加载或过滤为空时更新Dashboard
+            if (!filters.search && !filters.category && !filters.stock_level && !filters.hide_zero) {
+                renderLowStockItems(globalBooks);
+                updateDashboardStats(globalBooks, globalOrders);
+            }
         }
     } catch (error) {
         console.error('Inventory Error:', error);
     }
 }
 
-// B. 获取订单数据的函数
-async function fetchOrders(storeId) {
+// B. 获取类别列表
+async function fetchCategories() {
+    try {
+        const response = await fetch('../api/staff/get_categories.php');
+        const result = await response.json();
+
+        if (result.success) {
+            globalCategories = result.data;
+            populateCategoryDropdowns();
+        }
+    } catch (error) {
+        console.error('Categories Error:', error);
+    }
+}
+
+// B2. 获取订单状态列表
+async function fetchOrderStatuses() {
+    try {
+        const response = await fetch('../api/staff/get_order_statuses.php');
+        const result = await response.json();
+
+        if (result.success) {
+            globalOrderStatuses = result.data;
+            populateOrderStatusDropdowns();
+        }
+    } catch (error) {
+        console.error('Order Statuses Error:', error);
+    }
+}
+
+// C. 填充类别下拉框
+function populateCategoryDropdowns() {
+    // 填充筛选器中的类别下拉框
+    const filterSelect = document.getElementById('category-filter');
+    if (filterSelect && globalCategories.length > 0) {
+        // 保留"All Categories"选项，添加数据库中的类别
+        const currentValue = filterSelect.value;
+        const options = '<option value="">All Categories</option>' +
+            globalCategories.map(cat =>
+                `<option value="${cat.category_name}">${cat.category_name}</option>`
+            ).join('');
+        filterSelect.innerHTML = options;
+        filterSelect.value = currentValue;
+    }
+
+    // 填充编辑模态框中的类别下拉框
+    const modalSelect = document.getElementById('book-category');
+    if (modalSelect && globalCategories.length > 0) {
+        const currentValue = modalSelect.value;
+        const options = '<option value="">Select Category</option>' +
+            globalCategories.map(cat =>
+                `<option value="${cat.category_name}">${cat.category_name}</option>`
+            ).join('');
+        modalSelect.innerHTML = options;
+        modalSelect.value = currentValue;
+    }
+}
+
+// C2. 填充订单状态下拉框
+function populateOrderStatusDropdowns() {
+    // 填充筛选器中的状态下拉框
+    const filterSelect = document.getElementById('order-status-filter');
+    if (filterSelect && globalOrderStatuses.length > 0) {
+        const currentValue = filterSelect.value;
+        const options = '<option value="">All Statuses</option>' +
+            globalOrderStatuses.map(status =>
+                `<option value="${status}">${capitalize(status)}</option>`
+            ).join('');
+        filterSelect.innerHTML = options;
+        filterSelect.value = currentValue;
+    }
+
+    // 填充详情模态框中的状态下拉框
+    const modalSelect = document.getElementById('detail-order-status-select');
+    if (modalSelect && globalOrderStatuses.length > 0) {
+        const options = globalOrderStatuses.map(status =>
+            `<option value="${status}">${capitalize(status)}</option>`
+        ).join('');
+        modalSelect.innerHTML = options;
+    }
+}
+
+// D. 获取订单数据的函数
+async function fetchOrders(storeId, filters = {}) {
     if (!storeId) return;
     try {
-        const response = await fetch(`../api/staff/get_orders.php?store_id=${storeId}`);
+        const params = new URLSearchParams({
+            store_id: storeId,
+            search: filters.search || '',
+            status: filters.status || '',
+            date_from: filters.date_from || '',
+            date_to: filters.date_to || ''
+        });
+
+        const response = await fetch(`../api/staff/get_orders.php?${params.toString()}`);
         const result = await response.json();
 
         if (result.success) {
@@ -201,7 +318,7 @@ async function fetchOrders(storeId) {
     }
 }
 
-// C. 获取进货申请的函数
+// E. 获取进货申请的函数
 async function fetchStockRequests(storeId) {
     if (!storeId) return;
     try {
@@ -286,6 +403,14 @@ function setupInternalEventListeners() {
     const resetBtn = document.getElementById('reset-inventory');
     if (resetBtn) resetBtn.addEventListener('click', resetFilters);
 
+    // 隐藏库存为0的复选框 - 触发后端筛选
+    const hideZeroCheckbox = document.getElementById('hide-zero-stock');
+    if (hideZeroCheckbox) {
+        hideZeroCheckbox.addEventListener('change', () => {
+            applyFilters();
+        });
+    }
+
     // 在 setupInternalEventListeners 函数中插入
     const newRequestBtn = document.getElementById('new-request-btn');
     if (newRequestBtn) {
@@ -299,6 +424,40 @@ function setupInternalEventListeners() {
     const submitRequestBtn = document.getElementById('submit-request-btn');
     if (submitRequestBtn) {
         submitRequestBtn.addEventListener('click', submitStockRequest);
+    }
+
+    // 订单筛选按钮
+    const applyOrderFiltersBtn = document.getElementById('apply-order-filters');
+    if (applyOrderFiltersBtn) {
+        applyOrderFiltersBtn.addEventListener('click', () => {
+            staffPageState.orders = 1;
+            const filters = {
+                search: document.getElementById('order-search').value.trim(),
+                status: document.getElementById('order-status-filter').value,
+                date_from: document.getElementById('order-date-from').value,
+                date_to: document.getElementById('order-date-to').value
+            };
+            fetchOrders(currentStaff.store_id, filters);
+        });
+    }
+
+    const resetOrderFiltersBtn = document.getElementById('reset-order-filters');
+    if (resetOrderFiltersBtn) {
+        resetOrderFiltersBtn.addEventListener('click', () => {
+            document.getElementById('order-search').value = '';
+            document.getElementById('order-date-from').value = '';
+            document.getElementById('order-date-to').value = '';
+            document.getElementById('order-status-filter').value = '';
+            staffPageState.orders = 1;
+            fetchOrders(currentStaff.store_id);
+        });
+    }
+
+    const refreshOrdersBtn = document.getElementById('refresh-orders');
+    if (refreshOrdersBtn) {
+        refreshOrdersBtn.addEventListener('click', () => {
+            fetchOrders(currentStaff.store_id);
+        });
     }
 
     // 注销逻辑
@@ -334,6 +493,18 @@ function closeBookModal() {
     if (bookModal) {
         bookModal.classList.add('hidden');
         bookModal.classList.remove('flex');
+        
+        // 重新启用所有字段
+        const fields = [
+            'book-title', 'book-isbn', 'book-category', 'book-price',
+            'book-language', 'book-binding', 'book-publisher',
+            'book-author-first', 'book-author-last', 'book-author-country',
+            'book-intro'
+        ];
+        fields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.disabled = false;
+        });
     }
 }
 
@@ -432,11 +603,20 @@ function renderInventory(data) {
     // 2. 获取分页后的切片数据
     const paginatedData = getPaginatedData(sourceData, staffPageState.inventory, pageSize);
 
-    // 3. 渲染行内容
+    // 4. 渲染行内容
     inventoryList.innerHTML = paginatedData.map(item => {
         const title = item.book_name || item.title || 'Unknown Title';
-        const batch = item.batch_number || item.batch_id || '-';
-        const author = item.publisher || item.author || '-';
+        const batch = item.batch_number || '-';
+        const binding = item.binding || '';
+        
+        // 优先显示作者全名，如果没有则显示出版社
+        let authorDisplay = '-';
+        if (item.author_first || item.author_last) {
+            authorDisplay = `${item.author_first || ''} ${item.author_last || ''}`.trim();
+        } else {
+            authorDisplay = item.publisher || item.author || '-';
+        }
+        
         const isbn = item.ISBN || item.isbn || '-';
         
         // 确保 category 存在，如果为空显示 Uncategorized
@@ -444,6 +624,7 @@ function renderInventory(data) {
         
         const price = parseFloat(item.unit_price || item.price || 0).toFixed(2);
         const stock = parseInt(item.quantity || item.stock || 0);
+        const skuId = item.sku_id || '';
 
         // 库存状态颜色逻辑
         let stockStatus = stock <= 5 ? 'low' : (stock <= 20 ? 'medium' : 'high');
@@ -452,9 +633,11 @@ function renderInventory(data) {
             <tr class="hover:bg-gray-50 transition-colors">
                 <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                     <div class="font-bold text-brown-dark">${title}</div>
-                    <div class="text-[10px] text-gray-400 uppercase tracking-tighter">Batch: ${batch}</div>
+                    <div class="text-[10px] text-gray-400 uppercase tracking-tighter">
+                        ${binding ? `${binding} · ` : ''}Batch: ${batch}
+                    </div>
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${author}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${authorDisplay}</td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-mono">${isbn}</td>
                 
                 <!-- 修改点：添加 max-w-[150px] 和 truncate 实现省略号 -->
@@ -468,14 +651,14 @@ function renderInventory(data) {
                     <span class="status-${stockStatus}">${capitalize(stockStatus)}</span>
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm">
-                    <button class="text-primary hover:text-primary/80 edit-book-btn" data-id="${item.batch_id || item.id}">
+                    <button class="text-primary hover:text-primary/80 edit-book-btn" data-sku="${skuId}">
                         <i class="fa fa-edit"></i> Edit
                     </button>
                 </td>
             </tr>`;
     }).join('');
 
-    // 4. 更新分页控制条
+    // 5. 更新分页控制条
     renderPaginationControls(
         'inventory-pagination-controls',
         sourceData.length,
@@ -487,7 +670,7 @@ function renderInventory(data) {
         pageSize
     );
 
-    // 5. 重新绑定事件
+    // 6. 重新绑定事件
     bindDynamicEvents();
 }
 
@@ -663,8 +846,8 @@ function renderStockRequests(data) {
 function bindDynamicEvents() {
     document.querySelectorAll('.edit-book-btn').forEach(btn => {
         btn.onclick = function () {
-            const id = this.getAttribute('data-id');
-            editBook(id);
+            const skuId = this.getAttribute('data-sku');
+            editBook(skuId);
         };
     });
 
@@ -681,51 +864,120 @@ function bindDynamicEvents() {
  * ------------------------------------------------------------------
  */
 // 保存书籍 (新增或编辑) 表单提交
-function saveBook() {
-    const id = document.getElementById('book-id').value;
-    // 获取批次号字段
-    const batchNum = document.getElementById('book-batch').value;
+async function saveBook() {
+    const skuId = document.getElementById('book-id').value;
+    const isEdit = skuId !== '';
+    
+    let url = '';
+    let body = {};
 
-    const bookData = {
-        batch_id: id || Date.now(), // 模拟主键
-        batch_number: batchNum,     // 批次号
-        book_name: document.getElementById('book-title').value,
-        publisher: document.getElementById('book-author').value,
-        ISBN: document.getElementById('book-isbn').value,
-        category: document.getElementById('book-category').value,
-        unit_price: parseFloat(document.getElementById('book-price').value),
-        quantity: parseInt(document.getElementById('book-stock').value)
-    };
-
-    if (id) {
-        const index = globalBooks.findIndex(b => (b.batch_id || b.id) == id);
-        if (index !== -1) globalBooks[index] = bookData;
+    if (isEdit) {
+        // 编辑模式只更新库存和批次
+        url = '../api/staff/update_inventory.php';
+        body = {
+            sku_id: parseInt(skuId),
+            store_id: currentStaff.store_id,
+            quantity: parseInt(document.getElementById('book-stock').value),
+            batch_code: document.getElementById('book-batch').value.trim()
+        };
     } else {
-        globalBooks.unshift(bookData);
+        // 新增模式需要完整数据
+        url = '../api/staff/add_book.php';
+        const formData = {
+            isbn: document.getElementById('book-isbn').value.trim(),
+            name: document.getElementById('book-title').value.trim(),
+            language: document.getElementById('book-language').value.trim(),
+            publisher: document.getElementById('book-publisher').value.trim(),
+            introduction: document.getElementById('book-intro').value.trim(),
+            author_first: document.getElementById('book-author-first').value.trim(),
+            author_last: document.getElementById('book-author-last').value.trim(),
+            author_country: document.getElementById('book-author-country').value.trim(),
+            category_id: 0,
+            binding: document.getElementById('book-binding').value,
+            unit_price: parseFloat(document.getElementById('book-price').value),
+            store_id: currentStaff.store_id,
+            initial_quantity: parseInt(document.getElementById('book-stock').value),
+            batch_code: document.getElementById('book-batch').value.trim()
+        };
+
+        // 处理 category_id
+        const categoryName = document.getElementById('book-category').value;
+        const categoryObj = globalCategories.find(c => c.category_name === categoryName);
+        if (categoryObj) {
+            formData.category_id = categoryObj.category_id;
+        }
+        body = formData;
     }
 
-    // TODO: 待对接后端接口 (POST /api/inventory/save)
-    renderInventory(globalBooks);
-    closeBookModal();
-    showNotification(id ? "Record Updated" : "New Batch Added");
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            closeBookModal();
+            showNotification(isEdit ? "Inventory updated successfully" : "New book added successfully");
+            // 重新加载库存数据
+            fetchInventory();
+        } else {
+            alert("Error: " + result.message);
+        }
+    } catch (error) {
+        console.error('Save Error:', error);
+        alert("Failed to save book/inventory");
+    }
 }
 
-// 编辑书籍：填充表单
-function editBook(id) {
-    const book = globalBooks.find(b => b.batch_id == id);
+// 编辑书籍：填充表单（只编辑库存数量）
+function editBook(skuId) {
+    const book = globalBooks.find(b => b.sku_id == skuId);
+    console.log("Editing book data:", book); // 添加调试日志
     const bookModal = document.getElementById('book-modal');
     if (book && bookModal) {
-        document.getElementById('modal-title').textContent = 'Edit Book';
-        document.getElementById('book-id').value = book.id;
-        document.getElementById('book-title').value = book.title;
-        document.getElementById('book-author').value = book.author;
-        document.getElementById('book-isbn').value = book.isbn;
-        document.getElementById('book-category').value = book.category;
-        document.getElementById('book-price').value = book.price;
-        document.getElementById('book-stock').value = book.stock;
+        document.getElementById('modal-title').textContent = 'Edit Inventory';
+        // 使用sku_id作为标识
+        document.getElementById('book-id').value = book.sku_id || '';
+        document.getElementById('book-batch').value = book.batch_number || '';
+        document.getElementById('book-title').value = book.book_name || '';
+        document.getElementById('book-isbn').value = book.ISBN || '';
+        
+        // 处理类别：可能是逗号分隔的多个类别，取第一个
+        let categoryValue = book.category || '';
+        if (categoryValue.includes(',')) {
+            categoryValue = categoryValue.split(',')[0].trim();
+        }
+        document.getElementById('book-category').value = categoryValue;
+        
+        document.getElementById('book-price').value = book.unit_price || '';
+        document.getElementById('book-stock').value = book.quantity || '';
+        document.getElementById('book-binding').value = book.binding || '';
+        document.getElementById('book-language').value = book.language || '';
+        document.getElementById('book-publisher').value = book.publisher || '';
+        document.getElementById('book-author-first').value = book.author_first || '';
+        document.getElementById('book-author-last').value = book.author_last || '';
+        document.getElementById('book-author-country').value = book.author_country || '';
+        document.getElementById('book-intro').value = book.introduction || '';
+
+        // 禁用除了库存和批次号以外的字段
+        const lockedFields = [
+            'book-title', 'book-isbn', 'book-category', 'book-price',
+            'book-language', 'book-binding', 'book-publisher',
+            'book-author-first', 'book-author-last', 'book-author-country',
+            'book-intro'
+        ];
+        lockedFields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.disabled = true;
+        });
 
         bookModal.classList.remove('hidden');
         bookModal.classList.add('flex');
+    } else {
+        console.warn('Book not found with sku_id:', skuId);
     }
 }
 
@@ -741,51 +993,26 @@ function deleteBook(id) {
     }
 }
 
-// 筛选功能
+// 筛选功能 - 调用后端API
 function applyFilters() {
-    const searchTerm = document.getElementById('inventory-search').value.toLowerCase();
+    const searchTerm = document.getElementById('inventory-search').value.trim();
     const category = document.getElementById('category-filter').value;
     const stockLevel = document.getElementById('stock-filter').value;
     const sortBy = document.getElementById('sort-filter').value;
+    const hideZeroCheckbox = document.getElementById('hide-zero-stock');
+    const hideZero = hideZeroCheckbox ? hideZeroCheckbox.checked : false;
 
-    let filtered = globalBooks.filter(item => {
-        const title = (item.book_name || item.title || '').toLowerCase();
-        const isbn = (item.ISBN || item.isbn || '');
-        const matchesSearch = title.includes(searchTerm) || isbn.includes(searchTerm);
-
-        const matchesCategory = !category || (item.category === category);
-
-        let matchesStock = true;
-        const stock = parseInt(item.quantity || item.stock || 0);
-        if (stockLevel === 'low') matchesStock = stock <= 5;
-        else if (stockLevel === 'medium') matchesStock = stock > 5 && stock <= 20;
-        else if (stockLevel === 'high') matchesStock = stock > 20;
-
-        return matchesSearch && matchesCategory && matchesStock;
+    // 重置到第一页
+    staffPageState.inventory = 1;
+    
+    // 调用后端API，传递所有筛选参数
+    fetchInventory({
+        search: searchTerm,
+        category: category,
+        stock_level: stockLevel,
+        hide_zero: hideZero,
+        sort_by: sortBy
     });
-
-    // 执行排序逻辑
-    filtered.sort((a, b) => {
-        const priceA = parseFloat(a.unit_price || a.price || 0);
-        const priceB = parseFloat(b.unit_price || b.price || 0);
-        const stockA = parseInt(a.quantity || a.stock || 0);
-        const stockB = parseInt(b.quantity || b.stock || 0);
-        const titleA = (a.book_name || a.title || '');
-        const titleB = (b.book_name || b.title || '');
-
-        switch (sortBy) {
-            case 'title-asc': return titleA.localeCompare(titleB);
-            case 'title-desc': return titleB.localeCompare(titleA);
-            case 'price-asc': return priceA - priceB;
-            case 'price-desc': return priceB - priceA;
-            case 'stock-asc': return stockA - stockB;
-            case 'stock-desc': return stockB - stockA;
-            default: return 0;
-        }
-    });
-
-    staffPageState.inventory = 1; // 筛选后重置到第一页
-    renderInventory(filtered);
 }
 
 // 重置筛选
@@ -793,8 +1020,16 @@ function resetFilters() {
     document.getElementById('inventory-search').value = '';
     document.getElementById('category-filter').value = '';
     document.getElementById('stock-filter').value = '';
-    document.getElementById('sort-filter').value = 'title';
-    renderInventory();
+    document.getElementById('sort-filter').value = 'title-asc';
+    
+    // 取消勾选hideZeroStock
+    const hideZeroCheckbox = document.getElementById('hide-zero-stock');
+    if (hideZeroCheckbox) {
+        hideZeroCheckbox.checked = false;
+    }
+    
+    // 重新从后端获取数据（不带任何筛选）
+    fetchInventory();
 }
 
 // 工具函数：格式化日期
@@ -813,35 +1048,53 @@ function capitalize(str) {
 /**
  * 订单详情弹窗交互
  */
-window.viewOrderDetails = function (orderId) {
-    const order = mockOrders.find(o => (o.order_id || o.id) == orderId);
-    if (!order) return;
+window.viewOrderDetails = async function (orderId) {
+    try {
+        const response = await fetch(`../api/staff/get_order_details.php?order_id=${orderId}`);
+        const result = await response.json();
 
-    // A. 填充基本信息
-    document.getElementById('detail-order-id').textContent = `#${orderId}`;
-    document.getElementById('detail-customer-name').textContent = order.customer;
-    document.getElementById('detail-order-total').textContent = `¥${order.total.toFixed(2)}`;
+        if (result.success) {
+            const order = result.data;
 
-    // B. 更新状态显示样式 (只读)
-    const statusBadge = document.getElementById('detail-order-status-badge');
-    statusBadge.className = `status-${order.status.toLowerCase()} inline-block px-3 py-1 rounded-full text-sm font-medium border`;
-    statusBadge.textContent = order.status.toUpperCase();
+            // A. 填充基本信息
+            document.getElementById('detail-order-id').textContent = `#${order.order_id}`;
+            document.getElementById('detail-customer-name').textContent = order.customer_name;
+            document.getElementById('detail-order-total').textContent = `¥${parseFloat(order.total_amount).toFixed(2)}`;
 
-    // C. 渲染书籍清单 (增加 ISBN 列)
-    const tableBody = document.getElementById('order-items-table');
-    tableBody.innerHTML = (order.book_list || []).map(item => `
-        <tr>
-            <td class="px-4 py-2 text-sm text-gray-800 font-medium">${item.title}</td>
-            <td class="px-4 py-2 text-sm text-gray-500 font-mono">${item.isbn}</td>
-            <td class="px-4 py-2 text-sm text-center text-gray-600">x${item.qty}</td>
-            <td class="px-4 py-2 text-sm text-right text-gray-800 font-semibold">¥${(item.qty * item.price).toFixed(2)}</td>
-        </tr>
-    `).join('');
+            // B. 更新状态显示样式
+            const statusBadge = document.getElementById('detail-order-status-badge');
+            const status = order.order_status.toLowerCase();
+            statusBadge.className = `status-${status} inline-block px-3 py-1 rounded-full text-sm font-medium border`;
+            statusBadge.textContent = status.toUpperCase();
 
-    // D. 显示弹窗
-    const modal = document.getElementById('order-modal');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
+            // 设置下拉菜单当前值
+            const statusSelect = document.getElementById('detail-order-status-select');
+            if (statusSelect) {
+                statusSelect.value = status;
+            }
+
+            // C. 渲染书籍清单
+            const tableBody = document.getElementById('order-items-table');
+            tableBody.innerHTML = (order.items || []).map(item => `
+                <tr>
+                    <td class="px-4 py-2 text-sm text-gray-800 font-medium">${item.book_title}</td>
+                    <td class="px-4 py-2 text-sm text-gray-500 font-mono">${item.isbn}</td>
+                    <td class="px-4 py-2 text-sm text-center text-gray-600">x${item.quantity}</td>
+                    <td class="px-4 py-2 text-sm text-right text-gray-800 font-semibold">¥${parseFloat(item.subtotal).toFixed(2)}</td>
+                </tr>
+            `).join('');
+
+            // D. 显示弹窗
+            const modal = document.getElementById('order-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        } else {
+            alert("Error: " + result.message);
+        }
+    } catch (error) {
+        console.error('Order Details Error:', error);
+        alert("Failed to fetch order details");
+    }
 };
 
 window.closeOrderModal = function () {
@@ -850,17 +1103,33 @@ window.closeOrderModal = function () {
     modal.classList.remove('flex');
 };
 
-window.updateOrderStatus = function () {
+window.updateOrderStatus = async function () {
     const orderId = document.getElementById('detail-order-id').textContent.replace('#', '');
-    const newStatus = document.getElementById('detail-order-status').value;
+    const newStatus = document.getElementById('detail-order-status-select').value;
 
-    // TODO: 待替换为后端更新接口 API (PATCH /api/orders/status)
-    const orderIndex = mockOrders.findIndex(o => (o.order_id || o.id) == orderId);
-    if (orderIndex !== -1) {
-        mockOrders[orderIndex].status = newStatus;
-        showNotification(`Order #${orderId} status updated to ${newStatus}`);
-        renderOrders(); // 刷新列表
-        closeOrderModal();
+    if (!confirm(`Are you sure you want to update order #${orderId} status to ${newStatus}?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('../api/staff/update_order_status.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: orderId, status: newStatus })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification(`Order #${orderId} status updated to ${newStatus}`);
+            fetchOrders(currentStaff.store_id); // 刷新列表
+            closeOrderModal();
+        } else {
+            alert("Error: " + result.message);
+        }
+    } catch (error) {
+        console.error('Update Status Error:', error);
+        alert("Failed to update order status");
     }
 };
 
