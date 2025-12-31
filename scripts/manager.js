@@ -1,5 +1,47 @@
 // Manager Dashboard JavaScript - 与layout.js整合版
 
+// 全局变量存储当前管理员信息
+let currentManager = {
+    user_id: null,
+    full_name: '',
+    email: '',
+    phone: '',
+    store_name: '',
+    role: 'manager'
+};
+
+/**
+ * 初始化管理员会话
+ */
+async function initManagerSession() {
+    try {
+        const response = await fetch('../api/manager/get_current_manager.php');
+        const result = await response.json();
+
+        if (result.success) {
+            // 成功获取管理员信息
+            currentManager = result.data;
+            
+            updateUserAvatar(currentManager, 'manager');
+
+        } else {
+            // Session 过期或无效
+            console.warn("Session expired or invalid:", result.message);
+
+            // 1. 清除前端残留的"假"登录状态
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('current_user');
+            localStorage.removeItem('user_role');
+
+            // 2. 强制跳回登录页
+            alert("Session expired. Please login again.");
+            window.location.href = 'login.html';
+        }
+    } catch (error) {
+        console.error('Manager Session Init Failed:', error);
+    }
+}
+
 /**
  * Manager 系统页面切换函数 (供layout.js调用)
  * 修改：添加布局修复逻辑
@@ -134,7 +176,9 @@ window.managerSwitchPage = function (pageId) {
     }, 150);
 };
 
+// manager.js - 修改 DOMContentLoaded 部分
 document.addEventListener('DOMContentLoaded', function () {
+
     // Initialize date display
     initDateDisplay();
 
@@ -269,6 +313,18 @@ function updateStockSearchCount(count) {
 // Initialize event listeners (移除与layout.js冲突的部分)
 function initEventListeners() {
     // 注意: 侧边栏切换、导航、登出按钮现在由layout.js处理
+
+    // Trend period buttons
+    document.querySelectorAll('.trend-period-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.trend-period-btn').forEach(b => {
+                b.classList.remove('bg-blue-600', 'text-white');
+                b.classList.add('bg-gray-100', 'text-gray-700');
+            });
+            btn.classList.remove('bg-gray-100', 'text-gray-700');
+            btn.classList.add('bg-blue-600', 'text-white');
+        });
+    });
 
     // Trend period buttons
     document.querySelectorAll('.trend-period-btn').forEach(btn => {
@@ -1140,7 +1196,7 @@ function resetRequestFilters() {
         'request-date-to',
         'request-urgency-filter'
     ];
-    
+
     filters.forEach(id => {
         const element = document.getElementById(id);
         if (element) {
