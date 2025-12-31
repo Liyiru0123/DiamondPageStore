@@ -669,18 +669,22 @@
         <div class="space-y-3">
           <label class="text-sm font-bold text-brown-dark block">Select Payment Method</label>
           <div class="grid grid-cols-2 gap-3">
-            <label
-              class="border-2 border-brown rounded-xl p-3 flex flex-col items-center gap-2 cursor-pointer bg-brown/5">
-              <input type="radio" name="pay-method" value="credit" checked class="hidden">
-              <i class="fa fa-credit-card text-2xl text-brown"></i>
-              <span class="text-xs font-bold">Credit Card</span>
-            </label>
-            <label
-              class="border-2 border-gray-100 rounded-xl p-3 flex flex-col items-center gap-2 cursor-pointer hover:border-brown/50">
-              <input type="radio" name="pay-method" value="paypal" class="hidden">
-              <i class="fa fa-paypal text-2xl text-gray-400"></i>
-              <span class="text-xs font-bold text-gray-500">PayPal</span>
-            </label>
+            <div class="flex gap-4">
+              <label class="group border-2 rounded-xl p-3 flex flex-col items-center gap-2 cursor-pointer transition-all
+                border-gray-100 text-gray-400 bg-white
+                has-[:checked]:border-brown has-[:checked]:bg-brown/5 has-[:checked]:text-brown">
+                <input type="radio" name="pay-method" value="credit" checked class="hidden">
+                <i class="fa fa-credit-card text-2xl"></i>
+                <span class="text-xs font-bold">Credit Card</span>
+              </label>
+              <label class="group border-2 rounded-xl p-3 flex flex-col items-center gap-2 cursor-pointer transition-all
+                border-gray-100 text-gray-400 bg-white
+                has-[:checked]:border-brown has-[:checked]:bg-brown/5 has-[:checked]:text-brown">
+                <input type="radio" name="pay-method" value="paypal" class="hidden">
+                <i class="fa fa-paypal text-2xl"></i>
+                <span class="text-xs font-bold">PayPal</span>
+              </label>
+            </div>
           </div>
         </div>
         <button id="confirm-payment-btn"

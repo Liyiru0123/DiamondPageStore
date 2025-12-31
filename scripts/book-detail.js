@@ -1,12 +1,10 @@
 // scripts/book-detail.js
 
 let currentBook = null;
-
-// 1. 先声明对象，但不立即赋值
 let elements = {};
 
 /**
- * 核心修复：在这里统一获取 DOM 元素
+ * 统一获取 DOM 元素
  */
 function getElements() {
   elements = {
@@ -31,49 +29,50 @@ function getElements() {
   };
 }
 
-async function showBookDetail(basicBookData) {
-  if (!basicBookData) return;
-  console.log("[Detail] Showing book:", basicBookData.title);
+/**
+ * 核心修改：直接接收从 customer.js 传来的完整数据对象
+ */
+function showBookDetail(bookData) {
+  if (!bookData) return;
 
-  // 确保元素已获取
+  // 确保 DOM 元素已初始化
   if (!elements.modal) getElements();
 
-  currentBook = basicBookData;
-  renderBookDetail(basicBookData);
+  console.log("[Detail] Directly rendering local data for:", bookData.title);
+
+  // 1. 设置当前操作的书籍引用
+  currentBook = bookData;
+
+  // 2. 执行渲染（因为是本地数据，无需 await）
+  renderBookDetail(bookData);
+
+  // 3. 打开 UI 动画
   openModalUI();
-
-  if (elements.desc) elements.desc.textContent = "Loading full details...";
-
-  try {
-    const fullBookData = await fetchBookDetail(basicBookData.isbn);
-    if (fullBookData) {
-      currentBook = fullBookData;
-      renderBookDetail(fullBookData);
-    }
-  } catch (error) {
-    console.error("Failed to fetch book detail:", error);
-    if (elements.desc) elements.desc.textContent = "Detailed description currently unavailable.";
-  }
 }
 
 function renderBookDetail(book) {
-  if (!elements.title) return; // 防错检查
+  if (!elements.title) return;
 
+  // 基础字段填充 (利用 customer.js 中已经存在的字段名)
   elements.title.textContent = book.title || 'Unknown Title';
-  elements.author.textContent = book.author || book.author_name || 'Unknown Author';
+  elements.author.textContent = book.author_name || book.author || 'Unknown Author';
   elements.price.textContent = `¥${Number(book.price || 0).toFixed(2)}`;
-  elements.favCount.textContent = (book.fav_count || book.favCount || 0).toLocaleString();
-  elements.store.textContent = book.store_name || book.storeName || 'Unknown Store';
+  
+  // 收藏数渲染
+  const fCount = book.fav_count !== undefined ? book.fav_count : (book.favCount || 0);
+  elements.favCount.textContent = fCount.toLocaleString();
+  
+  elements.store.textContent = book.storeName || book.store_name || 'Unknown Store';
   elements.isbn.textContent = book.isbn;
 
   // 详情字段
-  if (elements.binding) elements.binding.textContent = book.binding || 'N/A';
-  if (elements.category) elements.category.textContent = book.category_name || book.category || 'General';
-  if (elements.publisher) elements.publisher.textContent = book.publisher || 'N/A';
-  if (elements.language) elements.language.textContent = book.language || 'N/A';
-  if (elements.desc) elements.desc.textContent = book.description || 'No introduction provided.';
+  elements.binding.textContent = book.binding || 'Paperback';
+  elements.category.textContent = book.category_name || book.category || 'General';
+  elements.publisher.textContent = book.publisher || 'Publisher Info N/A';
+  elements.language.textContent = book.language || 'English';
+  elements.desc.textContent = book.description || 'No introduction provided.';
 
-  // 动态库存样式处理
+  // 库存样式处理 (逻辑与 customer.js 保持一致)
   const stockCount = book.stock_count !== undefined ? book.stock_count : (book.stock || 0);
   if (elements.stock) {
     if (stockCount > 0) {
@@ -85,31 +84,29 @@ function renderBookDetail(book) {
     }
   }
 
+  // 同步收藏按钮的“红心”状态
   updateFavoriteButtonUI(book.isbn);
 }
 
+// --- 以下 UI 控制逻辑保持不变 ---
+
 function openModalUI() {
   if (!elements.modal) return;
-  
   elements.overlay.classList.remove('hidden');
   elements.modal.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
-
-  // 使用 setTimeout 或 requestAnimationFrame 确保 hidden 移除后再触发动画
   setTimeout(() => {
     elements.overlay.style.opacity = "1";
     elements.modal.style.opacity = "1";
-    elements.modal.style.transform = "translate(-50%, -50%) scale(1)"; // 配合居中
+    elements.modal.style.transform = "translate(-50%, -50%) scale(1)";
   }, 10);
 }
 
 function hideBookDetail() {
   if (!elements.modal) return;
-
   elements.overlay.style.opacity = "0";
   elements.modal.style.opacity = "0";
   elements.modal.style.transform = "translate(-50%, -50%) scale(0.95)";
-  
   setTimeout(() => {
     elements.overlay.classList.add('hidden');
     elements.modal.classList.add('hidden');
@@ -120,41 +117,42 @@ function hideBookDetail() {
 function updateFavoriteButtonUI(isbn) {
   const favBtnIcon = elements.addToFavoriteBtn?.querySelector('i');
   if (!favBtnIcon) return;
+  // 访问 customer.js 中的全局 favorites 数组
   const isFavorited = typeof favorites !== 'undefined' && favorites.some(f => String(f.isbn) === String(isbn));
-  favBtnIcon.className = isFavorited ? 'fa fa-heart text-red-500' : 'fa fa-heart-o';
+  favBtnIcon.className = isFavorited ? 'fa fa-heart text-red-500 text-xl' : 'fa fa-heart-o text-xl';
 }
 
 function init() {
-  getElements(); // 1. 初始化时先抓取元素
+  getElements();
   
-  // 2. 绑定事件
   if (elements.closeBtn) elements.closeBtn.onclick = hideBookDetail;
   if (elements.overlay) elements.overlay.onclick = (e) => e.target === elements.overlay && hideBookDetail();
   
+  // 购物车点击
   if (elements.addToCartBtn) {
     elements.addToCartBtn.onclick = () => {
-      if (currentBook) {
+      if (currentBook && typeof addToCart === 'function') {
         addToCart(currentBook.id);
-        hideBookDetail();
+        // hideBookDetail(); // 如果你想保持弹窗不关闭可以注释掉
       }
     };
   }
 
+  // 收藏点击
   if (elements.addToFavoriteBtn) {
     elements.addToFavoriteBtn.onclick = () => {
-      if (currentBook) {
+      if (currentBook && typeof toggleFavorite === 'function') {
         toggleFavorite(currentBook.isbn);
-        setTimeout(() => updateFavoriteButtonUI(currentBook.isbn), 100);
+        // 注意：toggleFavorite 内部会调用 updateFavoriteUIState，
+        // 而 updateFavoriteUIState 已经写了处理详情页按钮的逻辑。
       }
     };
   }
 
-  // 3. 挂载到全局
   window.showBookDetail = showBookDetail;
-  console.log("[Detail] Module Initialized.");
+  console.log("[Detail] Local-first module initialized.");
 }
 
-// 确保 DOM 加载完成后运行 init
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {

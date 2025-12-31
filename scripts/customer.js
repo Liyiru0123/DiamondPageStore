@@ -79,7 +79,7 @@ const bookCardTemplate = (book) => {
 
   return `
     <div class="book-card-item bg-white rounded-xl shadow-sm border border-brown-light/20 hover:shadow-md transition-all duration-300 group cursor-pointer" 
-        data-id="${book.id}" data-isbn="${book.isbn}">
+        data-id="${book.id}" data-isbn="${book.isbn}" data-store-id="${book.storeId}">
       <div class="p-5">
         <!-- 标题与收藏 -->
         <div class="flex justify-between items-start gap-2 mb-2">
@@ -184,10 +184,9 @@ async function searchBooks(keyword = "", page = 1) {
 
     // 获取搜索结果
     const books = await searchBooksAPI(keyword, filters);
-    const searchAllBooks = Array.isArray(books) ? books : [];
-
+    allBooks = Array.isArray(books) ? books : [];
     // 裁剪数据
-    const pageData = getPaginatedData(searchAllBooks, currentSearchPage, PAGE_SIZE);
+    const pageData = getPaginatedData(allBooks, currentSearchPage, PAGE_SIZE);
 
     if (pageData.length === 0) {
       container.innerHTML = `<div class="col-span-full text-center py-20"><p class="text-gray-400">No books matched.</p></div>`;
@@ -322,7 +321,7 @@ async function updateCartUI() {
           <div class="flex flex-col flex-1 cursor-pointer hover:opacity-70" 
               onclick='showBookDetail(${JSON.stringify(fullBookData).replace(/'/g, "&apos;")})'>
             <h4 class="font-bold text-brown-dark">${item.title}</h4>
-            <p class="text-sm text-gray-600">${item.author}</p>
+            <p class="text-xs text-gray-400">Unit Price: ¥${item.unit_price.toFixed(2)}</p>
             <p class="text-[10px] text-brown/60 italic"><i class="fa fa-map-marker"></i> ${fullBookData.storeName || 'Store'}</p>
           </div>
           <div class="flex items-center gap-4">
@@ -861,13 +860,22 @@ document.addEventListener('click', (e) => {
   // 2. 不能是点中了卡片里的“+ Cart”按钮
   // 3. 不能是点中了卡片里的“心形收藏”按钮
   if (card && !e.target.closest('.addCartBtn, .favorite-btn')) {
+    const ID = card.getAttribute('data-id');
     const isbn = card.getAttribute('data-isbn');
-    console.log("[Detail] Card clicked, ISBN:", isbn);
-    const bookData = allBooks.find(b => String(b.isbn) === String(isbn));
+    const store = card.getAttribute('data-store-id');
+    console.log("[Detail] Card clicked, ISBN:", ID);
+    const bookData = allBooks.find(b =>
+      String(b.isbn) === String(isbn) &&
+      String(b.id) === String(ID) &&
+      String(b.storeId) === String(store)
+    );
 
     if (window.showBookDetail) {
-      if (bookData) { window.showBookDetail(bookData); }
-      else { window.showBookDetail({ isbn: isbn, title: 'Loading...' }); }
+      if (bookData) {
+        window.showBookDetail(bookData);
+      } else {
+        window.showBookDetail({ isbn: isbn, title: 'Loading...' });
+      }
     } else {
       // 如果报错说没定义，说明 book-detail.js 里的函数没挂载到全局
       console.error("Function showBookDetail not found! Check book-detail.js");
