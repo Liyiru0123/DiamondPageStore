@@ -3,11 +3,11 @@ DROP VIEW IF EXISTS `vw_finance_revenue_by_date`;
 CREATE VIEW `vw_finance_revenue_by_date` AS
 select cast(`vw_finance_order_settlement`.`order_date` as date) AS `order_day`,sum(`vw_finance_order_settlement`.`discounted_amount`) AS `revenue`,
 `vw_finance_order_settlement`.`store_id` AS store_id 
-from `book_store`.`vw_finance_order_settlement` where `vw_finance_order_settlement`.`order_status` = 'paid' group by cast(`vw_finance_order_settlement`.`order_date` as date)
+from `book_store`.`vw_finance_order_settlement` where `vw_finance_order_settlement`.`order_status` = 'paid' group by cast(`vw_finance_order_settlement`.`order_date` as date);
 
 
 
-DROP PROCEDURE IF EXISTS `sp_finance_revenue_by_date`
+DROP PROCEDURE IF EXISTS `sp_finance_revenue_by_date`;
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_finance_revenue_by_date`(IN `p_start` DATE, IN `p_end` DATE, IN `p_store_id` INT)
 BEGIN
@@ -32,10 +32,10 @@ DELIMITER ;
 DROP VIEW IF EXISTS `vw_finance_purchase_cost_by_date`;
 CREATE VIEW `vw_finance_purchase_cost_by_date` AS
 select cast(`book_store`.`inventory_batches`.`received_date` as date) AS `cost_day`,sum(`book_store`.`inventory_batches`.`unit_cost` * `book_store`.`inventory_batches`.`quantity`) AS `cost`,`book_store`.`inventory_batches`.store_id AS store_id
-from `book_store`.`inventory_batches` group by cast(`book_store`.`inventory_batches`.`received_date` as date)
+from `book_store`.`inventory_batches` group by cast(`book_store`.`inventory_batches`.`received_date` as date);
 
 
-DROP PROCEDURE IF EXISTS `sp_finance_purchase_cost_by_date`
+DROP PROCEDURE IF EXISTS `sp_finance_purchase_cost_by_date`;
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_finance_purchase_cost_by_date`(IN `p_start` DATE, IN `p_end` DATE, IN `p_store_id` INT)
 BEGIN
@@ -81,7 +81,7 @@ WHERE
 
 
 
---饼图对应的sp
+-- 饼图对应的sp
 
 DROP PROCEDURE IF EXISTS `sp_finance_payment_method_summary`;
 

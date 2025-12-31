@@ -144,7 +144,7 @@ function addStatusStyles() {
         .revenue-trend-up { color: #10B981; }
         .revenue-trend-down { color: #EF4444; }
 
-        canvas { display: block; max-width: 100%; height: auto !important; }
+        canvas { display: block; max-width: 100%; }
 
         .sidebar-link.active {
             background-color: rgba(210, 180, 140, 0.3) !important;
@@ -229,7 +229,7 @@ async function initIncomeStatsCharts(startDate, endDate) {
         const defaultEnd = endDate || formatDateInput(now);
         const defaultStart = startDate || formatDateInput(new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000));
     
-        const overview = await fetchFinanceOverview();
+        const overview = await fetchFinanceOverview(currentStoreId);
         renderTotalRevenueCard(overview);
 
         const paymentSummary = await fetchPaymentMethodSummary(defaultStart, defaultEnd, currentStoreId);
@@ -270,7 +270,7 @@ function renderTotalRevenueCard(data) {
 
 function initPaymentMethodPieChart(summaryRows) {
     // 1. 打印数据到控制台，让你能亲眼看到到底有没有数据
-    console.log("饼图接收到的数据:", summaryRows);
+    //console.log("饼图接收到的数据:", summaryRows);
 
     const paymentMethodCtx = document.getElementById('payment-method-pie-chart');
     if (!paymentMethodCtx) return;
@@ -294,7 +294,7 @@ function initPaymentMethodPieChart(summaryRows) {
 
     // 如果没数据，或者数据总和是 0 (比如全是 0 块钱)
     if (labels.length === 0 || totalValue === 0) {
-        console.warn(" 饼图数据为空，显示默认灰色圆盘");
+        //console.warn(" 饼图数据为空，显示默认灰色圆盘");
         labels.length = 0;
         data.length = 0;
         

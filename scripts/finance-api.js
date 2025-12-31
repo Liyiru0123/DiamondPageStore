@@ -36,10 +36,20 @@ async function financeApiRequest(url, options = {}) {
     return data;
 }
 
-async function fetchFinanceOverview() {
+/*async function fetchFinanceOverview() {
     const res = await financeApiRequest(FINANCE_API_CONFIG.endpoints.overview);
     return res.data;
+}*/
+
+async function fetchFinanceOverview(storeId) {
+  const params = new URLSearchParams();
+  if (storeId) params.append('store_id', storeId);
+
+  const url = FINANCE_API_CONFIG.endpoints.overview + (params.toString() ? '&' + params.toString() : '');
+  const res = await financeApiRequest(url);
+  return res.data;
 }
+
 
 async function fetchPaymentMethodSummary(startDate, endDate,storeId) {
     const params = new URLSearchParams();

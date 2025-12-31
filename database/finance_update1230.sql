@@ -66,6 +66,7 @@ END //
 DELIMITER ;
 
 
+ALTER TABLE `orders` DROP INDEX `idx_member_id`;
 -- 1. 只有在 member_id 还没有索引的情况下，才执行这一句：
 ALTER TABLE `orders` ADD INDEX `idx_member_id` (`member_id`);
 
@@ -125,7 +126,7 @@ RENAME TABLE `vm_finance_order_settlement` TO `vw_finance_order_settlement`;
 
 
 
-DROP PROCEDURE IF EXISTS `sp_finance_overview`
+DROP PROCEDURE IF EXISTS `sp_finance_overview`;
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_finance_overview`(OUT `p_current_month` DECIMAL(12,2), OUT `p_last_month` DECIMAL(12,2), OUT `p_growth_percent` DECIMAL(8,2), OUT `p_total_orders` INT)
 BEGIN
@@ -169,22 +170,22 @@ DELIMITER ;
 -- 由于改名而必须一起修改的相关视图
 DROP VIEW IF EXISTS `vm_invoice_settlement`;
 CREATE VIEW `vm_invoice_settlement` AS
-select `b`.`invoice_id` AS `invoice_id`,`b`.`invoice_number` AS `invoice_number`,`b`.`invoice_status` AS `invoice_status`,`b`.`issue_date` AS `issue_date`,`b`.`due_date` AS `due_date`,`b`.`update_date` AS `update_date`,`b`.`note` AS `note`,`b`.`order_id` AS `order_id`,`b`.`store_id` AS `store_id`,`b`.`member_id` AS `member_id`,`b`.`order_status` AS `order_status`,`b`.`order_date` AS `order_date`,`s`.`payable_amount` AS `invoice_amount`,ifnull(`ps`.`paid_amount`,0) AS `paid_amount`,round(greatest(ifnull(`s`.`payable_amount`,0) - ifnull(`ps`.`paid_amount`,0),0),2) AS `outstanding_amount`,`ps`.`last_paid_at` AS `last_paid_at`,case when ifnull(`ps`.`paid_amount`,0) >= ifnull(`s`.`payable_amount`,0) and `s`.`payable_amount` is not null then 1 else 0 end AS `is_settled` from ((`book_store`.`vm_finance_invoice_base` `b` left join `book_store`.`vm_finance_invoice_paid_sum` `ps` on(`ps`.`invoice_id` = `b`.`invoice_id`)) left join `book_store`.`vw_finance_order_settlement` `s` on(`s`.`order_id` = `b`.`order_id`))
+select `b`.`invoice_id` AS `invoice_id`,`b`.`invoice_number` AS `invoice_number`,`b`.`invoice_status` AS `invoice_status`,`b`.`issue_date` AS `issue_date`,`b`.`due_date` AS `due_date`,`b`.`update_date` AS `update_date`,`b`.`note` AS `note`,`b`.`order_id` AS `order_id`,`b`.`store_id` AS `store_id`,`b`.`member_id` AS `member_id`,`b`.`order_status` AS `order_status`,`b`.`order_date` AS `order_date`,`s`.`payable_amount` AS `invoice_amount`,ifnull(`ps`.`paid_amount`,0) AS `paid_amount`,round(greatest(ifnull(`s`.`payable_amount`,0) - ifnull(`ps`.`paid_amount`,0),0),2) AS `outstanding_amount`,`ps`.`last_paid_at` AS `last_paid_at`,case when ifnull(`ps`.`paid_amount`,0) >= ifnull(`s`.`payable_amount`,0) and `s`.`payable_amount` is not null then 1 else 0 end AS `is_settled` from ((`book_store`.`vm_finance_invoice_base` `b` left join `book_store`.`vm_finance_invoice_paid_sum` `ps` on(`ps`.`invoice_id` = `b`.`invoice_id`)) left join `book_store`.`vw_finance_order_settlement` `s` on(`s`.`order_id` = `b`.`order_id`));
 
 DROP VIEW IF EXISTS `vw_finance_revenue_by_date`;
 CREATE VIEW `vw_finance_revenue_by_date` AS
-select cast(`vw_finance_order_settlement`.`order_date` as date) AS `order_day`,sum(`vw_finance_order_settlement`.`payable_amount`) AS `revenue` from `book_store`.`vw_finance_order_settlement` where `vw_finance_order_settlement`.`is_settled` = 1 group by cast(`vw_finance_order_settlement`.`order_date` as date)
+select cast(`vw_finance_order_settlement`.`order_date` as date) AS `order_day`,sum(`vw_finance_order_settlement`.`payable_amount`) AS `revenue` from `book_store`.`vw_finance_order_settlement` where `vw_finance_order_settlement`.`is_settled` = 1 group by cast(`vw_finance_order_settlement`.`order_date` as date);
 
 DROP VIEW IF EXISTS `vw_finance_order_list`;
 CREATE VIEW `vw_finance_order_list` AS
-select `o`.`order_id` AS `order_id`,`o`.`store_id` AS `store_id`,`st`.`name` AS `store_name`,`o`.`member_id` AS `member_id`,concat(`m`.`first_name`,' ',`m`.`last_name`) AS `member_name`,`o`.`order_status` AS `order_status`,`o`.`order_date` AS `order_date`,`o`.`note` AS `note`,`o`.`payable_amount` AS `payable_amount`,`o`.`paid_amount` AS `paid_amount`,`o`.`is_settled` AS `is_settled`,count(`oi`.`sku_id`) AS `item_count`,coalesce(sum(`oi`.`quantity`),0) AS `total_quantity` from (((`book_store`.`vw_finance_order_settlement` `o` join `book_store`.`stores` `st` on(`st`.`store_id` = `o`.`store_id`)) join `book_store`.`members` `m` on(`m`.`member_id` = `o`.`member_id`)) left join `book_store`.`order_items` `oi` on(`oi`.`order_id` = `o`.`order_id`)) group by `o`.`order_id`,`o`.`store_id`,`st`.`name`,`o`.`member_id`,`m`.`first_name`,`m`.`last_name`,`o`.`order_status`,`o`.`order_date`,`o`.`note`,`o`.`payable_amount`,`o`.`paid_amount`,`o`.`is_settled`
+select `o`.`order_id` AS `order_id`,`o`.`store_id` AS `store_id`,`st`.`name` AS `store_name`,`o`.`member_id` AS `member_id`,concat(`m`.`first_name`,' ',`m`.`last_name`) AS `member_name`,`o`.`order_status` AS `order_status`,`o`.`order_date` AS `order_date`,`o`.`note` AS `note`,`o`.`payable_amount` AS `payable_amount`,`o`.`paid_amount` AS `paid_amount`,`o`.`is_settled` AS `is_settled`,count(`oi`.`sku_id`) AS `item_count`,coalesce(sum(`oi`.`quantity`),0) AS `total_quantity` from (((`book_store`.`vw_finance_order_settlement` `o` join `book_store`.`stores` `st` on(`st`.`store_id` = `o`.`store_id`)) join `book_store`.`members` `m` on(`m`.`member_id` = `o`.`member_id`)) left join `book_store`.`order_items` `oi` on(`oi`.`order_id` = `o`.`order_id`)) group by `o`.`order_id`,`o`.`store_id`,`st`.`name`,`o`.`member_id`,`m`.`first_name`,`m`.`last_name`,`o`.`order_status`,`o`.`order_date`,`o`.`note`,`o`.`payable_amount`,`o`.`paid_amount`,`o`.`is_settled`;
 
 
 
 
 
 -- 对订单细节的更改
-DROP PROCEDURE IF EXISTS `sp_finance_order_detail`
+DROP PROCEDURE IF EXISTS `sp_finance_order_detail`;
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_finance_order_detail`(IN `p_order_id` INT)
 BEGIN
