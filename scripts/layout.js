@@ -377,32 +377,35 @@ function renderAdminHeader(role) {
                     </div>
                 </div>
 
-                <!-- 右侧区域：用户信息 - 只显示头像和下拉箭头 -->
-                <div class="flex items-center">
+                <!-- 右侧区域：通知 + 用户信息 -->
+                <div class="flex items-center gap-4">
+                    <button class="text-gray-600 hover:text-primary relative">
+                        <i class="fa fa-bell text-xl"></i>
+                        <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full">2</span>
+                    </button>
                     <div class="relative">
-                        <div id="user-menu-btn" class="flex items-center gap-2 cursor-pointer group px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                            <!-- 只保留头像 -->
-                            <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(avatarName)}&background=random" alt="Avatar" 
-                                class="w-8 h-8 rounded-full object-cover border-2 border-transparent group-hover:border-primary transition-all">
-                            <!-- 移除用户名和职位显示 -->
+                        <div class="flex items-center gap-2 cursor-pointer group" id="user-menu-trigger" onclick="toggleUserMenu()">
+                            <!-- 头像 (使用 Picsum 随机图或你的 assets) -->
+                            <img src="https://ui-avatars.com/api/?name=User&background=random" alt="Avatar" class="w-8 h-8 rounded-full object-cover border-2 border-transparent group-hover:border-primary transition-all">
+                            <div class="hidden md:block text-left">
+                                <!-- 这里也可以给个ID，方便后续JS替换成真实人名 -->
+                                <p class="text-sm font-medium" id="header-user-name">CurrentUser</p>
+                                <p class="text-xs text-gray-500">${displayRole}</p>
+                            </div>
                             <i class="fa fa-chevron-down text-xs text-gray-500 group-hover:text-primary transition-colors"></i>
                         </div>
-
-                        <!-- 下拉菜单 - 统一结构 -->
-                        <div id="user-menu-dropdown" 
-                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 hidden z-50 transition-all duration-200">
-                            <div class="p-2">
-                                <a href="#" id="edit-profile-btn"
-                                    class="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">
-                                    <i class="fa fa-user text-sm"></i>
-                                    <span>Edit Profile</span>
-                                </a>
-                                <a href="#" id="change-password-btn"
-                                    class="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">
-                                    <i class="fa fa-key text-sm"></i>
-                                    <span>Change Password</span>
-                                </a>
-                            </div>
+                        <!-- 用户下拉菜单 -->
+                        <div id="user-menu-dropdown" class="hidden absolute right-0 top-12 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-48">
+                            <a href="#" onclick="event.preventDefault(); openEditProfileModal();" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                                <i class="fa fa-user mr-2 text-primary"></i> Edit Profile
+                            </a>
+                            <a href="#" onclick="event.preventDefault(); openChangePasswordModal();" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                                <i class="fa fa-key mr-2 text-primary"></i> Change Password
+                            </a>
+                            <hr class="my-1 border-gray-200">
+                            <a href="#" onclick="event.preventDefault(); logout();" class="block px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                                <i class="fa fa-sign-out mr-2"></i> Logout
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -822,3 +825,27 @@ window.initLayout = function (role = 'customer', defaultPage = 'home') {
         window.switchPage(savedPage);
     });
 };
+
+/**
+ * 6. 用户菜单下拉控制
+ */
+window.toggleUserMenu = function() {
+    const dropdown = document.getElementById('user-menu-dropdown');
+    if (!dropdown) return;
+
+    dropdown.classList.toggle('hidden');
+};
+
+// 点击页面其他地方关闭用户菜单（使用事件委托，在document上监听）
+document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('user-menu-dropdown');
+    const trigger = document.getElementById('user-menu-trigger');
+
+    // 如果元素还未渲染，直接返回
+    if (!dropdown || !trigger) return;
+
+    // 如果点击的不是下拉菜单或触发器，则关闭菜单
+    if (!dropdown.contains(e.target) && !trigger.contains(e.target)) {
+        dropdown.classList.add('hidden');
+    }
+});
