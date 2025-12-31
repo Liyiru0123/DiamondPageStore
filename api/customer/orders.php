@@ -75,36 +75,74 @@ function getOrders($conn) {
         return;
     }
 
-    $sql = "SELECT * FROM vw_customer_orders WHERE member_id = :member_id";
+    // 1. 自动超时逻辑：检查并取消超过15分钟(900秒)未支付的订单
+    try {
+        $timeoutSql = "UPDATE orders SET order_status = 'cancelled' 
+                       WHERE order_status = 'created' 
+                       AND TIMESTAMPDIFF(SECOND, order_date, NOW()) > 900";
+        $conn->prepare($timeoutSql)->execute();
+    } catch (Exception $e) {
+        // 静默处理更新错误
+    }
+
+    // 2. 核心查询逻辑
+    // 子查询：通过 order_items -> skus -> books 路径聚合书籍名称(b.name)和数量
+    // 倒计时：在数据库层面用 900秒 减去 已过去秒数，确保无时区偏差
+    $sql = "SELECT v.*, 
+            (SELECT GROUP_CONCAT(CONCAT(b.name, ' (x', oi.quantity, ')') SEPARATOR '; ') 
+             FROM order_items oi 
+             JOIN skus s ON oi.sku_id = s.sku_id
+             JOIN books b ON s.isbn = b.isbn 
+             WHERE oi.order_id = v.order_id) as items_summary,
+            (900 - TIMESTAMPDIFF(SECOND, v.order_date, NOW())) as seconds_left
+            FROM vw_customer_orders v 
+            WHERE v.member_id = :member_id";
+
     $params = [':member_id' => $memberId];
 
+    // 如果前端传了特定状态（如 finished, refunded, cancelled 等）
     if ($status !== 'all') {
-        $sql .= " AND order_status = :status";
+        $sql .= " AND v.order_status = :status";
         $params[':status'] = $status;
     }
 
-    $sql .= " ORDER BY order_date DESC";
+    $sql .= " ORDER BY v.order_date DESC";
 
-    $stmt = $conn->prepare($sql);
-    $stmt->execute($params);
+    try {
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($params);
 
-    $orders = [];
-    while ($row = $stmt->fetch()) {
-        $orders[] = [
-            'orderId' => $row['order_id'],
-            'storeId' => $row['store_id'],
-            'storeName' => $row['store_name'],
-            'status' => $row['order_status'],
-            'date' => $row['order_date'],
-            'note' => $row['note'],
-            'total' => (float)$row['total_price'],
-            'totalItems' => (int)$row['total_items']
-        ];
+        $orders = [];
+        while ($row = $stmt->fetch()) {
+            $orders[] = [
+                'orderId' => $row['order_id'],
+                'storeId' => $row['store_id'],
+                'storeName' => $row['store_name'],
+                'status' => $row['order_status'],
+                'date' => $row['order_date'],
+                'note' => $row['note'],
+                'total' => (float)$row['total_price'],
+                'totalItems' => (int)$row['total_items'],
+                'summary' => $row['items_summary'] ?: 'No details available', // 这里就是书名预览
+                'remainingSeconds' => (int)$row['seconds_left'] > 0 ? (int)$row['seconds_left'] : 0
+            ];
+        }
+
+        echo json_encode([
+            'success' => true, 
+            'data' => $orders, 
+            'count' => count($orders),
+            'server_time' => date('Y-m-d H:i:s') // 方便调试
+        ]);
+
+    } catch (PDOException $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Database Query Error: ' . $e->getMessage()
+        ]);
     }
-
-    echo json_encode(['success' => true, 'data' => $orders, 'count' => count($orders)]);
 }
-
 /**
  * 获取订单详情（包含订单项）
  */
