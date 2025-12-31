@@ -1381,6 +1381,94 @@
         </main>
     </div>
 
+    <!-- ==================================================================== -->
+    <!-- 当前用户账户管理模态框 (Edit Profile & Change Password) -->
+    <!-- ==================================================================== -->
+
+    <!-- Edit Profile Modal -->
+    <div id="edit-profile-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Edit Profile</h3>
+                    <button onclick="closeEditProfileModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="fa fa-times text-xl"></i>
+                    </button>
+                </div>
+
+                <form id="edit-profile-form" onsubmit="event.preventDefault(); saveProfile();">
+                    <input type="hidden" id="profile-user-id">
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                        <input type="text" id="profile-username" class="form-input" readonly>
+                        <p class="text-xs text-gray-500 mt-1">Username cannot be changed</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Full Name <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="profile-full-name" class="form-input" required>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="profile-email" class="form-input">
+                    </div>
+
+                    <div class="flex justify-end gap-3 mt-6">
+                        <button type="button" onclick="closeEditProfileModal()" class="btn-secondary">Cancel</button>
+                        <button type="submit" class="btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="change-password-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-lg w-full max-w-md">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Change Password</h3>
+                    <button onclick="closeChangePasswordModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="fa fa-times text-xl"></i>
+                    </button>
+                </div>
+
+                <form id="change-password-form" onsubmit="event.preventDefault(); changePassword();">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Current Password <span class="text-red-500">*</span>
+                        </label>
+                        <input type="password" id="current-password" class="form-input" required>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            New Password <span class="text-red-500">*</span>
+                        </label>
+                        <input type="password" id="new-password" class="form-input" required minlength="6">
+                        <p class="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Confirm New Password <span class="text-red-500">*</span>
+                        </label>
+                        <input type="password" id="confirm-password" class="form-input" required minlength="6">
+                    </div>
+
+                    <div class="flex justify-end gap-3 mt-6">
+                        <button type="button" onclick="closeChangePasswordModal()" class="btn-secondary">Cancel</button>
+                        <button type="submit" class="btn-primary">Change Password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Manager-specific scripts -->
     <!-- Pagination Manager -->
     <script src="../scripts/pagination-manager.js"></script>
@@ -1390,10 +1478,12 @@
     <script src="../scripts/manager-data.js"></script>
     <!-- Manager Logic -->
     <script src="../scripts/manager.js"></script>
-    <!-- API Integration (overrides mock data functions) -->
+    <!-- API Integration (overrides mock data functions, defines showMessage) -->
     <script src="../scripts/manager-api-integration.js"></script>
     <!-- Supplier API Integration -->
     <script src="../scripts/manager-supplier-api.js"></script>
+    <!-- Profile Management (depends on showMessage from manager-api-integration.js) -->
+    <script src="../scripts/manager-profile.js"></script>
     <!-- Pagination Integration (adds pagination to all tables) -->
     <script src="../scripts/pagination-integration.js"></script>
 
