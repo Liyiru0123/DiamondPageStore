@@ -2,12 +2,15 @@
 -- 描述：为发票表添加索引，解决筛选和排序卡顿问题
 -- 日期：2025-10-29
 
+ALTER TABLE `invoices` DROP INDEX `idx_issue_date`;
 -- 1. 优化按日期排序 (ORDER BY issue_date) 和日期范围筛选
 ALTER TABLE `invoices` ADD INDEX `idx_issue_date` (`issue_date`);
 
+ALTER TABLE `invoices` DROP INDEX `idx_order_id`;
 -- 2. 优化按订单ID精确查找 (WHERE order_id = ...)
 ALTER TABLE `invoices` ADD INDEX `idx_order_id` (`order_id`);
 
+ALTER TABLE `invoices` DROP INDEX `idx_status`;
 -- 3. 优化按状态筛选 (WHERE status = ...)
 ALTER TABLE `invoices` ADD INDEX `idx_status` (`invoice_status`);
 

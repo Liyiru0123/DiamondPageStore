@@ -24,8 +24,13 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 try {
     switch ($action) {
         case 'overview':
-            $stmt = $conn->prepare('CALL sp_finance_overview(@cur, @last, @growth, @orders)');
-            $stmt->execute();
+            $store_id = isset($_GET['store_id']) ? $_GET['store_id'] : null;
+            
+            $conn->exec("SET @cur := 0, @last := 0, @growth := NULL, @orders := 0");
+
+            $stmt = $conn->prepare('CALL sp_finance_overview( @cur, @last, @growth, @orders, :store_id)');
+            $stmt->execute([':store_id' => $store_id]);
+            // $stmt->execute();
             $stmt->closeCursor();
 
             $row = $conn->query('SELECT @cur AS current_month, @last AS last_month, @growth AS growth_percent, @orders AS total_orders')->fetch();
