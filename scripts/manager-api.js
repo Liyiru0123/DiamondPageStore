@@ -40,6 +40,11 @@ const MANAGER_API_CONFIG = {
             search: '/users.php?action=search',
             resetPassword: '/users.php?action=reset_password'
         },
+        profile: {
+            getCurrentUser: '/profile.php?action=get_current_user',
+            updateProfile: '/profile.php?action=update_profile',
+            changePassword: '/profile.php?action=change_password'
+        },
         notifications: {
             list: '/notifications.php?action=list',
             detail: '/notifications.php?action=detail',
@@ -520,6 +525,31 @@ async function fetchOrdersSummaryAPI(filters = {}) {
 
     const response = await managerApiRequest(url);
     return response.data;
+}
+
+// =============================================================================
+// Profile API Functions (当前用户账户管理)
+// =============================================================================
+
+async function getCurrentUserProfileAPI(userId) {
+    const response = await managerApiRequest(
+        `${MANAGER_API_CONFIG.endpoints.profile.getCurrentUser}&user_id=${userId}`
+    );
+    return response.data;
+}
+
+async function updateProfileAPI(profileData) {
+    return await managerApiRequest(MANAGER_API_CONFIG.endpoints.profile.updateProfile, {
+        method: 'POST',
+        body: JSON.stringify(profileData)
+    });
+}
+
+async function changePasswordAPI(passwordData) {
+    return await managerApiRequest(MANAGER_API_CONFIG.endpoints.profile.changePassword, {
+        method: 'POST',
+        body: JSON.stringify(passwordData)
+    });
 }
 
 console.log('Manager API functions loaded successfully');
