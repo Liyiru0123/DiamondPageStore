@@ -527,17 +527,17 @@ async function updateUser() {
 
 // 重置用户密码
 async function resetUserPassword(userId, username) {
-    if (!confirm(`确定要重置用户 "${username}" 的密码吗？\n密码将被重置为默认密码: Password@123`)) {
+    if (!confirm(`Are you sure you want to reset the password for user "${username}"？\nThe password will be reset to the default password: Password@123`)) {
         return;
     }
 
     try {
         const response = await resetUserPasswordAPI(userId);
-        alert(`用户 "${username}" 的密码已重置成功！\n\n默认密码: ${response.default_password}\n\n请通知用户尽快修改密码。`);
-        showMessage(`用户 "${username}" 的密码已重置为默认密码`, 'success');
+        alert(`The password for user "${username}" has been successfully reset！\n\nDefault password: ${response.default_password}\n\nPlease notify the user to change their password as soon as possible.`);
+        showMessage(`The password for user "${username}" has been successfully reset！`, 'success');
     } catch (error) {
         console.error('Failed to reset password:', error);
-        showMessage('重置密码失败: ' + error.message, 'error');
+        showMessage('Password reset failed: ' + error.message, 'error');
     }
 }
 
@@ -1164,9 +1164,11 @@ async function initCharts() {
                     datasets: [{
                         label: 'Orders',
                         data: orderCounts,
-                        backgroundColor: 'rgba(99, 102, 241, 0.8)',
-                        borderColor: 'rgba(99, 102, 241, 1)',
-                        borderWidth: 1
+                        backgroundColor: '#8B5A2B',
+                        borderColor: '#8B5A2B',
+                        borderWidth: 1,
+                        borderRadius: 8,                
+                        borderSkipped: false            
                     }]
                 },
                 options: {
