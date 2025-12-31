@@ -25,11 +25,7 @@ try {
 }
 
 $keyword = isset($_GET['keyword']) ? trim($_GET['keyword']) : '';
-if ($keyword === '') {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Keyword is required', 'data' => []]);
-    exit();
-}
+$hasKeyword = $keyword !== '';
 
 $language = isset($_GET['language']) ? trim($_GET['language']) : '';
 if ($language === '' || $language === 'all') {
@@ -82,7 +78,8 @@ if ($sort === '' || $sort === 'all' || $sort === 'default') {
     $sort = $sortMap[$sort] ?? null;
 }
 
-$sql = "
+if ($hasKeyword) {
+    $sql = "
 WITH hits AS (
   SELECT b.ISBN,
          MATCH(b.name, b.introduction, b.publisher)
@@ -128,12 +125,35 @@ JOIN vw_customer_books v ON v.ISBN = hb.ISBN
 WHERE 1=1
 ";
 
-$params = [
-    ':kw_book_score' => $keyword,
-    ':kw_book_filter' => $keyword,
-    ':kw_author_score' => $keyword,
-    ':kw_author_filter' => $keyword
-];
+    $params = [
+        ':kw_book_score' => $keyword,
+        ':kw_book_filter' => $keyword,
+        ':kw_author_score' => $keyword,
+        ':kw_author_filter' => $keyword
+    ];
+} else {
+    $sql = "
+SELECT
+  v.sku_id,
+  v.ISBN,
+  v.title,
+  v.author,
+  v.language,
+  v.category,
+  v.publisher,
+  v.description,
+  v.price,
+  v.binding,
+  v.stock,
+  v.store_id,
+  v.store_name,
+  v.fav_count
+FROM vw_customer_books v
+WHERE 1=1
+";
+
+    $params = [];
+}
 
 if ($language !== null) {
     $sql .= " AND v.language = :lang";
@@ -150,13 +170,13 @@ if ($bucket !== null) {
     }
 }
 
-$orderBy = 'hb.score DESC';
+$orderBy = $hasKeyword ? 'hb.score DESC' : 'v.ISBN';
 if ($sort === 'fav') {
-    $orderBy = 'v.fav_count DESC, hb.score DESC';
+    $orderBy = $hasKeyword ? 'v.fav_count DESC, hb.score DESC' : 'v.fav_count DESC';
 } elseif ($sort === 'price_asc') {
-    $orderBy = 'v.price ASC, hb.score DESC';
+    $orderBy = $hasKeyword ? 'v.price ASC, hb.score DESC' : 'v.price ASC';
 } elseif ($sort === 'price_desc') {
-    $orderBy = 'v.price DESC, hb.score DESC';
+    $orderBy = $hasKeyword ? 'v.price DESC, hb.score DESC' : 'v.price DESC';
 }
 
 $sql .= " ORDER BY " . $orderBy;
