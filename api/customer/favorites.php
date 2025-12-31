@@ -67,7 +67,18 @@ function getFavorites($conn) {
         return;
     }
 
-    $stmt = $conn->prepare("SELECT * FROM vw_customer_favorites WHERE member_id = :member_id ORDER BY create_date DESC");
+    $stmt = $conn->prepare(
+        "SELECT vf.*,
+                COALESCE(favs.fav_count, 0) AS fav_count
+         FROM vw_customer_favorites vf
+         LEFT JOIN (
+             SELECT ISBN, COUNT(DISTINCT member_id) AS fav_count
+             FROM favorites
+             GROUP BY ISBN
+         ) favs ON favs.ISBN = vf.ISBN
+         WHERE vf.member_id = :member_id
+         ORDER BY vf.create_date DESC"
+    );
     $stmt->execute([':member_id' => $memberId]);
 
     $favorites = [];
@@ -85,7 +96,8 @@ function getFavorites($conn) {
             'stock' => (int)$row['stock'],
             'storeName' => $row['store_name'],
             'description' => $row['description'],
-            'createDate' => $row['create_date']
+            'createDate' => $row['create_date'],
+            'favCount' => (int)$row['fav_count']
         ];
     }
 
