@@ -75,20 +75,20 @@ function getCurrentUser($conn) {
 
     $userId = intval($_GET['user_id']);
 
-    $sql = "SELECT u.user_id, u.username, u.user_type, u.email,
+    $sql = "SELECT u.user_id, u.username, u.user_types,
                    CASE
-                       WHEN u.user_type = 'employee' THEN CONCAT(e.first_name, ' ', e.last_name)
-                       WHEN u.user_type = 'member' THEN m.full_name
+                       WHEN u.user_types = 'employee' THEN CONCAT(e.first_name, ' ', e.last_name)
+                       WHEN u.user_types = 'member' THEN CONCAT(m.first_name, ' ', m.last_name)
                        ELSE NULL
                    END AS full_name,
                    CASE
-                       WHEN u.user_type = 'employee' THEN e.email
-                       WHEN u.user_type = 'member' THEN m.email
-                       ELSE u.email
+                       WHEN u.user_types = 'employee' THEN e.email
+                       WHEN u.user_types = 'member' THEN m.email
+                       ELSE NULL
                    END AS user_email
             FROM users u
-            LEFT JOIN employees e ON u.user_id = e.user_id AND u.user_type = 'employee'
-            LEFT JOIN members m ON u.user_id = m.user_id AND u.user_type = 'member'
+            LEFT JOIN employees e ON u.user_id = e.user_id AND u.user_types = 'employee'
+            LEFT JOIN members m ON u.user_id = m.user_id AND u.user_types = 'member'
             WHERE u.user_id = :user_id";
 
     $stmt = $conn->prepare($sql);
@@ -110,7 +110,7 @@ function getCurrentUser($conn) {
         'data' => [
             'user_id' => $user['user_id'],
             'username' => $user['username'],
-            'user_type' => $user['user_type'],
+            'user_type' => $user['user_types'],
             'full_name' => $user['full_name'] ?? '',
             'email' => $user['user_email'] ?? ''
         ]
@@ -156,7 +156,7 @@ function updateProfile($conn) {
     }
 
     // 获取用户类型
-    $userTypeSQL = "SELECT user_type FROM users WHERE user_id = :user_id";
+    $userTypeSQL = "SELECT user_types FROM users WHERE user_id = :user_id";
     $stmt = $conn->prepare($userTypeSQL);
     $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
     $stmt->execute();
@@ -171,18 +171,11 @@ function updateProfile($conn) {
         return;
     }
 
-    $userType = $userInfo['user_type'];
+    $userType = $userInfo['user_types'];
 
     $conn->beginTransaction();
 
     try {
-        // 更新users表的email
-        $updateUserSQL = "UPDATE users SET email = :email WHERE user_id = :user_id";
-        $stmt = $conn->prepare($updateUserSQL);
-        $stmt->bindParam(':email', $email, PDO::PARAM_STR);
-        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $stmt->execute();
-
         // 根据用户类型更新对应的表
         if ($userType === 'employee') {
             // 智能解析姓名
@@ -207,10 +200,20 @@ function updateProfile($conn) {
             $empStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
             $empStmt->execute();
         } elseif ($userType === 'member') {
-            $memberSQL = "UPDATE members SET full_name = :full_name, email = :email
+            if (strpos($fullName, ' ') !== false) {
+                $nameParts = explode(' ', $fullName, 2);
+                $firstName = $nameParts[0];
+                $lastName = isset($nameParts[1]) ? $nameParts[1] : '';
+            } else {
+                $firstName = $fullName;
+                $lastName = '';
+            }
+
+            $memberSQL = "UPDATE members SET first_name = :first_name, last_name = :last_name, email = :email
                           WHERE user_id = :user_id";
             $memberStmt = $conn->prepare($memberSQL);
-            $memberStmt->bindParam(':full_name', $fullName, PDO::PARAM_STR);
+            $memberStmt->bindParam(':first_name', $firstName, PDO::PARAM_STR);
+            $memberStmt->bindParam(':last_name', $lastName, PDO::PARAM_STR);
             $memberStmt->bindParam(':email', $email, PDO::PARAM_STR);
             $memberStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
             $memberStmt->execute();

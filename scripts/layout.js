@@ -357,8 +357,24 @@ function renderAdminHeader(role) {
     };
     const displayRole = roleTitles[role] || 'Staff';
 
-    // 生成头像名称 - 使用角色名或默认
-    const avatarName = role.charAt(0).toUpperCase() + role.slice(1);
+    let initialName = role.charAt(0).toUpperCase() + role.slice(1);
+    let initialRole = displayRole;
+    let initialMeta = '';
+    const storedUser = localStorage.getItem('current_user');
+    if (storedUser) {
+        try {
+            const userData = JSON.parse(storedUser);
+            initialName = userData.full_name || userData.name || userData.username || initialName;
+            initialRole = userData.job_title || initialRole;
+            const parts = [];
+            if (userData.username) parts.push(userData.username);
+            if (userData.user_id) parts.push(`ID ${userData.user_id}`);
+            if (userData.email) parts.push(userData.email);
+            initialMeta = parts.join(' · ');
+        } catch (e) {
+            console.warn('Failed to parse stored user data:', e);
+        }
+    }
 
     container.innerHTML = `
         <header class="bg-white border-b border-gray-200 shadow-sm z-10 flex-shrink-0">
@@ -377,19 +393,16 @@ function renderAdminHeader(role) {
                     </div>
                 </div>
 
-                <!-- 右侧区域：通知 + 用户信息 -->
+                <!-- 右侧区域：用户信息 -->
                 <div class="flex items-center gap-4">
-                    <button class="text-gray-600 hover:text-primary relative">
-                        <i class="fa fa-bell text-xl"></i>
-                        <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full">2</span>
-                    </button>
                     <div class="relative">
                         <div class="flex items-center gap-2 cursor-pointer group" id="user-menu-btn">
                             <!-- 头像 (使用 Picsum 随机图或你的 assets) -->
-                            <img src="https://ui-avatars.com/api/?name=User&background=random" alt="Avatar" class="w-8 h-8 rounded-full object-cover border-2 border-transparent group-hover:border-primary transition-all">
+                            <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(initialName)}&background=random" alt="Avatar" class="w-8 h-8 rounded-full object-cover border-2 border-transparent group-hover:border-primary transition-all">
                             <div class="hidden md:block text-left">
-                                <p class="text-sm font-medium" id="header-user-name">Loading...</p>
-                                <p class="text-xs text-gray-500" id="header-user-role">${displayRole}</p>
+                                <p class="text-sm font-medium" id="header-user-name">${initialName}</p>
+                                <p class="text-xs text-gray-500" id="header-user-role">${initialRole}</p>
+                                <p class="text-[10px] text-gray-400" id="header-user-meta">${initialMeta}</p>
                             </div>
                             <i class="fa fa-chevron-down text-xs text-gray-500 group-hover:text-primary transition-colors"></i>
                         </div>
@@ -400,10 +413,6 @@ function renderAdminHeader(role) {
                             </a>
                             <a href="#" id="change-password-btn" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                                 <i class="fa fa-key mr-2 text-primary"></i> Change Password
-                            </a>
-                            <hr class="my-1 border-gray-200">
-                            <a href="#" id="logout-btn" class="block px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors">
-                                <i class="fa fa-sign-out mr-2"></i> Logout
                             </a>
                         </div>
                     </div>
@@ -424,10 +433,10 @@ async function loadCurrentUserInfo(role) {
         // 根据角色确定API端点
         switch (role) {
             case 'manager':
-                apiEndpoint = '../api/manager/get_current_user.php';
+                apiEndpoint = '../api/manager/get_current_manager.php';
                 break;
             case 'finance':
-                apiEndpoint = '../api/finance/get_current_user.php';
+                apiEndpoint = '../api/staff/get_current_staff.php';
                 break;
             case 'staff':
                 apiEndpoint = '../api/staff/get_current_staff.php';
@@ -451,6 +460,20 @@ async function loadCurrentUserInfo(role) {
             
             const roleEl = document.getElementById('header-user-role');
             if (roleEl) roleEl.textContent = userData.job_title || role;
+
+            const metaEl = document.getElementById('header-user-meta');
+            if (metaEl) {
+                const parts = [];
+                if (userData.username) parts.push(userData.username);
+                if (userData.user_id) parts.push(`ID ${userData.user_id}`);
+                if (userData.email) parts.push(userData.email);
+                metaEl.textContent = parts.join(' · ');
+            }
+
+            const displayName = userData.full_name || userData.name || userData.username;
+            if (displayName) {
+                updateUserAvatar({ full_name: displayName }, role);
+            }
             
             const storeEl = document.getElementById('header-store-name');
             if (storeEl && userData.store_name) storeEl.textContent = userData.store_name;
@@ -562,7 +585,13 @@ function initUserMenu() {
                 userMenuDropdown.classList.add('hidden');
 
                 // 调用编辑个人资料函数
-                showEditProfileModal();
+                // 优先使用 manager-profile.js 中的函数（会调用API保存到数据库）
+                if (typeof openEditProfileModal === 'function') {
+                    openEditProfileModal();
+                } else {
+                    // 兜底：使用layout.js中的简单实现
+                    showEditProfileModal();
+                }
             });
         }
 
@@ -577,7 +606,13 @@ function initUserMenu() {
                 userMenuDropdown.classList.add('hidden');
 
                 // 调用修改密码函数
-                showChangePasswordModal();
+                // 优先使用 manager-profile.js 中的函数（会调用API保存到数据库）
+                if (typeof openChangePasswordModal === 'function') {
+                    openChangePasswordModal();
+                } else {
+                    // 兜底：使用layout.js中的简单实现
+                    showChangePasswordModal();
+                }
             });
         }
 
@@ -774,18 +809,40 @@ function showChangePasswordModal() {
  */
 function showSimpleMessage(message, type = 'success') {
     const colors = {
-        success: 'bg-green-100 text-green-800',
-        error: 'bg-red-100 text-red-800'
+        success: 'bg-green-100 text-green-800 border border-green-300',
+        error: 'bg-red-100 text-red-800 border border-red-300'
     };
 
+    // 移除之前的消息提示（避免重叠）
+    const existingMessages = document.querySelectorAll('.message-toast');
+    existingMessages.forEach(msg => msg.remove());
+
     const messageDiv = document.createElement('div');
-    messageDiv.className = `fixed top-4 right-4 px-6 py-4 rounded-lg shadow-lg ${colors[type]} z-50`;
-    messageDiv.textContent = message;
+    messageDiv.className = `message-toast fixed top-20 right-4 px-6 py-4 rounded-lg shadow-xl ${colors[type]}`;
+    messageDiv.style.zIndex = '9999'; // 确保在最上层
+    messageDiv.innerHTML = `
+        <div class="flex items-center gap-2">
+            <i class="fa ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
 
     document.body.appendChild(messageDiv);
 
+    // 添加淡入动画
+    messageDiv.style.opacity = '0';
+    messageDiv.style.transform = 'translateX(100px)';
+    messageDiv.style.transition = 'all 0.3s ease-out';
+
+    requestAnimationFrame(() => {
+        messageDiv.style.opacity = '1';
+        messageDiv.style.transform = 'translateX(0)';
+    });
+
     setTimeout(() => {
-        messageDiv.remove();
+        messageDiv.style.opacity = '0';
+        messageDiv.style.transform = 'translateX(100px)';
+        setTimeout(() => messageDiv.remove(), 300);
     }, 3000);
 }
 
@@ -848,7 +905,7 @@ window.toggleUserMenu = function() {
 // 点击页面其他地方关闭用户菜单（使用事件委托，在document上监听）
 document.addEventListener('click', function(e) {
     const dropdown = document.getElementById('user-menu-dropdown');
-    const trigger = document.getElementById('user-menu-trigger');
+    const trigger = document.getElementById('user-menu-btn');
 
     // 如果元素还未渲染，直接返回
     if (!dropdown || !trigger) return;

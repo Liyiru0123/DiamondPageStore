@@ -279,24 +279,7 @@ function isValidEmail(email) {
     return emailRegex.test(email);
 }
 
-/**
- * 显示消息提示
- */
-function showMessage(message, type = 'info') {
-    // 如果manager-api-integration.js中有showMessage函数，使用它
-    if (typeof window.showMessage === 'function') {
-        window.showMessage(message, type);
-        return;
-    }
-
-    // 否则使用简单的alert
-    if (type === 'error') {
-        alert('Error: ' + message);
-    } else if (type === 'success') {
-        alert('Success: ' + message);
-    } else {
-        alert(message);
-    }
-}
+// 注意：showMessage 函数已在 manager-api-integration.js 中定义
+// 不再在此重复定义，避免无限递归问题
 
 console.log('Manager Profile functions loaded successfully');

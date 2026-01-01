@@ -102,25 +102,20 @@ async function viewSupplierDetailsAPI(supplierId) {
         );
         const supplier = response.data;
 
-        let detailsHTML = `
-            <div class="space-y-2">
-                <p><strong>Supplier ID:</strong> ${escapeHtml(supplier.supplier_id)}</p>
-                <p><strong>Name:</strong> ${escapeHtml(supplier.supplier_name)}</p>
-                <p><strong>Phone:</strong> ${escapeHtml(supplier.phone)}</p>
-                <p><strong>Email:</strong> ${escapeHtml(supplier.email || 'N/A')}</p>
-                <p><strong>Address:</strong> ${escapeHtml(supplier.address || 'N/A')}</p>
-        `;
+        const lines = [
+            `Supplier ID: ${supplier.supplier_id}`,
+            `Name: ${supplier.supplier_name}`,
+            `Phone: ${supplier.phone || 'N/A'}`,
+            `Email: ${supplier.email || 'N/A'}`,
+            `Address: ${supplier.address || 'N/A'}`,
+            `Total Purchases: ${supplier.total_purchases ?? 0}`,
+            `Stores Served: ${supplier.stores_served ?? 0}`,
+            `Last Purchase: ${supplier.last_purchase_date ? new Date(supplier.last_purchase_date).toLocaleDateString() : 'N/A'}`,
+            `Total Items Supplied: ${supplier.total_items_supplied ?? 0}`,
+            `Total Purchase Value: ${MANAGER_CURRENCY_LABEL} ${parseFloat(supplier.total_purchase_value || 0).toFixed(2)}`
+        ];
 
-        if (supplier.total_purchases !== undefined) {
-            detailsHTML += `
-                <p><strong>Total Purchases:</strong> ${supplier.total_purchases}</p>
-                <p><strong>Total Purchase Amount:</strong> ${MANAGER_CURRENCY_LABEL} ${parseFloat(supplier.total_purchase_amount || 0).toFixed(2)}</p>
-            `;
-        }
-
-        detailsHTML += `</div>`;
-
-        alert(detailsHTML.replace(/<[^>]*>/g, '\n'));
+        alert(lines.join('\n'));
     } catch (error) {
         console.error('Failed to view supplier details:', error);
         alert('Failed to load supplier details: ' + error.message);
@@ -305,7 +300,11 @@ function renderSupplierResults(suppliers) {
             <td class="px-4 py-4 text-sm text-gray-900">${escapeHtml(supplier.supplier_name)}</td>
             <td class="px-4 py-4 text-sm text-gray-700">${escapeHtml(supplier.phone)}</td>
             <td class="px-4 py-4 text-sm text-gray-700 max-w-xs truncate" title="${escapeHtml(supplier.address || 'N/A')}">${escapeHtml(supplier.address || 'N/A')}</td>
-            <td class="px-4 py-4 text-sm text-gray-700">${escapeHtml(supplier.email || 'N/A')}</td>
+            <td class="px-4 py-4 text-sm text-gray-700 w-56 max-w-xs">
+                <div class="min-w-0 truncate" title="${escapeHtml(supplier.email || 'N/A')}">
+                    ${escapeHtml(supplier.email || 'N/A')}
+                </div>
+            </td>
             <td class="px-4 py-4 text-sm">
                 <div class="flex gap-2">
                     <button class="text-primary hover:text-primary/80 edit-supplier-btn" title="Edit">
@@ -325,6 +324,7 @@ function renderSupplierResults(suppliers) {
 
     updateSupplierCount(suppliers.length);
     addSupplierActionButtonListeners();
+
 }
 
 function updateSupplierCount(count) {

@@ -128,7 +128,12 @@ function renderStaffTable(employees) {
                     ${escapeHtml(positionName)}
                 </span>
             </td>
-            <td class="px-4 py-4 text-sm">${escapeHtml(employee.email)}</td>
+            <td class="px-4 py-4 text-sm w-56 max-w-xs">
+                <div class="flex items-center gap-2 min-w-0 staff-email-cell" title="${escapeHtml(employee.email || 'N/A')}" data-email="${escapeHtml(employee.email || '')}">
+                    <span class="min-w-0 flex-1 truncate">${escapeHtml(employee.email || 'N/A')}</span>
+                    <span class="text-[10px] text-gray-400 whitespace-nowrap">dblclick</span>
+                </div>
+            </td>
             <td class="px-4 py-4 text-sm">
                 <div class="flex gap-2">
                     <button class="text-primary hover:text-primary/80 edit-staff-btn" title="Edit">
@@ -174,12 +179,12 @@ async function loadStaffData() {
 }
 
 async function deleteStaff(employeeId) {
-    if (!confirm('Are you sure you want to delete this employee?')) return;
-
+    // 注意：确认对话框已经在 setupStaffActionListeners 中处理，这里不再重复确认
     try {
         await deleteEmployeeAPI(employeeId);
         showMessage('Employee deleted successfully', 'success');
-        loadStaffData();
+        // 刷新表格数据
+        await loadStaffData();
     } catch (error) {
         console.error('Failed to delete employee:', error);
         showMessage('Failed to delete employee: ' + error.message, 'error');
@@ -187,6 +192,19 @@ async function deleteStaff(employeeId) {
 }
 
 function setupStaffActionListeners() {
+    const tableBody = document.getElementById('staff-table-body');
+    if (tableBody && tableBody.dataset.emailListenerAttached !== 'true') {
+        tableBody.dataset.emailListenerAttached = 'true';
+        tableBody.addEventListener('dblclick', (event) => {
+            const cell = event.target.closest('.staff-email-cell');
+            if (cell) {
+                const email = cell.dataset.email || '';
+                if (email) {
+                    alert(`Email: ${email}`);
+                }
+            }
+        });
+    }
     // Edit buttons - 监听 edit-staff-btn 类
     document.querySelectorAll('#staff-table-body .edit-staff-btn').forEach(button => {
         button.addEventListener('click', function () {
@@ -417,17 +435,17 @@ function addUserActionButtonListeners() {
     if (tableBody && tableBody.dataset.listenersAttached !== 'true') {
         tableBody.dataset.listenersAttached = 'true';
 
-        tableBody.addEventListener('click', (event) => {
-            // Email cell click
+        tableBody.addEventListener('dblclick', (event) => {
             const cell = event.target.closest('.user-email-cell');
             if (cell) {
                 const email = cell.dataset.email || '';
                 if (email) {
                     alert(`Email: ${email}`);
                 }
-                return;
             }
+        });
 
+        tableBody.addEventListener('click', (event) => {
             // Edit button click
             const editBtn = event.target.closest('.edit-user-btn');
             if (editBtn) {
@@ -952,19 +970,41 @@ async function loadBookCategoryTable() {
 
 function showMessage(message, type = 'info') {
     const colors = {
-        success: 'bg-green-100 text-green-800',
-        error: 'bg-red-100 text-red-800',
-        info: 'bg-blue-100 text-blue-800'
+        success: 'bg-green-100 text-green-800 border border-green-300',
+        error: 'bg-red-100 text-red-800 border border-red-300',
+        info: 'bg-blue-100 text-blue-800 border border-blue-300'
     };
 
+    // 移除之前的消息提示（避免重叠）
+    const existingMessages = document.querySelectorAll('.message-toast');
+    existingMessages.forEach(msg => msg.remove());
+
     const messageDiv = document.createElement('div');
-    messageDiv.className = `fixed top-4 right-4 px-6 py-4 rounded-lg shadow-lg ${colors[type]} z-50`;
-    messageDiv.textContent = message;
+    messageDiv.className = `message-toast fixed top-20 right-4 px-6 py-4 rounded-lg shadow-xl ${colors[type]}`;
+    messageDiv.style.zIndex = '9999'; // 确保在最上层
+    messageDiv.innerHTML = `
+        <div class="flex items-center gap-2">
+            <i class="fa ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
 
     document.body.appendChild(messageDiv);
 
+    // 添加淡入动画
+    messageDiv.style.opacity = '0';
+    messageDiv.style.transform = 'translateX(100px)';
+    messageDiv.style.transition = 'all 0.3s ease-out';
+
+    requestAnimationFrame(() => {
+        messageDiv.style.opacity = '1';
+        messageDiv.style.transform = 'translateX(0)';
+    });
+
     setTimeout(() => {
-        messageDiv.remove();
+        messageDiv.style.opacity = '0';
+        messageDiv.style.transform = 'translateX(100px)';
+        setTimeout(() => messageDiv.remove(), 300);
     }, 3000);
 }
 
@@ -1030,7 +1070,12 @@ async function performStaffSearch(searchTerm) {
                         ${escapeHtml(employee.job_title || 'Staff')}
                     </span>
                 </td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(employee.email)}</td>
+                <td class="px-4 py-4 text-sm w-56 max-w-xs">
+                    <div class="flex items-center gap-2 min-w-0 staff-email-cell" title="${escapeHtml(employee.email || 'N/A')}" data-email="${escapeHtml(employee.email || '')}">
+                        <span class="min-w-0 flex-1 truncate">${escapeHtml(employee.email || 'N/A')}</span>
+                        <span class="text-[10px] text-gray-400 whitespace-nowrap">dblclick</span>
+                    </div>
+                </td>
                 <td class="px-4 py-4 text-sm">
                     <div class="flex gap-2">
                         <button class="text-primary hover:text-primary/80 edit-staff" title="Edit">
@@ -1052,7 +1097,7 @@ async function performStaffSearch(searchTerm) {
             staffCount.textContent = String(employees.length);
         }
 
-        addStaffActionButtonListeners();
+        setupStaffActionListeners();
     } catch (error) {
         console.error('Failed to search staff:', error);
         showMessage('Failed to search staff: ' + error.message, 'error');
@@ -1107,7 +1152,12 @@ async function performUserSearch(searchTerm) {
                     <span class="px-2 py-1 text-xs ${typeBadge.className} rounded-full">${escapeHtml(typeBadge.label)}</span>
                 </td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(user.full_name || 'N/A')}</td>
-                <td class="px-4 py-4 text-sm user-email-cell" title="${escapeHtml(user.email || 'N/A')}" data-email="${escapeHtml(user.email || '')}">${escapeHtml(user.email || 'N/A')}</td>
+                <td class="px-4 py-4 text-sm w-56 max-w-xs">
+                    <div class="flex items-center gap-2 min-w-0 user-email-cell" title="${escapeHtml(user.email || 'N/A')}" data-email="${escapeHtml(user.email || '')}">
+                        <span class="min-w-0 flex-1 truncate">${escapeHtml(user.email || 'N/A')}</span>
+                        <span class="text-[10px] text-gray-400 whitespace-nowrap">dblclick</span>
+                    </div>
+                </td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(new Date(user.create_date).toLocaleDateString())}</td>
                 <td class="px-4 py-4 text-sm">${escapeHtml(new Date(user.last_log_date).toLocaleDateString())}</td>
                 <td class="px-4 py-4 text-sm">
@@ -1296,8 +1346,11 @@ function renderUserManagementRows(users) {
                 <span class="px-2 py-1 text-xs ${typeBadge.className} rounded-full">${escapeHtml(typeBadge.label)}</span>
             </td>
             <td class="px-4 py-4 text-sm">${escapeHtml(user.full_name || 'N/A')}</td>
-            <td class="px-4 py-4 text-sm w-48 max-w-xs truncate user-email-cell" title="${escapeHtml(user.email || 'N/A')}" data-email="${escapeHtml(user.email || '')}">
-                ${escapeHtml(user.email || 'N/A')}
+            <td class="px-4 py-4 text-sm w-56 max-w-xs">
+                <div class="flex items-center gap-2 min-w-0 user-email-cell" title="${escapeHtml(user.email || 'N/A')}" data-email="${escapeHtml(user.email || '')}">
+                    <span class="min-w-0 flex-1 truncate">${escapeHtml(user.email || 'N/A')}</span>
+                    <span class="text-[10px] text-gray-400 whitespace-nowrap">dblclick</span>
+                </div>
             </td>
             <td class="px-4 py-4 text-sm whitespace-nowrap">${escapeHtml(createdAt)}</td>
             <td class="px-4 py-4 text-sm whitespace-nowrap">${escapeHtml(lastLogin)}</td>

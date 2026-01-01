@@ -173,7 +173,8 @@ function getUserDetail($conn) {
 }
 
 /**
- * Add user (employee)
+ * Add user (employee) - 支持重用 user_id
+ * username 格式: emp001 -> user_id = 1
  */
 function addUser($conn) {
     $data = json_decode(file_get_contents('php://input'), true);
@@ -208,6 +209,10 @@ function addUser($conn) {
         return;
     }
 
+    // 从 username 提取 user_id（emp001 -> 1）
+    $userIdFromUsername = intval(preg_replace('/^emp/', '', $username));
+
+    // 检查 username 是否已存在
     $checkStmt = $conn->prepare("SELECT user_id FROM users WHERE username = :username");
     $checkStmt->bindValue(':username', $username, PDO::PARAM_STR);
     $checkStmt->execute();
@@ -220,27 +225,60 @@ function addUser($conn) {
         return;
     }
 
-    $sql = "INSERT INTO users (username, password_hash, create_date, last_log_date, user_types, status)
-            VALUES (:username, :password_hash, NOW(), NOW(), 'employee', 'active')";
-    $stmt = $conn->prepare($sql);
-    $stmt->bindValue(':username', $username, PDO::PARAM_STR);
-    $stmt->bindValue(':password_hash', $password, PDO::PARAM_STR);
-
-    if ($stmt->execute()) {
-        $userId = $conn->lastInsertId();
-        $fixStmt = $conn->prepare("UPDATE users SET user_types = 'employee', status = 'active' WHERE user_id = :user_id");
-        $fixStmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
-        $fixStmt->execute();
-        echo json_encode([
-            'success' => true,
-            'message' => 'User created successfully',
-            'data' => ['user_id' => $userId]
-        ]);
-    } else {
-        http_response_code(500);
+    // 检查 user_id 是否已存在
+    $checkIdStmt = $conn->prepare("SELECT user_id FROM users WHERE user_id = :user_id");
+    $checkIdStmt->bindValue(':user_id', $userIdFromUsername, PDO::PARAM_INT);
+    $checkIdStmt->execute();
+    if ($checkIdStmt->fetch()) {
+        http_response_code(400);
         echo json_encode([
             'success' => false,
-            'message' => 'Failed to create user'
+            'message' => 'User ID ' . $userIdFromUsername . ' already exists. Please use a different number.'
+        ]);
+        return;
+    }
+
+    // 使用指定的 user_id 插入
+    try {
+        $sql = "INSERT INTO users (user_id, username, password_hash, create_date, last_log_date, user_types, status)
+                VALUES (:user_id, :username, :password_hash, NOW(), NOW(), 'employee', 'active')";
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue(':user_id', $userIdFromUsername, PDO::PARAM_INT);
+        $stmt->bindValue(':username', $username, PDO::PARAM_STR);
+        $stmt->bindValue(':password_hash', $password, PDO::PARAM_STR);
+
+        if ($stmt->execute()) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'User created successfully',
+                'data' => ['user_id' => $userIdFromUsername]
+            ]);
+        } else {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Failed to create user'
+            ]);
+        }
+    } catch (Exception $e) {
+        $errorMessage = $e->getMessage();
+        $friendlyMessage = 'Failed to create user';
+
+        if (strpos($errorMessage, 'Duplicate entry') !== false) {
+            if (preg_match("/Duplicate entry '([^']+)'/", $errorMessage, $matches)) {
+                $duplicateValue = $matches[1];
+                if (strpos($errorMessage, 'username') !== false || strpos($errorMessage, 'PRIMARY') !== false) {
+                    $friendlyMessage = "Username or User ID '{$duplicateValue}' already exists";
+                } else {
+                    $friendlyMessage = "The value '{$duplicateValue}' is already in use";
+                }
+            }
+        }
+
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => $friendlyMessage
         ]);
     }
 }
