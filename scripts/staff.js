@@ -808,60 +808,74 @@ function renderStockRequests(data) {
     const sourceData = data || globalStockRequests || [];
 
     sourceData.forEach(request => {
-        const row = document.createElement('tr');
-
         // 兼容大小写字段名
         const requestId = request.request_id || request.REQUEST_ID;
-        const requestDate = request.request_date || request.REQUEST_DATE;
         const bookName = request.book_name || request.BOOK_NAME || 'Unknown';
         const requestedQuantity = request.requested_quantity || request.REQUESTED_QUANTITY || 0;
         const status = (request.status || request.STATUS || 'pending').toLowerCase();
         const completedDate = request.completed_date || request.COMPLETED_DATE;
 
         const isPending = status === 'pending';
-        const displayDate = formatDate(requestDate);
 
-        row.innerHTML = `
-            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                #${requestId}
-            </td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm">
-                <button class="text-primary hover:text-primary/80" onclick="viewRequestDetails(${requestId})">
-                    <i class="fa fa-eye"></i> View
-                </button>
-                ${status === 'approved' ? `
-                    <button class="text-green-600 hover:text-green-700 ml-2" onclick="completeRequest(${requestId})">
-                        <i class="fa fa-check"></i> Receive
-                    </button>
-                ` : ''}
-            </td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                ${displayDate}
-            </td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 max-w-[200px] truncate" title="${bookName}">
-                ${requestedQuantity}*${bookName}
-            </td>
-            <td class="px-4 py-3 whitespace-nowrap">
-                <span class="status-${status}">
-                    ${capitalize(status)}
-                </span>
-            </td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                ${isPending ? 'Pending Approval' : (completedDate ? formatDate(completedDate) : 'In Progress')}
-            </td>
-        `;
-
-        // 根据状态分栏显示
         if (isPending) {
+            // Pending Requests: No Date Requested, No Status
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                    #${requestId}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm">
+                    <button class="text-primary hover:text-primary/80" onclick="viewRequestDetails(${requestId})">
+                        <i class="fa fa-eye"></i> View
+                    </button>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 max-w-[200px] truncate" title="${bookName}">
+                    ${requestedQuantity}*${bookName}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                    Pending Approval
+                </td>
+            `;
             pendingList.appendChild(row);
         } else {
+            // Previous Requests: No Date Requested, Has Status
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                    #${requestId}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm">
+                    <button class="text-primary hover:text-primary/80" onclick="viewRequestDetails(${requestId})">
+                        <i class="fa fa-eye"></i> View
+                    </button>
+                    ${status === 'approved' ? `
+                        <button class="text-green-600 hover:text-green-700 ml-2" onclick="completeRequest(${requestId})">
+                            <i class="fa fa-check"></i> Receive
+                        </button>
+                    ` : ''}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 max-w-[200px] truncate" title="${bookName}">
+                    ${requestedQuantity}*${bookName}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                    <span class="status-${status}">
+                        ${capitalize(status)}
+                    </span>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                    ${completedDate ? formatDate(completedDate) : 'In Progress'}
+                </td>
+            `;
             prevList.appendChild(row);
         }
     });
 
     // 如果没有数据，显示提示
     if (pendingList.children.length === 0) {
-        pendingList.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">No pending requests</td></tr>';
+        pendingList.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-400">No pending requests</td></tr>';
+    }
+    if (prevList.children.length === 0) {
+        prevList.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-400">No previous requests</td></tr>';
     }
 }
 

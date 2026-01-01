@@ -410,6 +410,7 @@ CREATE PROCEDURE sp_staff_complete_replenishment_request(
     IN p_request_id INT
 )
 BEGIN
+    -- 逻辑已移至触发器 trg_replenishment_complete_add_inventory
     UPDATE replenishment_requests 
     SET status = 'completed',
         completed_date = NOW()
