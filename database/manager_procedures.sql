@@ -1,3 +1,4 @@
+
 -- manager_procedures.sql
 -- Manager procedures
 
@@ -668,7 +669,7 @@ END$$
 DROP PROCEDURE IF EXISTS sp_manager_add_supplier$$
 CREATE PROCEDURE sp_manager_add_supplier(
     IN p_name VARCHAR(100),
-    IN p_phone INT,
+    IN p_phone VARCHAR(20),
     IN p_email VARCHAR(100),
     IN p_address VARCHAR(200),
     OUT p_result_code INT,
@@ -678,7 +679,7 @@ CREATE PROCEDURE sp_manager_add_supplier(
 BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
-        SET p_result_code = -1;
+        SET p_result_code = 0;
         SET p_result_message = 'Error: Failed to add supplier';
         SET p_supplier_id = NULL;
         ROLLBACK;
@@ -686,14 +687,34 @@ BEGIN
 
     START TRANSACTION;
 
-    IF EXISTS (SELECT 1 FROM suppliers WHERE name = p_name) THEN
+    IF p_name IS NULL OR TRIM(p_name) = '' THEN
         SET p_result_code = 0;
-        SET p_result_message = 'Validation failed: Supplier name already exists';
+        SET p_result_message = 'Error: Supplier name is required';
+        SET p_supplier_id = NULL;
+        ROLLBACK;
+    ELSEIF p_phone IS NULL OR TRIM(p_phone) = '' THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Phone number is required';
+        SET p_supplier_id = NULL;
+        ROLLBACK;
+    ELSEIF p_phone REGEXP '[^0-9]' THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Phone number must contain only digits';
+        SET p_supplier_id = NULL;
+        ROLLBACK;
+    ELSEIF CHAR_LENGTH(p_phone) > 10 THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Phone number is too long (max 10 digits)';
+        SET p_supplier_id = NULL;
+        ROLLBACK;
+    ELSEIF EXISTS (SELECT 1 FROM suppliers WHERE name = p_name) THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Supplier name already exists';
         SET p_supplier_id = NULL;
         ROLLBACK;
     ELSEIF EXISTS (SELECT 1 FROM suppliers WHERE phone = p_phone) THEN
         SET p_result_code = 0;
-        SET p_result_message = 'Validation failed: Phone number already exists';
+        SET p_result_message = 'Error: Phone number already exists';
         SET p_supplier_id = NULL;
         ROLLBACK;
     ELSE
@@ -702,7 +723,153 @@ BEGIN
 
         SET p_supplier_id = LAST_INSERT_ID();
         SET p_result_code = 1;
-        SET p_result_message = 'Success: Supplier added';
+        SET p_result_message = 'Success: Supplier added successfully';
+
+        COMMIT;
+    END IF;
+END$$
+
+DROP PROCEDURE IF EXISTS sp_manager_update_supplier$$
+CREATE PROCEDURE sp_manager_update_supplier(
+    IN p_supplier_id INT,
+    IN p_name VARCHAR(100),
+    IN p_phone VARCHAR(20),
+    IN p_email VARCHAR(100),
+    IN p_address VARCHAR(200),
+    OUT p_result_code INT,
+    OUT p_result_message VARCHAR(255)
+)
+BEGIN
+    DECLARE v_existing_name VARCHAR(100);
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Failed to update supplier';
+        ROLLBACK;
+    END;
+
+    START TRANSACTION;
+
+    IF NOT EXISTS (SELECT 1 FROM suppliers WHERE supplier_id = p_supplier_id) THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Supplier not found';
+        ROLLBACK;
+    ELSE
+        IF p_name IS NOT NULL AND TRIM(p_name) != '' THEN
+            SELECT name INTO v_existing_name
+            FROM suppliers
+            WHERE name = p_name AND supplier_id != p_supplier_id
+            LIMIT 1;
+
+            IF v_existing_name IS NOT NULL THEN
+                SET p_result_code = 0;
+                SET p_result_message = 'Error: Supplier name already exists';
+                ROLLBACK;
+            ELSE
+                UPDATE suppliers
+                SET
+                    name = COALESCE(NULLIF(p_name, ''), name),
+                    phone = COALESCE(NULLIF(p_phone, ''), phone),
+                    email = COALESCE(NULLIF(p_email, ''), email),
+                    address = COALESCE(NULLIF(p_address, ''), address)
+                WHERE supplier_id = p_supplier_id;
+
+                SET p_result_code = 1;
+                SET p_result_message = 'Success: Supplier updated successfully';
+                COMMIT;
+            END IF;
+        ELSE
+            UPDATE suppliers
+            SET
+                phone = COALESCE(NULLIF(p_phone, ''), phone),
+                email = COALESCE(NULLIF(p_email, ''), email),
+                address = COALESCE(NULLIF(p_address, ''), address)
+            WHERE supplier_id = p_supplier_id;
+
+            SET p_result_code = 1;
+            SET p_result_message = 'Success: Supplier updated successfully';
+            COMMIT;
+        END IF;
+    END IF;
+END$$
+
+DROP PROCEDURE IF EXISTS sp_manager_delete_supplier$$
+CREATE PROCEDURE sp_manager_delete_supplier(
+    IN p_supplier_id INT,
+    OUT p_result_code INT,
+    OUT p_result_message VARCHAR(255)
+)
+BEGIN
+    DECLARE v_purchase_count INT;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Failed to delete supplier';
+        ROLLBACK;
+    END;
+
+    START TRANSACTION;
+
+    IF NOT EXISTS (SELECT 1 FROM suppliers WHERE supplier_id = p_supplier_id) THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Supplier not found';
+        ROLLBACK;
+    ELSE
+        SELECT COUNT(*) INTO v_purchase_count
+        FROM purchases
+        WHERE supplier_id = p_supplier_id;
+
+        IF v_purchase_count > 0 THEN
+            SET p_result_code = 0;
+            SET p_result_message = CONCAT('Error: Cannot delete supplier with ', v_purchase_count, ' associated purchase(s)');
+            ROLLBACK;
+        ELSE
+            DELETE FROM suppliers WHERE supplier_id = p_supplier_id;
+
+            SET p_result_code = 1;
+            SET p_result_message = 'Success: Supplier deleted successfully';
+            COMMIT;
+        END IF;
+    END IF;
+END$$
+
+-- =============================================================================
+-- User management
+-- =============================================================================
+
+DROP PROCEDURE IF EXISTS sp_manager_reset_user_password$$
+CREATE PROCEDURE sp_manager_reset_user_password(
+    IN p_user_id INT,
+    OUT p_result_code INT,
+    OUT p_result_message VARCHAR(255)
+)
+BEGIN
+    DECLARE v_default_password_hash VARCHAR(50);
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: Failed to reset password';
+        ROLLBACK;
+    END;
+
+    START TRANSACTION;
+
+    IF NOT EXISTS (SELECT 1 FROM users WHERE user_id = p_user_id) THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Error: User not found';
+        ROLLBACK;
+    ELSE
+        SET v_default_password_hash = 'Password@123';
+
+        UPDATE users
+        SET password_hash = v_default_password_hash
+        WHERE user_id = p_user_id;
+
+        SET p_result_code = 1;
+        SET p_result_message = 'Success: Password has been reset to default (Password@123)';
         COMMIT;
     END IF;
 END$$
@@ -758,7 +925,89 @@ BEGIN
     END IF;
 END$$
 
+-- =============================================================================
+-- Data fixes
+-- =============================================================================
+
+DROP PROCEDURE IF EXISTS sp_manager_fix_dashboard_data$$
+CREATE PROCEDURE sp_manager_fix_dashboard_data()
+BEGIN
+    UPDATE payments p
+    SET p.amount = (
+        SELECT COALESCE(SUM(oi.quantity * s.unit_price), 0)
+        FROM payment_allocations pa
+        JOIN invoices inv ON pa.invoice_id = inv.invoice_id
+        JOIN orders o ON inv.order_id = o.order_id
+        JOIN order_items oi ON o.order_id = oi.order_id
+        JOIN skus s ON oi.sku_id = s.sku_id
+        WHERE pa.payment_id = p.payment_id
+        AND o.order_status = 'paid'
+    )
+    WHERE p.amount = 0 OR p.amount IS NULL;
+
+    SELECT
+        'Payment amounts updated' AS status,
+        COUNT(*) AS updated_count,
+        COALESCE(SUM(amount), 0) AS total_amount
+    FROM payments;
+
+    UPDATE payment_allocations pa
+    JOIN invoices inv ON pa.invoice_id = inv.invoice_id
+    JOIN orders o ON inv.order_id = o.order_id
+    JOIN (
+        SELECT oi.order_id, SUM(oi.quantity * s.unit_price) AS order_total
+        FROM order_items oi
+        JOIN skus s ON oi.sku_id = s.sku_id
+        GROUP BY oi.order_id
+    ) AS order_totals ON o.order_id = order_totals.order_id
+    SET pa.allocated_amount = order_totals.order_total
+    WHERE pa.allocated_amount = 0 OR pa.allocated_amount IS NULL;
+
+    SELECT
+        'Payment allocations updated' AS status,
+        COUNT(*) AS updated_count,
+        COALESCE(SUM(allocated_amount), 0) AS total_allocated
+    FROM payment_allocations;
+
+    SELECT
+        'Payment analysis' AS section,
+        payment_method,
+        COUNT(*) AS payment_count,
+        COALESCE(SUM(amount), 0) AS total_amount,
+        ROUND(AVG(amount), 2) AS avg_amount
+    FROM payments
+    GROUP BY payment_method
+    ORDER BY total_amount DESC;
+
+    SELECT
+        'Category sales' AS section,
+        category_name,
+        total_sales,
+        revenue_percentage
+    FROM vm_manager_sales_by_category
+    ORDER BY total_sales DESC
+    LIMIT 5;
+
+    SELECT
+        'Order payment summary' AS section,
+        o.order_id,
+        o.order_status,
+        COALESCE(SUM(oi.quantity * s.unit_price), 0) AS order_total,
+        p.payment_id,
+        p.payment_method,
+        p.amount AS payment_amount
+    FROM orders o
+    LEFT JOIN order_items oi ON o.order_id = oi.order_id
+    LEFT JOIN skus s ON oi.sku_id = s.sku_id
+    LEFT JOIN invoices inv ON o.order_id = inv.order_id
+    LEFT JOIN payment_allocations pa ON inv.invoice_id = pa.invoice_id
+    LEFT JOIN payments p ON pa.payment_id = p.payment_id
+    WHERE o.order_status = 'paid'
+    GROUP BY o.order_id, o.order_status, p.payment_id, p.payment_method, p.amount
+    ORDER BY o.order_id
+    LIMIT 10;
+END$$
+
 DELIMITER ;
 
 SELECT 'manager procedures created' AS message;
-
