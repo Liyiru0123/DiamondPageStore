@@ -513,66 +513,10 @@ function debounce(func, wait) {
     };
 }
 
-// 初始化书籍搜索功能
-function initBookSearch() {
-    const searchInput = document.getElementById('book-search-input');
-    if (searchInput) {
-        // 使用防抖功能
-        const debouncedSearch = debounce(function (e) {
-            const searchTerm = e.target.value.trim();
-            if (searchTerm.length >= 2 || searchTerm.length === 0) {
-                performBookSearch(searchTerm);
-            }
-        }, 300);
-
-        searchInput.addEventListener('input', debouncedSearch);
-    }
-}
-
-// 执行书籍搜索
-function performBookSearch(searchTerm) {
-    let results;
-
-    if (searchTerm) {
-        // 搜索书名或ISBN
-        results = pricingData.filter(book =>
-            book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            book.isbn.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    } else {
-        // 如果没有搜索词，显示所有书籍
-        results = pricingData;
-    }
-
-    // 更新表格
-    updatePricingTable(results);
-
-    // 如果没有搜索结果，显示提示
-    if (searchTerm && results.length === 0) {
-        showNoResultsMessage();
-    }
-}
-
-// 显示无结果消息
-function showNoResultsMessage() {
-    console.log('No search results found');
-}
+// 书籍/定价搜索由 API 版本处理（manager-api-integration.js）
 
 // 初始化搜索框
 function initSearchBoxes() {
-    // 库存搜索
-    const inventorySearch = document.querySelector('#inventory-page input[placeholder*="Search books"]');
-    if (inventorySearch) {
-        const debouncedSearch = debounce(function (e) {
-            const searchTerm = e.target.value;
-            if (searchTerm.length >= 2 || searchTerm.length === 0) {
-                performInventorySearch(searchTerm);
-            }
-        }, 300);
-
-        inventorySearch.addEventListener('input', debouncedSearch);
-    }
-
     // 员工搜索
     const staffSearch = document.querySelector('#staff-page input[placeholder*="Search staff"]');
     if (staffSearch) {
@@ -589,139 +533,7 @@ function initSearchBoxes() {
     }
 }
 
-function performInventorySearch(searchTerm) {
-    const results = searchTerm ? searchInventory(searchTerm) : inventoryData;
-    updateInventoryTable(results);
-
-    if (searchTerm && results.length === 0) {
-        alert('No books found matching your search');
-    }
-}
-
-// 搜索库存
-function searchInventory(searchTerm) {
-    const filtered = inventoryData.filter(item =>
-        item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.isbn.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.branch.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    return filtered;
-}
-
-// 搜索员工
-function searchStaff(searchTerm) {
-    const filtered = staffData.filter(item =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.employeeID.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.userID.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.branchName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    return filtered;
-}
-
-// 更新库存表格
-function updateInventoryTable(data) {
-    const container = document.getElementById('inventory-table-body');
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    data.forEach(book => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 transition-colors';
-
-        let stockClass = '';
-        let stockText = '';
-        if (book.stock <= 5) {
-            stockClass = 'text-red-600 font-medium';
-            stockText = `${book.stock} (Low)`;
-        } else if (book.stock <= 10) {
-            stockClass = 'text-yellow-600';
-            stockText = `${book.stock} (Medium)`;
-        } else {
-            stockClass = 'text-green-600';
-            stockText = `${book.stock} (Good)`;
-        }
-
-        row.innerHTML = `
-            <td class="px-4 py-4 text-sm font-medium">${book.title}</td>
-            <td class="px-4 py-4 text-sm text-gray-500">${book.isbn}</td>
-            <td class="px-4 py-4 text-sm font-mono">${book.sku}</td>
-            <td class="px-4 py-4 text-sm">${book.branch}</td>
-            <td class="px-4 py-4 text-sm ${stockClass}">${stockText}</td>
-            <td class="px-4 py-4 text-sm">${book.lastRestock}</td>
-            <td class="px-4 py-4 text-sm">
-                <div class="flex gap-2">
-                    <button class="text-primary hover:text-primary/80" title="Edit">
-                        <i class="fa fa-edit"></i>
-                    </button>
-                    <button class="text-blue-600 hover:text-blue-800" title="Refresh Stock">
-                        <i class="fa fa-refresh"></i>
-                    </button>
-                    <button class="text-red-600 hover:text-red-800" title="Delete">
-                        <i class="fa fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        `;
-        container.appendChild(row);
-    });
-
-    // 重新添加事件监听器
-    addInventoryActionButtonListeners();
-}
-
-// 更新员工表格
-function updateStaffTable(data) {
-    const container = document.getElementById('staff-table-body');
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    data.forEach(staff => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 transition-colors';
-        row.dataset.staffId = staff.id;
-        row.dataset.storeID = staff.storeID;
-        row.dataset.position = staff.position;
-
-        let roleClass = 'role-staff';
-        if (staff.position === 'manager') roleClass = 'role-manager';
-        if (staff.position === 'finance') roleClass = 'role-finance';
-
-        row.innerHTML = `
-            <td class="px-4 py-4 text-sm font-medium">${staff.employeeID}</td>
-            <td class="px-4 py-4 text-sm">${staff.userID}</td>
-            <td class="px-4 py-4 text-sm">${staff.branchName}</td>
-            <td class="px-4 py-4 text-sm">${staff.name}</td>
-            <td class="px-4 py-4 text-sm">
-                <span class="px-2 py-1 text-xs ${roleClass} rounded-full">${staff.position}</span>
-            </td>
-            <td class="px-4 py-4 text-sm">${staff.email}</td>
-            <td class="px-4 py-4 text-sm">
-                <div class="flex gap-2">
-                    <button class="text-primary hover:text-primary/80 edit-staff" title="Edit">
-                        <i class="fa fa-edit"></i>
-                    </button>
-                    <button class="text-blue-600 hover:text-blue-800 view-staff" title="View Details">
-                        <i class="fa fa-eye"></i>
-                    </button>
-                    <button class="text-red-600 hover:text-red-800 delete-staff" title="Delete">
-                        <i class="fa fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        `;
-        container.appendChild(row);
-    });
-
-    updateStaffCount(data.length);
-}
+// 库存/员工搜索与渲染由 API 版本处理（manager-api-integration.js）
 
 // ============================================
 // 员工管理相关函数（保留UI交互部分）
@@ -832,11 +644,16 @@ async function addNewStaff() {
             return;
         }
 
-        const normalizedUsername = formData.username.toLowerCase();
+        const normalizedUsername = formData.username.toLowerCase().trim();
+
+        // 验证用户名格式：emp + 3位数字
         if (!/^emp\d{3}$/.test(normalizedUsername)) {
             alert('Username must be in format emp001');
             return;
         }
+
+        // 从 username 中提取 employee_id（emp001 -> 1）
+        const employeeIdFromUsername = parseInt(normalizedUsername.replace('emp', ''), 10);
 
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             alert('Please enter a valid email address (example: name@example.com).');
@@ -865,6 +682,7 @@ async function addNewStaff() {
         createdUserId = userResponse.data.user_id;
 
         const employeeData = {
+            employee_id: employeeIdFromUsername,  // 使用从 username 提取的 ID
             user_id: parseInt(createdUserId, 10),
             first_name: formData.firstName,
             last_name: formData.lastName,
@@ -881,8 +699,14 @@ async function addNewStaff() {
         }
 
         closeAddStaffModal();
-        alert(`Staff member "${formData.firstName} ${formData.lastName}" has been added successfully!`);
         document.getElementById('add-staff-form').reset();
+
+        // 使用 showMessage 显示成功提示
+        if (typeof showMessage === 'function') {
+            showMessage(`Staff "${formData.firstName} ${formData.lastName}" added successfully!`, 'success');
+        } else {
+            alert(`Staff member "${formData.firstName} ${formData.lastName}" has been added successfully!`);
+        }
     } catch (error) {
         if (createdUserId && typeof deleteUserAPI === 'function') {
             try {
@@ -892,7 +716,14 @@ async function addNewStaff() {
             }
         }
         console.error('Error adding staff:', error);
-        alert('Failed to add staff: ' + (error.message || 'Please try again.'));
+
+        // 使用 showMessage 显示错误提示
+        const errorMsg = error.message || 'Please try again';
+        if (typeof showMessage === 'function') {
+            showMessage(errorMsg, 'error');
+        } else {
+            alert('Failed to add staff: ' + errorMsg);
+        }
     }
 }
 function openEditStaffModal(staffData) {
@@ -1278,141 +1109,7 @@ function performSKUSearch(searchTerm) {
 
 
 
-// 加载供应商数据
-function loadSupplierData() {
-    updateSupplierTable(supplierData);
-}
-
-// 更新供应商表格
-function updateSupplierTable(data) {
-    const container = document.getElementById('supplier-table-body');
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    data.forEach(supplier => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 transition-colors';
-        row.dataset.supplierId = supplier.id;
-        row.dataset.supplierName = supplier.name.toLowerCase();
-        row.dataset.supplierPhone = supplier.phone;
-        row.dataset.supplierAddress = supplier.address.toLowerCase();
-
-        row.innerHTML = `
-            <td class="px-4 py-4 text-sm font-medium text-gray-900">${supplier.supplierID}</td>
-            <td class="px-4 py-4 text-sm text-gray-900">${supplier.name}</td>
-            <td class="px-4 py-4 text-sm text-gray-700">${supplier.phone}</td>
-            <td class="px-4 py-4 text-sm text-gray-700 max-w-xs truncate" title="${supplier.address}">${supplier.address}</td>
-            <td class="px-4 py-4 text-sm text-gray-700">${supplier.email}</td>
-            <td class="px-4 py-4 text-sm">
-                <div class="flex gap-2">
-                    <button class="text-primary hover:text-primary/80 edit-supplier-btn" title="Edit">
-                        <i class="fa fa-edit"></i>
-                    </button>
-                    <button class="text-blue-600 hover:text-blue-800 view-supplier-btn" title="View Details">
-                        <i class="fa fa-eye"></i>
-                    </button>
-                    <button class="text-red-600 hover:text-red-800 delete-supplier-btn" title="Delete">
-                        <i class="fa fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        `;
-        container.appendChild(row);
-    });
-
-    updateSupplierCount(data.length);
-
-    // 添加事件监听器到新创建的行
-    addSupplierActionButtonListeners();
-}
-
-// 添加供应商表格按钮事件监听器
-function addSupplierActionButtonListeners() {
-    const container = document.getElementById('supplier-table-body');
-    if (!container) return;
-
-    // 避免重复绑定事件
-    if (container.dataset.supplierListenersBound === 'true') return;
-    container.dataset.supplierListenersBound = 'true';
-
-    container.addEventListener('click', async function (e) {
-        const button = e.target.closest('button');
-        if (!button) return;
-
-        const row = button.closest('tr');
-        const supplierId = row.dataset.supplierId;
-
-        // 尝试从本地数组查找，如果找不到则创建一个包含id的对象
-        let supplier = supplierData.find(s => s.id == supplierId || s.supplier_id == supplierId);
-        if (!supplier) {
-            supplier = { id: supplierId, supplier_id: supplierId };
-        }
-
-        if (button.classList.contains('edit-supplier-btn')) {
-            // 使用API版本的编辑功能
-            if (typeof openEditSupplierModalAPI === 'function') {
-                await openEditSupplierModalAPI(supplierId);
-            } else {
-                openEditSupplierModal(supplier);
-            }
-        } else if (button.classList.contains('view-supplier-btn')) {
-            // 使用API版本的查看功能
-            if (typeof viewSupplierDetailsAPI === 'function') {
-                await viewSupplierDetailsAPI(supplierId);
-            } else {
-                viewSupplierDetails(supplier);
-            }
-        } else if (button.classList.contains('delete-supplier-btn')) {
-            await deleteSupplier(supplier);
-        }
-    });
-}
-
-// 执行供应商搜索
-function performSupplierSearch(searchTerm) {
-    const container = document.getElementById('supplier-table-body');
-    if (!container) return;
-
-    if (!searchTerm) {
-        // 显示所有行
-        const rows = container.querySelectorAll('tr');
-        rows.forEach(row => {
-            row.style.display = '';
-        });
-        updateSupplierCount(rows.length);
-        return;
-    }
-
-    const searchLower = searchTerm.toLowerCase();
-    const rows = container.querySelectorAll('tr');
-    let visibleCount = 0;
-
-    rows.forEach(row => {
-        const name = row.dataset.supplierName || '';
-        const phone = row.dataset.supplierPhone || '';
-        const address = row.dataset.supplierAddress || '';
-
-        if (name.includes(searchLower) ||
-            phone.includes(searchLower) ||
-            address.includes(searchLower)) {
-            row.style.display = '';
-            visibleCount++;
-        } else {
-            row.style.display = 'none';
-        }
-    });
-
-    updateSupplierCount(visibleCount);
-}
-
-// 更新供应商计数
-function updateSupplierCount(count) {
-    const supplierCountElement = document.getElementById('supplier-count');
-    if (supplierCountElement) {
-        supplierCountElement.textContent = count;
-    }
-}
+// 供应商数据与搜索由 API 版本处理（manager-supplier-api.js）
 
 // 打开添加供应商模态框
 function openAddSupplierModal() {
@@ -1445,55 +1142,7 @@ function closeEditSupplierModal() {
     document.getElementById('edit-supplier-form').reset();
 }
 
-// 查看供应商详情
-function viewSupplierDetails(supplier) {
-    alert(`Supplier Details:\n\n` +
-        `ID: ${supplier.supplierID}\n` +
-        `Name: ${supplier.name}\n` +
-        `Phone: ${supplier.phone}\n` +
-        `Address: ${supplier.address}\n` +
-        `Email: ${supplier.email}\n` +
-        `Contact Person: ${supplier.contactPerson || 'N/A'}\n` +
-        `Category: ${supplier.category || 'N/A'}\n` +
-        `Status: ${supplier.status}`);
-}
-
-// 删除供应商 - 调用API版本
-async function deleteSupplier(supplier) {
-    // 获取supplierId - 兼容不同数据格式
-    const supplierId = supplier.supplier_id || supplier.id;
-
-    if (!confirm('Are you sure you want to delete this supplier? Suppliers with related purchases cannot be deleted.')) {
-        return;
-    }
-
-    try {
-        // 调用API删除供应商
-        if (typeof deleteSupplierAPI === 'function') {
-            await deleteSupplierAPI(supplierId);
-            showMessage('Supplier deleted successfully', 'success');
-            loadSupplierData();
-        } else {
-            // 备用：如果deleteSupplierAPI不存在，尝试直接调用managerApiRequest
-            const response = await managerApiRequest(
-                MANAGER_API_CONFIG.endpoints.suppliers.delete,
-                'POST',
-                { supplier_id: supplierId }
-            );
-            showMessage('Supplier deleted successfully', 'success');
-            loadSupplierData();
-        }
-    } catch (error) {
-        const message = String(error && error.message ? error.message : '');
-        // 检查是否是关联订单导致无法删除
-        if (message.includes('associated purchase orders') || message.includes('cannot delete')) {
-            showMessage('Cannot delete supplier: This supplier has associated purchase orders.', 'info');
-            return;
-        }
-        console.error('Failed to delete supplier:', error);
-        showMessage('Failed to delete supplier: ' + message, 'error');
-    }
-}
+// 供应商详情/删除由 API 版本处理（manager-supplier-api.js）
 
 // 添加新供应商 - 已移至 manager-supplier-api.js，使用 API 版本
 // 此函数由 window.addNewSupplier 在 manager-supplier-api.js 中定义

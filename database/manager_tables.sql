@@ -58,6 +58,22 @@ PREPARE stmt FROM @sql_employee_email;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+-- Normalize employee emails (convert legacy numeric values)
+UPDATE employees
+SET email = CONCAT(
+    LOWER(REPLACE(TRIM(first_name), ' ', '')),
+    CASE
+        WHEN last_name IS NULL OR LENGTH(TRIM(last_name)) = 0 THEN ''
+        ELSE CONCAT('.', LOWER(REPLACE(TRIM(last_name), ' ', '')))
+    END,
+    '.',
+    employee_id,
+    '@diamondpagestore.com'
+)
+WHERE email IS NULL
+   OR email = ''
+   OR email NOT LIKE '%@%';
+
 -- FULLTEXT indexes for manager search endpoints
 SET @idx_exists = (
     SELECT COUNT(*)
