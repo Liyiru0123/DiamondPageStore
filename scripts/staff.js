@@ -54,8 +54,18 @@ async function initStaffSession() {
         const result = await response.json();
 
         if (result.success) {
-            // 成功逻辑保持不变
-            currentStaff = result.data;
+            // 兼容性处理：有些数据库环境返回大写字段名
+            const rawData = result.data;
+            currentStaff = {
+                user_id: rawData.user_id || rawData.USER_ID,
+                store_id: rawData.store_id || rawData.STORE_ID,
+                store_name: rawData.store_name || rawData.STORE_NAME,
+                full_name: rawData.full_name || rawData.FULL_NAME,
+                job_title: rawData.job_title || rawData.JOB_TITLE
+            };
+
+            console.log("Staff Session Initialized:", currentStaff);
+
             const headerStoreEl = document.getElementById('header-store-name');
             if (headerStoreEl) headerStoreEl.textContent = currentStaff.store_name;
             const headerUserEl = document.getElementById('header-user-name');
@@ -301,20 +311,27 @@ async function fetchOrders(storeId, filters = {}) {
         const result = await response.json();
 
         if (result.success) {
-            globalOrders = result.data;
-
+            globalOrders = result.data || [];
             console.log("Orders Fetched:", globalOrders.length);
 
             // 渲染表格
             renderOrders(globalOrders);
             renderRecentOrders(globalOrders);
 
-            // 再次调用统计更新，把刚才拿到的 Orders 传进去
-            // (注意：这里要传 globalBooks，以防库存数据被覆盖为空)
+            // 再次调用统计更新
             updateDashboardStats(globalBooks, globalOrders);
+        } else {
+            console.error('Orders API Error:', result.message);
+            globalOrders = [];
+            renderOrders([]);
+            renderRecentOrders([]);
+            updateDashboardStats(globalBooks, []);
         }
     } catch (error) {
-        console.error('Orders Error:', error);
+        console.error('Orders Fetch Exception:', error);
+        globalOrders = [];
+        renderOrders([]);
+        renderRecentOrders([]);
     }
 }
 
@@ -712,37 +729,50 @@ function renderOrders(data) {
     const paginatedData = getPaginatedData(sourceData, staffPageState.orders, pageSize);
 
     // 3. 渲染 HTML
-    ordersList.innerHTML = paginatedData.map(order => {
-        // 数据库返回的 total_amount 可能是字符串，转换成浮点数以防万一
-        const total = parseFloat(order.total_amount || 0);
+    if (paginatedData.length === 0) {
+        ordersList.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-gray-400">No orders found</td></tr>';
+        return;
+    }
 
-        // 状态样式兼容：数据库是 created/paid，CSS 类名是 status-created 等
-        const statusClass = `status-${(order.order_status || 'created').toLowerCase()}`;
+    ordersList.innerHTML = paginatedData.map(order => {
+        // 兼容性处理：支持多种可能的字段名
+        const displayId = order.order_id || order.id || '-';
+        const displayCustomer = order.customer_name || order.customer || 'Guest';
+        const displayDate = order.order_date || order.date;
+        const displayItemsCount = order.items_count !== undefined ? order.items_count : (order.items || 0);
+        const rawStatus = order.order_status || order.status || 'created';
+        const safeStatus = rawStatus.toLowerCase();
+
+        // 数据库返回的 total_amount 可能是字符串，转换成浮点数以防万一
+        const total = parseFloat(order.total_amount || order.total || 0);
+
+        // 状态样式样式
+        const statusClass = `status-${safeStatus}`;
 
         return `
         <tr class="hover:bg-gray-50 transition-colors">
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                #${order.order_id}
+                #${displayId}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                ${order.customer_name || 'Guest'}
+                ${displayCustomer}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                ${formatDate(order.order_date)}
+                ${formatDate(displayDate)}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                ${order.items_count} items
+                ${displayItemsCount} items
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-semibold">
                 ¥${total.toFixed(2)}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
                 <span class="${statusClass} border px-2 py-1 rounded-full text-xs font-medium">
-                    ${(order.order_status || '').toUpperCase()}
+                    ${rawStatus.toUpperCase()}
                 </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <button onclick="viewOrderDetails(${order.order_id})" class="btn-secondary py-1 px-3 text-xs flex items-center gap-1">
+                <button onclick="viewOrderDetails(${displayId})" class="btn-secondary py-1 px-3 text-xs flex items-center gap-1">
                     <i class="fa fa-eye"></i> View Details
                 </button>
             </td>
