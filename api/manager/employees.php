@@ -185,7 +185,7 @@ function getEmployeesByStore($conn) {
 }
 
 /**
- * 添加员工（支持指定 employee_id）
+ * 添加员工（调用存储过程，支持指定 employee_id）
  */
 function addEmployee($conn) {
     $input = file_get_contents('php://input');
@@ -233,117 +233,40 @@ function addEmployee($conn) {
         }
     }
 
-    $conn->beginTransaction();
+    // 调用存储过程
+    $employeeId = isset($data['employee_id']) ? intval($data['employee_id']) : null;
 
-    try {
-        // 验证 user_id 存在且是 employee 类型
-        $checkUserSQL = "SELECT user_id FROM users WHERE user_id = :user_id AND user_types = 'employee'";
-        $checkStmt = $conn->prepare($checkUserSQL);
-        $checkStmt->bindParam(':user_id', $data['user_id'], PDO::PARAM_INT);
-        $checkStmt->execute();
-        if (!$checkStmt->fetch()) {
-            $conn->rollBack();
-            http_response_code(400);
-            echo json_encode([
-                'success' => false,
-                'message' => 'User does not exist or is not employee type'
-            ]);
-            return;
-        }
+    $sql = "CALL sp_manager_add_employee_v2(
+        :employee_id, :user_id, :first_name, :last_name, :store_id, :job_title_id, :email, :performance,
+        @result_code, @result_message, @out_employee_id
+    )";
 
-        // 验证 user_id 未被其他员工使用
-        $checkEmpSQL = "SELECT employee_id FROM employees WHERE user_id = :user_id";
-        $checkEmpStmt = $conn->prepare($checkEmpSQL);
-        $checkEmpStmt->bindParam(':user_id', $data['user_id'], PDO::PARAM_INT);
-        $checkEmpStmt->execute();
-        if ($checkEmpStmt->fetch()) {
-            $conn->rollBack();
-            http_response_code(400);
-            echo json_encode([
-                'success' => false,
-                'message' => 'User already linked to an employee'
-            ]);
-            return;
-        }
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(':employee_id', $employeeId, PDO::PARAM_INT);
+    $stmt->bindParam(':user_id', $data['user_id'], PDO::PARAM_INT);
+    $stmt->bindParam(':first_name', $data['first_name'], PDO::PARAM_STR);
+    $stmt->bindParam(':last_name', $data['last_name'], PDO::PARAM_STR);
+    $stmt->bindParam(':store_id', $data['store_id'], PDO::PARAM_INT);
+    $stmt->bindParam(':job_title_id', $data['job_title_id'], PDO::PARAM_INT);
+    $stmt->bindParam(':email', $data['email'], PDO::PARAM_STR);
+    $stmt->bindParam(':performance', $performance, PDO::PARAM_STR);
 
-        // 如果提供了 employee_id，检查是否已存在
-        $employeeId = isset($data['employee_id']) ? intval($data['employee_id']) : null;
-        if ($employeeId !== null) {
-            $checkIdSQL = "SELECT employee_id FROM employees WHERE employee_id = :employee_id";
-            $checkIdStmt = $conn->prepare($checkIdSQL);
-            $checkIdStmt->bindParam(':employee_id', $employeeId, PDO::PARAM_INT);
-            $checkIdStmt->execute();
-            if ($checkIdStmt->fetch()) {
-                $conn->rollBack();
-                http_response_code(400);
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'Employee ID ' . $employeeId . ' already exists'
-                ]);
-                return;
-            }
+    $stmt->execute();
 
-            // 使用指定的 employee_id 插入
-            $sql = "INSERT INTO employees (employee_id, user_id, first_name, last_name, store_id, job_title_id, email, performance)
-                    VALUES (:employee_id, :user_id, :first_name, :last_name, :store_id, :job_title_id, :email, :performance)";
-            $stmt = $conn->prepare($sql);
-            $stmt->bindParam(':employee_id', $employeeId, PDO::PARAM_INT);
-        } else {
-            // 自动生成 employee_id
-            $sql = "INSERT INTO employees (user_id, first_name, last_name, store_id, job_title_id, email, performance)
-                    VALUES (:user_id, :first_name, :last_name, :store_id, :job_title_id, :email, :performance)";
-            $stmt = $conn->prepare($sql);
-        }
+    // 获取存储过程的输出参数
+    $result = $conn->query("SELECT @result_code as code, @result_message as message, @out_employee_id as employee_id")->fetch();
 
-        $stmt->bindParam(':user_id', $data['user_id'], PDO::PARAM_INT);
-        $stmt->bindParam(':first_name', $data['first_name'], PDO::PARAM_STR);
-        $stmt->bindParam(':last_name', $data['last_name'], PDO::PARAM_STR);
-        $stmt->bindParam(':store_id', $data['store_id'], PDO::PARAM_INT);
-        $stmt->bindParam(':job_title_id', $data['job_title_id'], PDO::PARAM_INT);
-        $stmt->bindParam(':email', $data['email'], PDO::PARAM_STR);
-        $stmt->bindParam(':performance', $performance, PDO::PARAM_STR);
-
-        $stmt->execute();
-
-        $finalEmployeeId = $employeeId !== null ? $employeeId : $conn->lastInsertId();
-
-        $conn->commit();
-
+    if ($result['code'] == 1) {
         echo json_encode([
             'success' => true,
-            'message' => 'Employee added successfully',
-            'data' => ['employee_id' => $finalEmployeeId]
+            'message' => $result['message'],
+            'data' => ['employee_id' => intval($result['employee_id'])]
         ]);
-    } catch (Exception $e) {
-        $conn->rollBack();
-
-        // 转换数据库错误为用户友好的消息
-        $errorMessage = $e->getMessage();
-        $friendlyMessage = 'Failed to add employee';
-
-        if (strpos($errorMessage, 'Duplicate entry') !== false) {
-            // 解析重复的值
-            if (preg_match("/Duplicate entry '([^']+)'/", $errorMessage, $matches)) {
-                $duplicateValue = $matches[1];
-
-                if (strpos($errorMessage, 'email') !== false || strpos($errorMessage, 'phone') !== false) {
-                    $friendlyMessage = "Email '{$duplicateValue}' is already in use by another employee";
-                } elseif (strpos($errorMessage, 'user_id') !== false) {
-                    $friendlyMessage = "User ID {$duplicateValue} is already linked to another employee";
-                } elseif (strpos($errorMessage, 'employee_id') !== false) {
-                    $friendlyMessage = "Employee ID {$duplicateValue} already exists";
-                } else {
-                    $friendlyMessage = "The value '{$duplicateValue}' is already in use";
-                }
-            }
-        } elseif (strpos($errorMessage, 'foreign key constraint') !== false) {
-            $friendlyMessage = 'Invalid reference: Store or Job Title does not exist';
-        }
-
+    } else {
         http_response_code(400);
         echo json_encode([
             'success' => false,
-            'message' => $friendlyMessage
+            'message' => $result['message']
         ]);
     }
 }
@@ -434,7 +357,7 @@ function updateEmployee($conn) {
 }
 
 /**
- * 删除员工（直接SQL）
+ * 删除员工（调用存储过程，同时删除关联用户）
  */
 function deleteEmployee($conn) {
     if (!isset($_GET['employee_id'])) {
@@ -448,61 +371,28 @@ function deleteEmployee($conn) {
 
     $employeeId = intval($_GET['employee_id']);
 
-    $conn->beginTransaction();
+    // 调用存储过程
+    $sql = "CALL sp_manager_delete_employee_with_user(:employee_id, @result_code, @result_message)";
 
-    try {
-        // Check if employee exists
-        $checkSql = "SELECT employee_id, user_id FROM employees WHERE employee_id = :employee_id";
-        $checkStmt = $conn->prepare($checkSql);
-        $checkStmt->bindParam(':employee_id', $employeeId, PDO::PARAM_INT);
-        $checkStmt->execute();
-        $employee = $checkStmt->fetch();
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(':employee_id', $employeeId, PDO::PARAM_INT);
+    $stmt->execute();
 
-        if (!$employee) {
-            http_response_code(404);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Employee not found'
-            ]);
-            $conn->rollBack();
-            return;
-        }
+    // 获取存储过程的输出参数
+    $result = $conn->query("SELECT @result_code as code, @result_message as message")->fetch();
 
-        // Delete employee record
-        $sql = "DELETE FROM employees WHERE employee_id = :employee_id";
-        $stmt = $conn->prepare($sql);
-        $stmt->bindParam(':employee_id', $employeeId, PDO::PARAM_INT);
-        $stmt->execute();
-
-        // Delete linked user if no member record exists
-        if (!empty($employee['user_id'])) {
-            $memberStmt = $conn->prepare("SELECT member_id FROM members WHERE user_id = :user_id");
-            $memberStmt->bindParam(':user_id', $employee['user_id'], PDO::PARAM_INT);
-            $memberStmt->execute();
-            if ($memberStmt->fetch()) {
-                $conn->rollBack();
-                http_response_code(400);
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'Cannot delete linked user because member record exists'
-                ]);
-                return;
-            }
-
-            $userStmt = $conn->prepare("DELETE FROM users WHERE user_id = :user_id");
-            $userStmt->bindParam(':user_id', $employee['user_id'], PDO::PARAM_INT);
-            $userStmt->execute();
-        }
-
-        $conn->commit();
-
+    if ($result['code'] == 1) {
         echo json_encode([
             'success' => true,
-            'message' => 'Employee deleted successfully'
+            'message' => $result['message']
         ]);
-    } catch (Exception $e) {
-        $conn->rollBack();
-        throw $e;
+    } else {
+        $httpCode = ($result['code'] == 0 && strpos($result['message'], 'not found') !== false) ? 404 : 400;
+        http_response_code($httpCode);
+        echo json_encode([
+            'success' => false,
+            'message' => $result['message']
+        ]);
     }
 }
 

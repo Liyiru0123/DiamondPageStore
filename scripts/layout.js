@@ -376,6 +376,8 @@ function renderAdminHeader(role) {
         }
     }
 
+    const initialAvatar = buildAvatarDataUrl(initialName);
+
     container.innerHTML = `
         <header class="bg-white border-b border-gray-200 shadow-sm z-10 flex-shrink-0">
             <div class="flex items-center justify-between px-4 h-16">
@@ -398,7 +400,7 @@ function renderAdminHeader(role) {
                     <div class="relative">
                         <div class="flex items-center gap-2 cursor-pointer group" id="user-menu-btn">
                             <!-- 头像 (使用 Picsum 随机图或你的 assets) -->
-                            <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(initialName)}&background=random" alt="Avatar" class="w-8 h-8 rounded-full object-cover border-2 border-transparent group-hover:border-primary transition-all">
+                            <img src="${initialAvatar}" alt="Avatar" class="w-8 h-8 rounded-full object-cover border-2 border-transparent group-hover:border-primary transition-all">
                             <div class="hidden md:block text-left">
                                 <p class="text-sm font-medium" id="header-user-name">${initialName}</p>
                                 <p class="text-xs text-gray-500" id="header-user-role">${initialRole}</p>
@@ -506,7 +508,7 @@ function updateUserAvatar(userData, role) {
     const name = userData.full_name || userData.name || userData.username || 
                  role.charAt(0).toUpperCase() + role.slice(1);
     
-    avatarElement.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+    avatarElement.src = buildAvatarDataUrl(name);
 }
 
 /**
@@ -527,8 +529,46 @@ window.updateUserAvatar = function(userData, role) {
         displayName = 'User';
     }
     
-    avatarElement.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`;
+    avatarElement.src = buildAvatarDataUrl(displayName);
 };
+
+function buildAvatarDataUrl(name) {
+    const initials = getInitials(name);
+    const bgColor = pickAvatarColor(name);
+    const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">
+            <rect width="100%" height="100%" fill="${bgColor}"/>
+            <text x="50%" y="50%" dy=".35em" text-anchor="middle"
+                  font-family="Arial, sans-serif" font-size="28" fill="#ffffff">
+                ${initials}
+            </text>
+        </svg>
+    `.trim();
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function getInitials(name) {
+    const cleaned = String(name || '').trim();
+    if (!cleaned) return 'U';
+    const parts = cleaned.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    if (cleaned.length >= 2) {
+        return cleaned.slice(0, 2).toUpperCase();
+    }
+    return cleaned[0].toUpperCase();
+}
+
+function pickAvatarColor(name) {
+    const palette = ['#8B5A2B', '#A0522D', '#D2B48C', '#6B7280', '#2563EB', '#059669', '#B91C1C', '#7C3AED', '#0EA5E9'];
+    const str = String(name || 'user');
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+    }
+    return palette[hash % palette.length];
+}
 
 /**
  * 用户区域下拉菜单控制（简化版，确保可点击）

@@ -1008,6 +1008,395 @@ BEGIN
     LIMIT 10;
 END$$
 
+-- =============================================================================
+-- User and Employee management (v2) - 支持指定ID
+-- =============================================================================
+
+-- 添加员工（支持指定 employee_id）
+DROP PROCEDURE IF EXISTS sp_manager_add_employee_v2$$
+CREATE PROCEDURE sp_manager_add_employee_v2(
+    IN p_employee_id INT,
+    IN p_user_id INT,
+    IN p_first_name VARCHAR(50),
+    IN p_last_name VARCHAR(50),
+    IN p_store_id INT,
+    IN p_job_title_id INT,
+    IN p_email VARCHAR(100),
+    IN p_performance DECIMAL(5,2),
+    OUT p_result_code INT,
+    OUT p_result_message VARCHAR(255),
+    OUT p_out_employee_id INT
+)
+BEGIN
+    DECLARE v_performance DECIMAL(5,2);
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+        SET p_result_code = -1;
+
+        -- 友好错误消息
+        IF @errno = 1062 THEN
+            IF @text LIKE '%email%' THEN
+                SET p_result_message = 'Email is already in use by another employee';
+            ELSEIF @text LIKE '%user_id%' THEN
+                SET p_result_message = 'User is already linked to another employee';
+            ELSEIF @text LIKE '%employee_id%' OR @text LIKE '%PRIMARY%' THEN
+                SET p_result_message = CONCAT('Employee ID ', COALESCE(p_employee_id, 'auto'), ' already exists');
+            ELSE
+                SET p_result_message = 'Duplicate entry found';
+            END IF;
+        ELSEIF @errno = 1452 THEN
+            SET p_result_message = 'Invalid reference: Store or Job Title does not exist';
+        ELSE
+            SET p_result_message = 'Failed to add employee';
+        END IF;
+
+        SET p_out_employee_id = NULL;
+        ROLLBACK;
+    END;
+
+    SET v_performance = COALESCE(p_performance, 75);
+
+    START TRANSACTION;
+
+    -- 验证 user_id 存在且是 employee 类型
+    IF NOT EXISTS (SELECT 1 FROM users WHERE user_id = p_user_id AND user_types = 'employee') THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'User does not exist or is not employee type';
+        SET p_out_employee_id = NULL;
+        ROLLBACK;
+    -- 验证 user_id 未被其他员工使用
+    ELSEIF EXISTS (SELECT 1 FROM employees WHERE user_id = p_user_id) THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'User already linked to an employee';
+        SET p_out_employee_id = NULL;
+        ROLLBACK;
+    -- 验证 store_id 存在
+    ELSEIF NOT EXISTS (SELECT 1 FROM stores WHERE store_id = p_store_id) THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Store does not exist';
+        SET p_out_employee_id = NULL;
+        ROLLBACK;
+    -- 验证 job_title_id 存在
+    ELSEIF NOT EXISTS (SELECT 1 FROM job_titles WHERE job_title_id = p_job_title_id) THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Job title does not exist';
+        SET p_out_employee_id = NULL;
+        ROLLBACK;
+    -- 如果指定了 employee_id，检查是否已存在
+    ELSEIF p_employee_id IS NOT NULL AND EXISTS (SELECT 1 FROM employees WHERE employee_id = p_employee_id) THEN
+        SET p_result_code = 0;
+        SET p_result_message = CONCAT('Employee ID ', p_employee_id, ' already exists');
+        SET p_out_employee_id = NULL;
+        ROLLBACK;
+    ELSE
+        -- 插入员工记录
+        IF p_employee_id IS NOT NULL THEN
+            INSERT INTO employees (employee_id, user_id, first_name, last_name, store_id, job_title_id, email, performance)
+            VALUES (p_employee_id, p_user_id, p_first_name, p_last_name, p_store_id, p_job_title_id, p_email, v_performance);
+            SET p_out_employee_id = p_employee_id;
+        ELSE
+            INSERT INTO employees (user_id, first_name, last_name, store_id, job_title_id, email, performance)
+            VALUES (p_user_id, p_first_name, p_last_name, p_store_id, p_job_title_id, p_email, v_performance);
+            SET p_out_employee_id = LAST_INSERT_ID();
+        END IF;
+
+        SET p_result_code = 1;
+        SET p_result_message = 'Employee added successfully';
+        COMMIT;
+    END IF;
+END$$
+
+-- 删除员工（同时删除关联的用户）
+DROP PROCEDURE IF EXISTS sp_manager_delete_employee_with_user$$
+CREATE PROCEDURE sp_manager_delete_employee_with_user(
+    IN p_employee_id INT,
+    OUT p_result_code INT,
+    OUT p_result_message VARCHAR(255)
+)
+BEGIN
+    DECLARE v_user_id INT;
+    DECLARE v_has_member INT DEFAULT 0;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        SET p_result_code = -1;
+        SET p_result_message = 'Error: Failed to delete employee';
+        ROLLBACK;
+    END;
+
+    START TRANSACTION;
+
+    -- 检查员工是否存在
+    SELECT user_id INTO v_user_id FROM employees WHERE employee_id = p_employee_id;
+
+    IF v_user_id IS NULL THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Employee not found';
+        ROLLBACK;
+    ELSE
+        -- 检查是否有关联的补货请求
+        IF EXISTS (SELECT 1 FROM replenishment_requests WHERE requested_by = p_employee_id OR approved_by = p_employee_id) THEN
+            SET p_result_code = 0;
+            SET p_result_message = 'Cannot delete: Employee has associated replenishment requests';
+            ROLLBACK;
+        ELSE
+            -- 删除员工记录
+            DELETE FROM employees WHERE employee_id = p_employee_id;
+
+            -- 检查用户是否还有member记录
+            IF v_user_id IS NOT NULL THEN
+                SELECT COUNT(*) INTO v_has_member FROM members WHERE user_id = v_user_id;
+
+                IF v_has_member = 0 THEN
+                    -- 没有member记录，可以删除用户
+                    DELETE FROM users WHERE user_id = v_user_id;
+                END IF;
+            END IF;
+
+            SET p_result_code = 1;
+            SET p_result_message = 'Employee deleted successfully';
+            COMMIT;
+        END IF;
+    END IF;
+END$$
+
+-- 添加用户（支持指定 user_id，用于 emp001 格式）
+DROP PROCEDURE IF EXISTS sp_manager_add_user$$
+CREATE PROCEDURE sp_manager_add_user(
+    IN p_user_id INT,
+    IN p_username VARCHAR(50),
+    IN p_password VARCHAR(255),
+    IN p_user_type VARCHAR(20),
+    OUT p_result_code INT,
+    OUT p_result_message VARCHAR(255),
+    OUT p_out_user_id INT
+)
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        GET DIAGNOSTICS CONDITION 1 @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+        SET p_result_code = -1;
+
+        IF @errno = 1062 THEN
+            IF @text LIKE '%username%' THEN
+                SET p_result_message = 'Username already exists';
+            ELSEIF @text LIKE '%PRIMARY%' THEN
+                SET p_result_message = CONCAT('User ID ', p_user_id, ' already exists');
+            ELSE
+                SET p_result_message = 'Duplicate entry found';
+            END IF;
+        ELSE
+            SET p_result_message = 'Failed to create user';
+        END IF;
+
+        SET p_out_user_id = NULL;
+        ROLLBACK;
+    END;
+
+    START TRANSACTION;
+
+    -- 检查 username 是否已存在
+    IF EXISTS (SELECT 1 FROM users WHERE username = p_username) THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'Username already exists';
+        SET p_out_user_id = NULL;
+        ROLLBACK;
+    -- 检查 user_id 是否已存在
+    ELSEIF p_user_id IS NOT NULL AND EXISTS (SELECT 1 FROM users WHERE user_id = p_user_id) THEN
+        SET p_result_code = 0;
+        SET p_result_message = CONCAT('User ID ', p_user_id, ' already exists. Please use a different number.');
+        SET p_out_user_id = NULL;
+        ROLLBACK;
+    ELSE
+        -- 插入用户
+        IF p_user_id IS NOT NULL THEN
+            INSERT INTO users (user_id, username, password_hash, create_date, last_log_date, user_types, status)
+            VALUES (p_user_id, p_username, p_password, NOW(), NOW(), COALESCE(p_user_type, 'employee'), 'active');
+            SET p_out_user_id = p_user_id;
+        ELSE
+            INSERT INTO users (username, password_hash, create_date, last_log_date, user_types, status)
+            VALUES (p_username, p_password, NOW(), NOW(), COALESCE(p_user_type, 'employee'), 'active');
+            SET p_out_user_id = LAST_INSERT_ID();
+        END IF;
+
+        SET p_result_code = 1;
+        SET p_result_message = 'User created successfully';
+        COMMIT;
+    END IF;
+END$$
+
+-- 更新用户信息
+DROP PROCEDURE IF EXISTS sp_manager_update_user$$
+CREATE PROCEDURE sp_manager_update_user(
+    IN p_user_id INT,
+    IN p_username VARCHAR(50),
+    IN p_status VARCHAR(20),
+    IN p_full_name VARCHAR(100),
+    OUT p_result_code INT,
+    OUT p_result_message VARCHAR(255)
+)
+BEGIN
+    DECLARE v_user_type VARCHAR(20);
+    DECLARE v_first_name VARCHAR(50);
+    DECLARE v_last_name VARCHAR(50);
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        SET p_result_code = -1;
+        SET p_result_message = 'Failed to update user';
+        ROLLBACK;
+    END;
+
+    START TRANSACTION;
+
+    -- 检查用户是否存在
+    SELECT user_types INTO v_user_type FROM users WHERE user_id = p_user_id;
+
+    IF v_user_type IS NULL THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'User not found';
+        ROLLBACK;
+    ELSE
+        -- 更新 users 表
+        UPDATE users
+        SET username = COALESCE(NULLIF(p_username, ''), username),
+            status = COALESCE(NULLIF(p_status, ''), status)
+        WHERE user_id = p_user_id;
+
+        -- 如果有 full_name，更新对应的表
+        IF p_full_name IS NOT NULL AND p_full_name != '' THEN
+            -- 解析姓名
+            IF LOCATE(' ', p_full_name) > 0 THEN
+                SET v_first_name = SUBSTRING_INDEX(p_full_name, ' ', 1);
+                SET v_last_name = SUBSTRING(p_full_name, LOCATE(' ', p_full_name) + 1);
+            ELSE
+                SET v_first_name = p_full_name;
+                SET v_last_name = '';
+            END IF;
+
+            IF v_user_type = 'member' THEN
+                UPDATE members SET first_name = v_first_name, last_name = v_last_name WHERE user_id = p_user_id;
+            ELSEIF v_user_type = 'employee' THEN
+                UPDATE employees SET first_name = v_first_name, last_name = v_last_name WHERE user_id = p_user_id;
+            END IF;
+        END IF;
+
+        SET p_result_code = 1;
+        SET p_result_message = 'User updated successfully';
+        COMMIT;
+    END IF;
+END$$
+
+-- 删除用户（包括关联的 employee/member 记录）
+DROP PROCEDURE IF EXISTS sp_manager_delete_user$$
+CREATE PROCEDURE sp_manager_delete_user(
+    IN p_user_id INT,
+    OUT p_result_code INT,
+    OUT p_result_message VARCHAR(255)
+)
+BEGIN
+    DECLARE v_member_id INT;
+    DECLARE v_order_count INT DEFAULT 0;
+    DECLARE v_fav_count INT DEFAULT 0;
+    DECLARE v_pay_count INT DEFAULT 0;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        SET p_result_code = -1;
+        SET p_result_message = 'Failed to delete user';
+        ROLLBACK;
+    END;
+
+    START TRANSACTION;
+
+    -- 检查用户是否存在
+    IF NOT EXISTS (SELECT 1 FROM users WHERE user_id = p_user_id) THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'User not found';
+        ROLLBACK;
+    ELSE
+        -- 删除关联的 employee 记录
+        DELETE FROM employees WHERE user_id = p_user_id;
+
+        -- 检查是否有 member 记录
+        SELECT member_id INTO v_member_id FROM members WHERE user_id = p_user_id;
+
+        IF v_member_id IS NOT NULL THEN
+            -- 检查 member 是否有关联数据
+            SELECT COUNT(*) INTO v_order_count FROM orders WHERE member_id = v_member_id;
+            SELECT COUNT(*) INTO v_fav_count FROM favorites WHERE member_id = v_member_id;
+            SELECT COUNT(*) INTO v_pay_count FROM payments WHERE member_id = v_member_id;
+
+            IF v_order_count > 0 OR v_fav_count > 0 OR v_pay_count > 0 THEN
+                SET p_result_code = 0;
+                SET p_result_message = 'User is linked to member records. Clear related orders/favorites/payments first.';
+                ROLLBACK;
+            ELSE
+                -- 删除 member 记录
+                DELETE FROM members WHERE user_id = p_user_id;
+                -- 删除用户
+                DELETE FROM users WHERE user_id = p_user_id;
+                SET p_result_code = 1;
+                SET p_result_message = 'User deleted successfully';
+                COMMIT;
+            END IF;
+        ELSE
+            -- 没有 member 记录，直接删除用户
+            DELETE FROM users WHERE user_id = p_user_id;
+            SET p_result_code = 1;
+            SET p_result_message = 'User deleted successfully';
+            COMMIT;
+        END IF;
+    END IF;
+END$$
+
+-- 切换用户状态
+DROP PROCEDURE IF EXISTS sp_manager_toggle_user_status$$
+CREATE PROCEDURE sp_manager_toggle_user_status(
+    IN p_user_id INT,
+    OUT p_result_code INT,
+    OUT p_result_message VARCHAR(255),
+    OUT p_new_status VARCHAR(20)
+)
+BEGIN
+    DECLARE v_current_status VARCHAR(20);
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        SET p_result_code = -1;
+        SET p_result_message = 'Failed to toggle user status';
+        SET p_new_status = NULL;
+        ROLLBACK;
+    END;
+
+    START TRANSACTION;
+
+    -- 获取当前状态
+    SELECT status INTO v_current_status FROM users WHERE user_id = p_user_id;
+
+    IF v_current_status IS NULL THEN
+        SET p_result_code = 0;
+        SET p_result_message = 'User not found';
+        SET p_new_status = NULL;
+        ROLLBACK;
+    ELSE
+        -- 切换状态
+        IF v_current_status = 'active' THEN
+            SET p_new_status = 'disabled';
+        ELSE
+            SET p_new_status = 'active';
+        END IF;
+
+        UPDATE users SET status = p_new_status WHERE user_id = p_user_id;
+
+        SET p_result_code = 1;
+        SET p_result_message = 'User status updated successfully';
+        COMMIT;
+    END IF;
+END$$
+
 DELIMITER ;
 
 SELECT 'manager procedures created' AS message;

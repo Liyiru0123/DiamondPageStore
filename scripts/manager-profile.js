@@ -49,7 +49,7 @@ async function loadCurrentUserInfo() {
         }
 
         // 更新头像（使用用户名生成）
-        const avatar = document.querySelector('#user-menu-trigger img');
+        const avatar = document.querySelector('#user-menu-btn img');
         if (avatar && userData.full_name) {
             avatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.full_name)}&background=random`;
         }
@@ -152,7 +152,7 @@ async function saveProfile() {
         }
 
         // 更新头像
-        const avatar = document.querySelector('#user-menu-trigger img');
+        const avatar = document.querySelector('#user-menu-btn img');
         if (avatar) {
             avatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=random`;
         }
