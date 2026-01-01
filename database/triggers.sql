@@ -84,6 +84,7 @@ BEGIN
     DECLARE v_total_amount DECIMAL(10,2) DEFAULT 0;
     DECLARE v_points_to_add INT DEFAULT 0;
 
+    -- 逻辑 1: 支付成功，增加积分
     IF NEW.order_status = 'paid' AND OLD.order_status != 'paid' THEN
         SELECT COALESCE(SUM(oi.quantity * s.unit_price), 0)
         INTO v_total_amount
@@ -106,6 +107,77 @@ BEGIN
             CURRENT_TIMESTAMP,
             CONCAT('Order #', NEW.order_id, ' payment - points added: ', v_points_to_add)
         );
+    END IF;
+
+    -- 逻辑 2: 订单退款，扣除积分
+    IF NEW.order_status = 'refunded' AND OLD.order_status != 'refunded' THEN
+        SELECT COALESCE(SUM(oi.quantity * s.unit_price), 0)
+        INTO v_total_amount
+        FROM order_items oi
+        JOIN skus s ON oi.sku_id = s.sku_id
+        WHERE oi.order_id = NEW.order_id;
+
+        SET v_points_to_add = FLOOR(v_total_amount);
+
+        UPDATE members
+        SET point = GREATEST(0, CAST(point AS SIGNED) - v_points_to_add)
+        WHERE member_id = NEW.member_id;
+
+        INSERT INTO point_ledgers (member_id, order_id, points_change, points_delta, change_date, reason)
+        VALUES (
+            NEW.member_id,
+            NEW.order_id,
+            -v_points_to_add,
+            -v_points_to_add,
+            CURRENT_TIMESTAMP,
+            CONCAT('Order #', NEW.order_id, ' refunded - points deducted: ', v_points_to_add)
+        );
+    END IF;
+END$$
+
+-- Order refund: restore inventory
+DROP TRIGGER IF EXISTS trg_order_refund_restore_inventory$$
+CREATE TRIGGER trg_order_refund_restore_inventory
+AFTER UPDATE ON orders
+FOR EACH ROW
+BEGIN
+    DECLARE v_sku_id INT;
+    DECLARE v_order_quantity INT;
+    DECLARE v_batch_id INT;
+    DECLARE done INT DEFAULT FALSE;
+
+    DECLARE order_items_cursor CURSOR FOR
+        SELECT sku_id, quantity
+        FROM order_items
+        WHERE order_id = NEW.order_id;
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+    -- 当订单状态变为 'refunded' 时触发
+    IF NEW.order_status = 'refunded' AND OLD.order_status != 'refunded' THEN
+        OPEN order_items_cursor;
+
+        item_loop: LOOP
+            FETCH order_items_cursor INTO v_sku_id, v_order_quantity;
+            IF done THEN
+                LEAVE item_loop;
+            END IF;
+
+            -- 将库存退回到该门店该SKU最新的一个批次中
+            SELECT batch_id INTO v_batch_id
+            FROM inventory_batches
+            WHERE store_id = NEW.store_id AND sku_id = v_sku_id
+            ORDER BY received_date DESC
+            LIMIT 1;
+
+            IF v_batch_id IS NOT NULL THEN
+                UPDATE inventory_batches
+                SET quantity = quantity + v_order_quantity
+                WHERE batch_id = v_batch_id;
+            END IF;
+        END LOOP;
+
+        CLOSE order_items_cursor;
     END IF;
 END$$
 

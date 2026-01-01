@@ -153,14 +153,14 @@ BEGIN
         o.order_date,
         o.order_status,
         COUNT(oi.sku_id) AS items_count,
-        SUM(oi.quantity * s.unit_price) AS total_amount
+        COALESCE(SUM(oi.quantity * s.unit_price), 0) AS total_amount
     FROM orders o
     JOIN members m ON o.member_id = m.member_id
-    JOIN order_items oi ON o.order_id = oi.order_id
-    JOIN skus s ON oi.sku_id = s.sku_id
+    LEFT JOIN order_items oi ON o.order_id = oi.order_id
+    LEFT JOIN skus s ON oi.sku_id = s.sku_id
     WHERE o.store_id = p_store_id
         AND (p_search_term IS NULL OR p_search_term = '' OR 
-             o.order_id LIKE CONCAT('%', p_search_term, '%') OR 
+             CAST(o.order_id AS CHAR) LIKE CONCAT('%', p_search_term, '%') OR 
              CONCAT(m.first_name, ' ', m.last_name) LIKE CONCAT('%', p_search_term, '%'))
         AND (p_status IS NULL OR p_status = '' OR o.order_status = p_status)
         AND (p_date_from IS NULL OR DATE(o.order_date) >= p_date_from)
@@ -343,6 +343,77 @@ BEGIN
     UPDATE orders 
     SET order_status = p_status 
     WHERE order_id = p_order_id;
+END //
+
+-- =============================================
+-- 8. 获取指定门店的补货请求列表
+-- =============================================
+DROP PROCEDURE IF EXISTS sp_staff_get_stock_requests //
+CREATE PROCEDURE sp_staff_get_stock_requests(
+    IN p_store_id INT
+)
+BEGIN
+    SELECT 
+        request_id,
+        request_date,
+        requested_quantity,
+        status,
+        book_name,
+        ISBN,
+        urgency_level,
+        note
+    FROM vw_manager_replenishment_requests
+    WHERE store_id = p_store_id
+    ORDER BY request_date DESC;
+END //
+
+-- =============================================
+-- 9. 创建补货请求
+-- =============================================
+DROP PROCEDURE IF EXISTS sp_staff_create_replenishment_request //
+CREATE PROCEDURE sp_staff_create_replenishment_request(
+    IN p_store_id INT,
+    IN p_sku_id INT,
+    IN p_quantity INT,
+    IN p_requested_by INT,
+    IN p_reason VARCHAR(500),
+    IN p_note VARCHAR(500)
+)
+BEGIN
+    INSERT INTO replenishment_requests (
+        store_id, 
+        sku_id, 
+        requested_quantity, 
+        requested_by, 
+        reason, 
+        note, 
+        status, 
+        request_date
+    )
+    VALUES (
+        p_store_id, 
+        p_sku_id, 
+        p_quantity, 
+        p_requested_by, 
+        p_reason, 
+        p_note, 
+        'pending', 
+        NOW()
+    );
+END //
+
+-- =============================================
+-- 10. 完成补货请求 (收货)
+-- =============================================
+DROP PROCEDURE IF EXISTS sp_staff_complete_replenishment_request //
+CREATE PROCEDURE sp_staff_complete_replenishment_request(
+    IN p_request_id INT
+)
+BEGIN
+    UPDATE replenishment_requests 
+    SET status = 'completed',
+        completed_date = NOW()
+    WHERE request_id = p_request_id;
 END //
 
 DELIMITER ;
