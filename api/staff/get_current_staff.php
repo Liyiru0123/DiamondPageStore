@@ -19,10 +19,11 @@ if (!isset($_SESSION['user_id'])) {
 
 try {
     $user_id = $_SESSION['user_id'];
+    $db = getDB();
 
     // 使用刚才创建的 VIEW 进行查询，而不是直接查表
     $sql = "SELECT * FROM vw_staff_details WHERE user_id = :uid LIMIT 1";
-    $stmt = $pdo->prepare($sql);
+    $stmt = $db->prepare($sql);
     $stmt->execute([':uid' => $user_id]);
     
     $staff = $stmt->fetch(PDO::FETCH_ASSOC);

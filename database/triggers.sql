@@ -217,6 +217,31 @@ BEGIN
     END IF;
 END$$
 
-DELIMITER ;
+-- Replenishment request: auto-add inventory on completion
+DROP TRIGGER IF EXISTS trg_replenishment_complete_add_inventory$$
+CREATE TRIGGER trg_replenishment_complete_add_inventory
+AFTER UPDATE ON replenishment_requests
+FOR EACH ROW
+BEGIN
+    DECLARE v_unit_price DECIMAL(9,2);
+    DECLARE v_purchase_id INT;
 
-SELECT 'triggers created' AS message;
+    -- 当状态变为 'completed' 时触发
+    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
+        -- 1. 获取单价作为成本
+        SELECT unit_price INTO v_unit_price FROM skus WHERE sku_id = NEW.sku_id;
+
+        -- 2. 创建一个已完成的进货记录 (关联到默认供应商)
+        INSERT INTO purchases (store_id, supplier_id, purchase_date, note, status)
+        SELECT NEW.store_id, supplier_id, NOW(), CONCAT('Replenishment Request #', NEW.request_id), 'completed'
+        FROM suppliers LIMIT 1;
+        
+        SET v_purchase_id = LAST_INSERT_ID();
+
+        -- 3. 创建新批次增加库存
+        INSERT INTO inventory_batches (sku_id, store_id, purchase_id, quantity, unit_cost, batch_code, received_date)
+        VALUES (NEW.sku_id, NEW.store_id, v_purchase_id, NEW.requested_quantity, COALESCE(v_unit_price, 0), CONCAT('REP-', NEW.request_id), NOW());
+    END IF;
+END$$
+
+DELIMITER ;
