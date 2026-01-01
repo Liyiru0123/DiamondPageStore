@@ -173,7 +173,7 @@ function getUserDetail($conn) {
 }
 
 /**
- * Add user (employee) - 支持重用 user_id
+ * Add user (employee) - 调用存储过程，支持重用 user_id
  * username 格式: emp001 -> user_id = 1
  */
 function addUser($conn) {
@@ -212,79 +212,37 @@ function addUser($conn) {
     // 从 username 提取 user_id（emp001 -> 1）
     $userIdFromUsername = intval(preg_replace('/^emp/', '', $username));
 
-    // 检查 username 是否已存在
-    $checkStmt = $conn->prepare("SELECT user_id FROM users WHERE username = :username");
-    $checkStmt->bindValue(':username', $username, PDO::PARAM_STR);
-    $checkStmt->execute();
-    if ($checkStmt->fetch()) {
-        http_response_code(400);
+    // 调用存储过程
+    $sql = "CALL sp_manager_add_user(:user_id, :username, :password, :user_type, @result_code, @result_message, @out_user_id)";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue(':user_id', $userIdFromUsername, PDO::PARAM_INT);
+    $stmt->bindValue(':username', $username, PDO::PARAM_STR);
+    $stmt->bindValue(':password', $password, PDO::PARAM_STR);
+    $userType = 'employee';
+    $stmt->bindValue(':user_type', $userType, PDO::PARAM_STR);
+    $stmt->execute();
+
+    // 获取存储过程的输出参数
+    $result = $conn->query("SELECT @result_code as code, @result_message as message, @out_user_id as user_id")->fetch();
+
+    if ($result['code'] == 1) {
         echo json_encode([
-            'success' => false,
-            'message' => 'Username already exists'
+            'success' => true,
+            'message' => $result['message'],
+            'data' => ['user_id' => intval($result['user_id'])]
         ]);
-        return;
-    }
-
-    // 检查 user_id 是否已存在
-    $checkIdStmt = $conn->prepare("SELECT user_id FROM users WHERE user_id = :user_id");
-    $checkIdStmt->bindValue(':user_id', $userIdFromUsername, PDO::PARAM_INT);
-    $checkIdStmt->execute();
-    if ($checkIdStmt->fetch()) {
+    } else {
         http_response_code(400);
         echo json_encode([
             'success' => false,
-            'message' => 'User ID ' . $userIdFromUsername . ' already exists. Please use a different number.'
-        ]);
-        return;
-    }
-
-    // 使用指定的 user_id 插入
-    try {
-        $sql = "INSERT INTO users (user_id, username, password_hash, create_date, last_log_date, user_types, status)
-                VALUES (:user_id, :username, :password_hash, NOW(), NOW(), 'employee', 'active')";
-        $stmt = $conn->prepare($sql);
-        $stmt->bindValue(':user_id', $userIdFromUsername, PDO::PARAM_INT);
-        $stmt->bindValue(':username', $username, PDO::PARAM_STR);
-        $stmt->bindValue(':password_hash', $password, PDO::PARAM_STR);
-
-        if ($stmt->execute()) {
-            echo json_encode([
-                'success' => true,
-                'message' => 'User created successfully',
-                'data' => ['user_id' => $userIdFromUsername]
-            ]);
-        } else {
-            http_response_code(500);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Failed to create user'
-            ]);
-        }
-    } catch (Exception $e) {
-        $errorMessage = $e->getMessage();
-        $friendlyMessage = 'Failed to create user';
-
-        if (strpos($errorMessage, 'Duplicate entry') !== false) {
-            if (preg_match("/Duplicate entry '([^']+)'/", $errorMessage, $matches)) {
-                $duplicateValue = $matches[1];
-                if (strpos($errorMessage, 'username') !== false || strpos($errorMessage, 'PRIMARY') !== false) {
-                    $friendlyMessage = "Username or User ID '{$duplicateValue}' already exists";
-                } else {
-                    $friendlyMessage = "The value '{$duplicateValue}' is already in use";
-                }
-            }
-        }
-
-        http_response_code(400);
-        echo json_encode([
-            'success' => false,
-            'message' => $friendlyMessage
+            'message' => $result['message']
         ]);
     }
 }
 
 /**
- * 更新用户信息
+ * 更新用户信息（调用存储过程）
  */
 function updateUser($conn) {
     $data = json_decode(file_get_contents('php://input'), true);
@@ -307,86 +265,41 @@ function updateUser($conn) {
         return;
     }
 
-    $userId = $data['user_id'];
+    $userId = intval($data['user_id']);
+    $username = isset($data['username']) ? $data['username'] : null;
+    $status = isset($data['status']) ? $data['status'] : (isset($data['account_status']) ? $data['account_status'] : null);
+    $fullName = isset($data['full_name']) ? $data['full_name'] : null;
 
-    try {
-        $conn->beginTransaction();
+    // 调用存储过程
+    $sql = "CALL sp_manager_update_user(:user_id, :username, :status, :full_name, @result_code, @result_message)";
 
-        // 1. 更新 users 表
-        $userUpdates = [];
-        $userParams = [':user_id' => $userId];
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+    $stmt->bindValue(':username', $username, PDO::PARAM_STR);
+    $stmt->bindValue(':status', $status, PDO::PARAM_STR);
+    $stmt->bindValue(':full_name', $fullName, PDO::PARAM_STR);
+    $stmt->execute();
 
-        if (isset($data['username'])) {
-            $userUpdates[] = "username = :username";
-            $userParams[':username'] = $data['username'];
-        }
+    // 获取存储过程的输出参数
+    $result = $conn->query("SELECT @result_code as code, @result_message as message")->fetch();
 
-        if (isset($data['status'])) {
-            $userUpdates[] = "status = :status";
-            $userParams[':status'] = $data['status'];
-        } elseif (isset($data['account_status'])) {
-            $userUpdates[] = "status = :status";
-            $userParams[':status'] = $data['account_status'];
-        }
-
-        if (!empty($userUpdates)) {
-            $sql = "UPDATE users SET " . implode(', ', $userUpdates) . " WHERE user_id = :user_id";
-            $stmt = $conn->prepare($sql);
-            foreach ($userParams as $key => $value) {
-                $stmt->bindValue($key, $value);
-            }
-            $stmt->execute();
-        }
-
-        // 2. 如果有 full_name，更新 members 或 employees 表
-        if (isset($data['full_name']) && !empty($data['full_name'])) {
-            $nameParts = explode(' ', trim($data['full_name']), 2);
-            $firstName = $nameParts[0];
-            $lastName = isset($nameParts[1]) ? $nameParts[1] : '';
-
-            // 先获取用户类型
-            $typeStmt = $conn->prepare("SELECT user_types FROM users WHERE user_id = :user_id");
-            $typeStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-            $typeStmt->execute();
-            $userType = $typeStmt->fetchColumn();
-
-            if ($userType === 'member') {
-                // 更新 members 表
-                $memberSql = "UPDATE members SET first_name = :first_name, last_name = :last_name WHERE user_id = :user_id";
-                $memberStmt = $conn->prepare($memberSql);
-                $memberStmt->bindParam(':first_name', $firstName, PDO::PARAM_STR);
-                $memberStmt->bindParam(':last_name', $lastName, PDO::PARAM_STR);
-                $memberStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-                $memberStmt->execute();
-            } elseif ($userType === 'employee') {
-                // 更新 employees 表
-                $empSql = "UPDATE employees SET first_name = :first_name, last_name = :last_name WHERE user_id = :user_id";
-                $empStmt = $conn->prepare($empSql);
-                $empStmt->bindParam(':first_name', $firstName, PDO::PARAM_STR);
-                $empStmt->bindParam(':last_name', $lastName, PDO::PARAM_STR);
-                $empStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-                $empStmt->execute();
-            }
-        }
-
-        $conn->commit();
-
+    if ($result['code'] == 1) {
         echo json_encode([
             'success' => true,
-            'message' => 'User updated successfully'
+            'message' => $result['message']
         ]);
-    } catch (Exception $e) {
-        $conn->rollBack();
-        http_response_code(500);
+    } else {
+        $httpCode = ($result['code'] == 0 && strpos($result['message'], 'not found') !== false) ? 404 : 400;
+        http_response_code($httpCode);
         echo json_encode([
             'success' => false,
-            'message' => 'Failed to update user: ' . $e->getMessage()
+            'message' => $result['message']
         ]);
     }
 }
 
 /**
- * 删除用户
+ * 删除用户（调用存储过程）
  */
 function deleteUser($conn) {
     if (!isset($_GET['user_id'])) {
@@ -400,86 +313,33 @@ function deleteUser($conn) {
 
     $userId = intval($_GET['user_id']);
 
-    $checkSql = "SELECT user_id FROM users WHERE user_id = :user_id";
-    $checkStmt = $conn->prepare($checkSql);
-    $checkStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-    $checkStmt->execute();
+    // 调用存储过程
+    $sql = "CALL sp_manager_delete_user(:user_id, @result_code, @result_message)";
 
-    if (!$checkStmt->fetch()) {
-        http_response_code(404);
-        echo json_encode([
-            'success' => false,
-            'message' => 'User not found'
-        ]);
-        return;
-    }
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+    $stmt->execute();
 
-    $conn->beginTransaction();
+    // 获取存储过程的输出参数
+    $result = $conn->query("SELECT @result_code as code, @result_message as message")->fetch();
 
-    try {
-        $empStmt = $conn->prepare("SELECT employee_id FROM employees WHERE user_id = :user_id");
-        $empStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $empStmt->execute();
-        $employee = $empStmt->fetch();
-
-        if ($employee) {
-            $delEmp = $conn->prepare("DELETE FROM employees WHERE user_id = :user_id");
-            $delEmp->bindParam(':user_id', $userId, PDO::PARAM_INT);
-            $delEmp->execute();
-        }
-
-        $memberStmt = $conn->prepare("SELECT member_id FROM members WHERE user_id = :user_id");
-        $memberStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $memberStmt->execute();
-        $member = $memberStmt->fetch();
-
-        if ($member) {
-            $memberId = intval($member['member_id']);
-            $orderStmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM orders WHERE member_id = :member_id");
-            $orderStmt->bindParam(':member_id', $memberId, PDO::PARAM_INT);
-            $orderStmt->execute();
-            $orderCount = $orderStmt->fetch();
-
-            $favStmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM favorites WHERE member_id = :member_id");
-            $favStmt->bindParam(':member_id', $memberId, PDO::PARAM_INT);
-            $favStmt->execute();
-            $favCount = $favStmt->fetch();
-
-            $payStmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM payments WHERE member_id = :member_id");
-            $payStmt->bindParam(':member_id', $memberId, PDO::PARAM_INT);
-            $payStmt->execute();
-            $payCount = $payStmt->fetch();
-
-            if ((intval($orderCount['cnt']) > 0) || (intval($favCount['cnt']) > 0) || (intval($payCount['cnt']) > 0)) {
-                $conn->rollBack();
-                http_response_code(400);
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'User is linked to member records. Clear related orders/favorites/payments first.'
-                ]);
-                return;
-            }
-
-            $delMember = $conn->prepare("DELETE FROM members WHERE user_id = :user_id");
-            $delMember->bindParam(':user_id', $userId, PDO::PARAM_INT);
-            $delMember->execute();
-        }
-
-        $sql = "DELETE FROM users WHERE user_id = :user_id";
-        $stmt = $conn->prepare($sql);
-        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $stmt->execute();
-
-        $conn->commit();
+    if ($result['code'] == 1) {
         echo json_encode([
             'success' => true,
-            'message' => 'User deleted successfully'
+            'message' => $result['message']
         ]);
-    } catch (Exception $e) {
-        $conn->rollBack();
-        throw $e;
+    } else {
+        $httpCode = ($result['code'] == 0 && strpos($result['message'], 'not found') !== false) ? 404 : 400;
+        http_response_code($httpCode);
+        echo json_encode([
+            'success' => false,
+            'message' => $result['message']
+        ]);
     }
 }
+/**
+ * 切换用户状态（调用存储过程）
+ */
 function toggleUserStatus($conn) {
     if (!isset($_GET['user_id'])) {
         http_response_code(400);
@@ -492,41 +352,28 @@ function toggleUserStatus($conn) {
 
     $userId = intval($_GET['user_id']);
 
-    // 获取当前状态
-    $sql = "SELECT status FROM users WHERE user_id = :user_id";
+    // 调用存储过程
+    $sql = "CALL sp_manager_toggle_user_status(:user_id, @result_code, @result_message, @new_status)";
+
     $stmt = $conn->prepare($sql);
     $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
     $stmt->execute();
-    $user = $stmt->fetch();
 
-    if (!$user) {
-        http_response_code(404);
-        echo json_encode([
-            'success' => false,
-            'message' => 'User not found'
-        ]);
-        return;
-    }
+    // 获取存储过程的输出参数
+    $result = $conn->query("SELECT @result_code as code, @result_message as message, @new_status as new_status")->fetch();
 
-    // 切换状态
-    $newStatus = ($user['status'] === 'active') ? 'disabled' : 'active';
-
-    $updateSql = "UPDATE users SET status = :status WHERE user_id = :user_id";
-    $updateStmt = $conn->prepare($updateSql);
-    $updateStmt->bindParam(':status', $newStatus, PDO::PARAM_STR);
-    $updateStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-
-    if ($updateStmt->execute()) {
+    if ($result['code'] == 1) {
         echo json_encode([
             'success' => true,
-            'message' => 'User status updated successfully',
-            'data' => ['new_status' => $newStatus]
+            'message' => $result['message'],
+            'data' => ['new_status' => $result['new_status']]
         ]);
     } else {
-        http_response_code(500);
+        $httpCode = ($result['code'] == 0 && strpos($result['message'], 'not found') !== false) ? 404 : 400;
+        http_response_code($httpCode);
         echo json_encode([
             'success' => false,
-            'message' => 'Failed to update user status'
+            'message' => $result['message']
         ]);
     }
 }
