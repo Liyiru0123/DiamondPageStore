@@ -3,11 +3,42 @@
 
 USE book_store;
 
+DROP VIEW IF EXISTS vm_manager_employees;
+DROP VIEW IF EXISTS vw_manager_employees;
+DROP VIEW IF EXISTS vm_manager_employee_performance;
+DROP VIEW IF EXISTS vw_manager_employee_performance;
+DROP VIEW IF EXISTS vm_manager_staff_by_store;
+DROP VIEW IF EXISTS vw_manager_staff_by_store;
+DROP VIEW IF EXISTS vm_manager_inventory_overview;
+DROP VIEW IF EXISTS vw_manager_inventory_overview;
+DROP VIEW IF EXISTS vm_manager_inventory_by_store;
+DROP VIEW IF EXISTS vw_manager_inventory_by_store;
+DROP VIEW IF EXISTS vm_manager_inventory_by_sku;
+DROP VIEW IF EXISTS vw_manager_inventory_by_sku;
+DROP VIEW IF EXISTS vm_manager_replenishment_requests;
+DROP VIEW IF EXISTS vw_manager_replenishment_requests;
+DROP VIEW IF EXISTS vm_manager_purchases;
+DROP VIEW IF EXISTS vw_manager_purchases;
+DROP VIEW IF EXISTS vm_manager_suppliers;
+DROP VIEW IF EXISTS vw_manager_suppliers;
+DROP VIEW IF EXISTS vm_manager_orders_summary;
+DROP VIEW IF EXISTS vw_manager_orders_summary;
+DROP VIEW IF EXISTS vm_manager_sales_by_store;
+DROP VIEW IF EXISTS vw_manager_sales_by_store;
+DROP VIEW IF EXISTS vm_manager_sales_by_category;
+DROP VIEW IF EXISTS vw_manager_sales_by_category;
+DROP VIEW IF EXISTS vm_manager_payment_analysis;
+DROP VIEW IF EXISTS vw_manager_payment_analysis;
+DROP VIEW IF EXISTS vm_manager_bestsellers;
+DROP VIEW IF EXISTS vw_manager_bestsellers;
+DROP VIEW IF EXISTS vm_manager_store_performance;
+DROP VIEW IF EXISTS vw_manager_store_performance;
+
 -- ============================================================================
 -- Employee management views
 -- ============================================================================
 
-CREATE OR REPLACE VIEW vw_manager_employees AS
+CREATE OR REPLACE VIEW vm_manager_employees AS
 SELECT
     e.employee_id,
     e.user_id,
@@ -31,7 +62,7 @@ JOIN job_titles jt ON e.job_title_id = jt.job_title_id
 LEFT JOIN users u ON e.user_id = u.user_id
 ORDER BY e.store_id, jt.base_salary DESC, e.last_name;
 
-CREATE OR REPLACE VIEW vw_manager_employee_performance AS
+CREATE OR REPLACE VIEW vm_manager_employee_performance AS
 SELECT
     e.employee_id,
     CONCAT(e.first_name, ' ', e.last_name) AS employee_name,
@@ -51,7 +82,7 @@ JOIN job_titles jt ON e.job_title_id = jt.job_title_id
 JOIN stores s ON e.store_id = s.store_id
 ORDER BY e.performance DESC;
 
-CREATE OR REPLACE VIEW vw_manager_staff_by_store AS
+CREATE OR REPLACE VIEW vm_manager_staff_by_store AS
 SELECT
     s.store_id,
     s.name AS store_name,
@@ -72,7 +103,7 @@ ORDER BY total_employees DESC;
 -- Inventory management views
 -- ============================================================================
 
-CREATE OR REPLACE VIEW vw_manager_inventory_overview AS
+CREATE OR REPLACE VIEW vm_manager_inventory_overview AS
 SELECT
     b.ISBN,
     b.name AS book_name,
@@ -106,7 +137,7 @@ LEFT JOIN inventory_batches ib ON s.sku_id = ib.sku_id
 GROUP BY b.ISBN, b.name, b.publisher, b.language, s.sku_id, s.binding, s.unit_price
 ORDER BY total_stock DESC;
 
-CREATE OR REPLACE VIEW vw_manager_inventory_by_store AS
+CREATE OR REPLACE VIEW vm_manager_inventory_by_store AS
 SELECT
     st.store_id,
     st.name AS store_name,
@@ -132,7 +163,7 @@ LEFT JOIN books b ON s.ISBN = b.ISBN
 GROUP BY st.store_id, st.name, b.ISBN, b.name, s.sku_id, s.binding, s.unit_price
 ORDER BY st.store_id, total_quantity DESC;
 
-CREATE OR REPLACE VIEW vw_manager_inventory_by_sku AS
+CREATE OR REPLACE VIEW vm_manager_inventory_by_sku AS
 SELECT
     s.sku_id,
     b.ISBN,
@@ -153,7 +184,7 @@ LEFT JOIN stores st ON ib.store_id = st.store_id
 GROUP BY s.sku_id, b.ISBN, b.name, s.binding, s.unit_price, ib.store_id, st.name
 ORDER BY s.sku_id, store_stock DESC;
 
-CREATE OR REPLACE VIEW vw_manager_replenishment_requests AS
+CREATE OR REPLACE VIEW vm_manager_replenishment_requests AS
 SELECT
     rr.request_id,
     rr.store_id,
@@ -197,7 +228,7 @@ ORDER BY rr.request_date DESC;
 -- Purchase management views
 -- ============================================================================
 
-CREATE OR REPLACE VIEW vw_manager_purchases AS
+CREATE OR REPLACE VIEW vm_manager_purchases AS
 SELECT
     p.purchase_id,
     p.store_id,
@@ -218,7 +249,7 @@ LEFT JOIN inventory_batches ib ON pi.sku_id = ib.sku_id AND p.purchase_id = ib.p
 GROUP BY p.purchase_id, p.store_id, st.name, p.supplier_id, sup.name, sup.phone, p.purchase_date, p.note
 ORDER BY p.purchase_date DESC;
 
-CREATE OR REPLACE VIEW vw_manager_suppliers AS
+CREATE OR REPLACE VIEW vm_manager_suppliers AS
 SELECT
     s.supplier_id,
     s.name AS supplier_name,
@@ -241,7 +272,7 @@ ORDER BY total_purchase_value DESC;
 -- Orders and sales views
 -- ============================================================================
 
-CREATE OR REPLACE VIEW vw_manager_orders_summary AS
+CREATE OR REPLACE VIEW vm_manager_orders_summary AS
 SELECT
     o.order_id,
     o.store_id,
@@ -270,7 +301,7 @@ GROUP BY o.order_id, o.store_id, st.name, o.member_id, m.first_name, m.last_name
          m.email, o.order_status, o.order_date, o.note, p.payment_method, p.amount, p.create_date
 ORDER BY o.order_date DESC;
 
-CREATE OR REPLACE VIEW vw_manager_sales_by_store AS
+CREATE OR REPLACE VIEW vm_manager_sales_by_store AS
 SELECT
     st.store_id,
     st.name AS store_name,
@@ -289,7 +320,7 @@ LEFT JOIN skus s ON oi.sku_id = s.sku_id
 GROUP BY st.store_id, st.name, st.status
 ORDER BY total_revenue DESC;
 
-CREATE OR REPLACE VIEW vw_manager_sales_by_category AS
+CREATE OR REPLACE VIEW vm_manager_sales_by_category AS
 SELECT
     c.category_id,
     c.name AS category_name,
@@ -325,7 +356,7 @@ ORDER BY total_sales DESC;
 -- Analytics views
 -- ============================================================================
 
-CREATE OR REPLACE VIEW vw_manager_payment_analysis AS
+CREATE OR REPLACE VIEW vm_manager_payment_analysis AS
 SELECT
     payment_method,
     COUNT(*) AS payment_count,
@@ -349,7 +380,7 @@ FROM payments p
 GROUP BY payment_method
 ORDER BY total_amount DESC;
 
-CREATE OR REPLACE VIEW vw_manager_bestsellers AS
+CREATE OR REPLACE VIEW vm_manager_bestsellers AS
 SELECT
     b.ISBN,
     b.name AS book_name,
@@ -374,7 +405,7 @@ GROUP BY b.ISBN, b.name, b.publisher, b.language
 ORDER BY total_sold DESC
 LIMIT 50;
 
-CREATE OR REPLACE VIEW vw_manager_store_performance AS
+CREATE OR REPLACE VIEW vm_manager_store_performance AS
 SELECT
     st.store_id,
     st.name AS store_name,
@@ -399,5 +430,50 @@ LEFT JOIN skus s ON oi.sku_id = s.sku_id
 GROUP BY st.store_id, st.name, st.status, st.telephone
 ORDER BY revenue DESC;
 
-SELECT 'manager views created' AS message;
+-- Compatibility views for existing code paths
+CREATE OR REPLACE VIEW vw_manager_employees AS
+SELECT * FROM vm_manager_employees;
 
+CREATE OR REPLACE VIEW vw_manager_employee_performance AS
+SELECT * FROM vm_manager_employee_performance;
+
+CREATE OR REPLACE VIEW vw_manager_staff_by_store AS
+SELECT * FROM vm_manager_staff_by_store;
+
+CREATE OR REPLACE VIEW vw_manager_inventory_overview AS
+SELECT * FROM vm_manager_inventory_overview;
+
+CREATE OR REPLACE VIEW vw_manager_inventory_by_store AS
+SELECT * FROM vm_manager_inventory_by_store;
+
+CREATE OR REPLACE VIEW vw_manager_inventory_by_sku AS
+SELECT * FROM vm_manager_inventory_by_sku;
+
+CREATE OR REPLACE VIEW vw_manager_replenishment_requests AS
+SELECT * FROM vm_manager_replenishment_requests;
+
+CREATE OR REPLACE VIEW vw_manager_purchases AS
+SELECT * FROM vm_manager_purchases;
+
+CREATE OR REPLACE VIEW vw_manager_suppliers AS
+SELECT * FROM vm_manager_suppliers;
+
+CREATE OR REPLACE VIEW vw_manager_orders_summary AS
+SELECT * FROM vm_manager_orders_summary;
+
+CREATE OR REPLACE VIEW vw_manager_sales_by_store AS
+SELECT * FROM vm_manager_sales_by_store;
+
+CREATE OR REPLACE VIEW vw_manager_sales_by_category AS
+SELECT * FROM vm_manager_sales_by_category;
+
+CREATE OR REPLACE VIEW vw_manager_payment_analysis AS
+SELECT * FROM vm_manager_payment_analysis;
+
+CREATE OR REPLACE VIEW vw_manager_bestsellers AS
+SELECT * FROM vm_manager_bestsellers;
+
+CREATE OR REPLACE VIEW vw_manager_store_performance AS
+SELECT * FROM vm_manager_store_performance;
+
+SELECT 'manager views created' AS message;
