@@ -1,6 +1,9 @@
 <?php
-require_once '../../config/database.php';
+// api/staff/create_stock_request.php
 header('Content-Type: application/json');
+require_once '../../config/database.php';
+
+session_start();
 
 // 获取 POST JSON 数据
 $data = json_decode(file_get_contents("php://input"), true);
@@ -10,44 +13,72 @@ if (!isset($data['items']) || empty($data['items'])) {
     exit;
 }
 
-$store_id = 1; // 假设当前员工所在店铺
-$supplier_id = 1; // 简化：默认发给 1号供应商，实际可做下拉选择
-$note = $data['note'] ?? '';
+// 获取当前员工信息 (从 Session 或数据库)
+$user_id = $_SESSION['user_id'] ?? 79; // 默认 79 仅供测试
 
 try {
-    $db = getDB();
-    
-    // === 开启事务 (Transaction Start) ===
-    $db->beginTransaction();
+    // 获取 $pdo
+    if (!isset($pdo)) {
+        $database = new DatabaseLocal();
+        $pdo = $database->getConnection();
+    }
 
-    // 1. 调用存储过程创建 Header
-    // 注意：PDO 调用带 OUT 参数的存储过程比较复杂，这里用 Session 变量法
-    $stmt = $db->prepare("CALL sp_staff_create_purchase_header(?, ?, ?, @new_id)");
-    $stmt->execute([$store_id, $supplier_id, $note]);
-    
-    // 获取刚才生成的 ID
-    $stmt = $db->query("SELECT @new_id")->fetch(PDO::FETCH_ASSOC);
-    $purchase_id = $stmt['@new_id'];
+    // 获取员工详情
+    $stmt = $pdo->prepare("SELECT employee_id, store_id FROM vw_staff_details WHERE user_id = ? LIMIT 1");
+    $stmt->execute([$user_id]);
+    $staff = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // 2. 循环插入 Items
-    $stmtItem = $db->prepare("CALL sp_staff_add_purchase_item(?, ?, ?)");
+    if (!$staff) {
+        echo json_encode(['success' => false, 'message' => 'Staff not found']);
+        exit;
+    }
+
+    $employee_id = $staff['employee_id'];
+    $store_id = $staff['store_id'];
+    $note = $data['note'] ?? '';
+    $reason = $data['reason'] ?? 'Regular replenishment';
+
+    // === 开启事务 ===
+    $pdo->beginTransaction();
+
+    $stmt = $pdo->prepare("CALL sp_staff_create_replenishment_request(?, ?, ?, ?, ?, ?)");
     
     foreach ($data['items'] as $item) {
-        // 前端传来的 item 包含 sku_id 和 qty
-        $stmtItem->execute([$purchase_id, $item['sku_id'], $item['quantity']]);
-        $stmtItem->closeCursor(); // 必须关闭游标才能再次执行
+        $sku_id = (isset($item['sku_id']) && is_numeric($item['sku_id'])) ? intval($item['sku_id']) : null;
+        
+        if (!$sku_id && !empty($item['isbn'])) {
+            // 根据 ISBN 查找 SKU ID
+            $stmtSku = $pdo->prepare("SELECT sku_id FROM skus WHERE ISBN = ? LIMIT 1");
+            $stmtSku->execute([$item['isbn']]);
+            $sku = $stmtSku->fetch(PDO::FETCH_ASSOC);
+            if ($sku) {
+                $sku_id = $sku['sku_id'];
+            }
+        }
+
+        if (!$sku_id) {
+            throw new Exception("Could not find a valid SKU for ISBN: " . ($item['isbn'] ?? 'N/A'));
+        }
+
+        $stmt->execute([
+            $store_id,
+            $sku_id,
+            $item['quantity'],
+            $employee_id,
+            $reason,
+            $note
+        ]);
+        $stmt->closeCursor();
     }
 
-    // === 提交事务 (Commit) ===
-    $db->commit();
+    $pdo->commit();
 
-    echo json_encode(['success' => true, 'message' => 'Request created', 'id' => $purchase_id]);
+    echo json_encode(['success' => true, 'message' => 'Stock requests created successfully']);
 
 } catch (Exception $e) {
-    // === 发生错误，回滚 (Rollback) ===
-    if ($db->inTransaction()) {
-        $db->rollBack();
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
     }
-    echo json_encode(['success' => false, 'message' => 'Transaction failed: ' . $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
 }
 ?>

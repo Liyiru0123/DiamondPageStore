@@ -66,7 +66,7 @@ const MENU_CONFIG = {
     staff: [
         { id: 'dashboard', icon: 'fa-home', text: 'Dashboard', type: 'admin' },
         { id: 'inventory', icon: 'fa-book', text: 'Inventory Management', type: 'admin' },
-        { id: 'orders', icon: 'fa-shopping-cart', text: 'Order Processing', type: 'admin' },
+        { id: 'orders', icon: 'fa-shopping-cart', text: 'Order Management', type: 'admin' },
         { id: 'stock-request', icon: 'fa-truck', text: 'Stock Requests', type: 'admin' }
     ],
 
@@ -350,13 +350,12 @@ function renderAdminHeader(role) {
     const container = document.getElementById('layout-header');
     if (!container) return;
 
-    // 移除 roleTitles 定义，因为我们不再显示职位
-    // const roleTitles = {
-    //     finance: 'Finance Staff',
-    //     manager: 'Stores Manager',
-    //     staff: 'Sales Staff'
-    // };
-    // const displayRole = roleTitles[role] || 'Staff';
+    const roleTitles = {
+        finance: 'Finance Staff',
+        manager: 'Stores Manager',
+        staff: 'Sales Staff'
+    };
+    const displayRole = roleTitles[role] || 'Staff';
 
     // 生成头像名称 - 使用角色名或默认
     const avatarName = role.charAt(0).toUpperCase() + role.slice(1);
@@ -373,6 +372,7 @@ function renderAdminHeader(role) {
                         <img src="../assets/images/logo.png" alt="Bookstore Logo" class="w-10 h-10 object-contain">
                         <h1 class="text-xl font-serif font-bold text-primary flex items-center">
                             Diamond Page Store
+                            <span id="header-store-name" class="ml-2 text-sm font-normal text-gray-400 border-l border-gray-300 pl-2"></span>
                         </h1>
                     </div>
                 </div>
@@ -384,26 +384,25 @@ function renderAdminHeader(role) {
                         <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full">2</span>
                     </button>
                     <div class="relative">
-                        <div class="flex items-center gap-2 cursor-pointer group" id="user-menu-trigger" onclick="toggleUserMenu()">
+                        <div class="flex items-center gap-2 cursor-pointer group" id="user-menu-btn">
                             <!-- 头像 (使用 Picsum 随机图或你的 assets) -->
                             <img src="https://ui-avatars.com/api/?name=User&background=random" alt="Avatar" class="w-8 h-8 rounded-full object-cover border-2 border-transparent group-hover:border-primary transition-all">
                             <div class="hidden md:block text-left">
-                                <!-- 这里也可以给个ID，方便后续JS替换成真实人名 -->
-                                <p class="text-sm font-medium" id="header-user-name">CurrentUser</p>
-                                <p class="text-xs text-gray-500">${displayRole}</p>
+                                <p class="text-sm font-medium" id="header-user-name">Loading...</p>
+                                <p class="text-xs text-gray-500" id="header-user-role">${displayRole}</p>
                             </div>
                             <i class="fa fa-chevron-down text-xs text-gray-500 group-hover:text-primary transition-colors"></i>
                         </div>
                         <!-- 用户下拉菜单 -->
                         <div id="user-menu-dropdown" class="hidden absolute right-0 top-12 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-48">
-                            <a href="#" onclick="event.preventDefault(); openEditProfileModal();" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                            <a href="#" id="edit-profile-btn" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                                 <i class="fa fa-user mr-2 text-primary"></i> Edit Profile
                             </a>
-                            <a href="#" onclick="event.preventDefault(); openChangePasswordModal();" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                            <a href="#" id="change-password-btn" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                                 <i class="fa fa-key mr-2 text-primary"></i> Change Password
                             </a>
                             <hr class="my-1 border-gray-200">
-                            <a href="#" onclick="event.preventDefault(); logout();" class="block px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                            <a href="#" id="logout-btn" class="block px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors">
                                 <i class="fa fa-sign-out mr-2"></i> Logout
                             </a>
                         </div>
@@ -445,6 +444,16 @@ async function loadCurrentUserInfo(role) {
             userData = result.data;
             // 更新头像
             updateUserAvatar(userData, role);
+            
+            // 动态更新姓名和职位 (从数据库 View 获取，避免前端硬编码)
+            const nameEl = document.getElementById('header-user-name');
+            if (nameEl) nameEl.textContent = userData.full_name || userData.username;
+            
+            const roleEl = document.getElementById('header-user-role');
+            if (roleEl) roleEl.textContent = userData.job_title || role;
+            
+            const storeEl = document.getElementById('header-store-name');
+            if (storeEl && userData.store_name) storeEl.textContent = userData.store_name;
         } else {
             console.warn('Failed to load user info:', result.message);
             // 使用默认角色头像

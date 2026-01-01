@@ -21,7 +21,7 @@ let globalOrderStatuses = []; // 存储订单状态列表
 
 /**
  * ------------------------------------------------------------------
- * 1. 初始化逻辑 (入口)
+ * 3. 页面初始化 (DOM Ready)
  * ------------------------------------------------------------------
  */
 document.addEventListener('DOMContentLoaded', () => {
@@ -318,6 +318,8 @@ async function fetchOrders(storeId, filters = {}) {
     }
 }
 
+let globalStockRequests = []; // 存储补货请求数据
+
 // E. 获取进货申请的函数
 async function fetchStockRequests(storeId) {
     if (!storeId) return;
@@ -326,37 +328,13 @@ async function fetchStockRequests(storeId) {
         const result = await response.json();
 
         if (result.success) {
-            renderStockRequests(result.data);
+            globalStockRequests = result.data;
+            renderStockRequests(globalStockRequests);
         }
     } catch (error) {
         console.error('Requests Error:', error);
     }
 }
-
-/**
- * ------------------------------------------------------------------
- * 3. 页面初始化 (DOM Ready)
- * ------------------------------------------------------------------
- */
-document.addEventListener('DOMContentLoaded', () => {
-    // 设置当前日期
-    const currentDateElement = document.getElementById('current-date');
-    if (currentDateElement) {
-        const now = new Date();
-        currentDateElement.textContent = now.toLocaleDateString('en-US', {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-        });
-    }
-
-    // 渲染所有数据表格
-    // 替换原来的 render 调用，改为 fetch
-    fetchInventory();
-    fetchOrders();
-    renderStockRequests();
-
-    // 绑定页面内部的事件 (Modal, Filters 等)
-    setupInternalEventListeners();
-});
 
 /**
  * ------------------------------------------------------------------
@@ -418,6 +396,14 @@ function setupInternalEventListeners() {
             const modal = document.getElementById('stock-request-modal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+
+            // 绑定初始行的事件
+            const initialTitleInput = document.querySelector('#request-items-body .item-title');
+            if (initialTitleInput && !initialTitleInput._bound) {
+                initialTitleInput.addEventListener('input', () => searchBooksForRequest(initialTitleInput));
+                initialTitleInput.addEventListener('change', () => handleBookSelection(initialTitleInput));
+                initialTitleInput._bound = true;
+            }
         });
     }
 
@@ -428,16 +414,28 @@ function setupInternalEventListeners() {
 
     // 订单筛选按钮
     const applyOrderFiltersBtn = document.getElementById('apply-order-filters');
+    const orderSearchInput = document.getElementById('order-search');
+
+    const performOrderSearch = () => {
+        staffPageState.orders = 1;
+        const filters = {
+            search: orderSearchInput.value.trim(),
+            status: document.getElementById('order-status-filter').value,
+            date_from: document.getElementById('order-date-from').value,
+            date_to: document.getElementById('order-date-to').value
+        };
+        fetchOrders(currentStaff.store_id, filters);
+    };
+
     if (applyOrderFiltersBtn) {
-        applyOrderFiltersBtn.addEventListener('click', () => {
-            staffPageState.orders = 1;
-            const filters = {
-                search: document.getElementById('order-search').value.trim(),
-                status: document.getElementById('order-status-filter').value,
-                date_from: document.getElementById('order-date-from').value,
-                date_to: document.getElementById('order-date-to').value
-            };
-            fetchOrders(currentStaff.store_id, filters);
+        applyOrderFiltersBtn.addEventListener('click', performOrderSearch);
+    }
+
+    if (orderSearchInput) {
+        orderSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performOrderSearch();
+            }
         });
     }
 
@@ -449,13 +447,6 @@ function setupInternalEventListeners() {
             document.getElementById('order-date-to').value = '';
             document.getElementById('order-status-filter').value = '';
             staffPageState.orders = 1;
-            fetchOrders(currentStaff.store_id);
-        });
-    }
-
-    const refreshOrdersBtn = document.getElementById('refresh-orders');
-    if (refreshOrdersBtn) {
-        refreshOrdersBtn.addEventListener('click', () => {
             fetchOrders(currentStaff.store_id);
         });
     }
@@ -783,47 +774,50 @@ function renderStockRequests(data) {
     pendingList.innerHTML = '';
     prevList.innerHTML = '';
 
-    // 数据源：如果是从 API 获取的 data 则使用，否则暂时为空 (不再使用 stockRequests mock 数据)
-    const sourceData = data || [];
+    // 数据源
+    const sourceData = data || globalStockRequests || [];
 
     sourceData.forEach(request => {
         const row = document.createElement('tr');
 
-        // 数据库状态: pending, approved, rejected, completed
-        const isPending = request.status === 'pending';
+        // 兼容大小写字段名
+        const requestId = request.request_id || request.REQUEST_ID;
+        const requestDate = request.request_date || request.REQUEST_DATE;
+        const bookName = request.book_name || request.BOOK_NAME || 'Unknown';
+        const requestedQuantity = request.requested_quantity || request.REQUESTED_QUANTITY || 0;
+        const status = (request.status || request.STATUS || 'pending').toLowerCase();
+        const completedDate = request.completed_date || request.COMPLETED_DATE;
 
-        // 数据库里没有 delivery_date，如果是 completed 我们可以用 update_date (如果有的话)，否则暂无
-        // 这里暂时统一显示 purchase_date
-        const displayDate = formatDate(request.purchase_date);
+        const isPending = status === 'pending';
+        const displayDate = formatDate(requestDate);
 
         row.innerHTML = `
             <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                #${request.purchase_id}
+                #${requestId}
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm">
+                <button class="text-primary hover:text-primary/80" onclick="viewRequestDetails(${requestId})">
+                    <i class="fa fa-eye"></i> View
+                </button>
+                ${status === 'approved' ? `
+                    <button class="text-green-600 hover:text-green-700 ml-2" onclick="completeRequest(${requestId})">
+                        <i class="fa fa-check"></i> Receive
+                    </button>
+                ` : ''}
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                 ${displayDate}
             </td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                <!-- 这里假设后端SQL使用了 COUNT(*) as total_items -->
-                ${request.total_items || request.items || 0} 
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 max-w-[200px] truncate" title="${bookName}">
+                ${requestedQuantity}*${bookName}
             </td>
             <td class="px-4 py-3 whitespace-nowrap">
-                <span class="status-${(request.status || 'pending').toLowerCase()}">
-                    ${capitalize(request.status)}
+                <span class="status-${status}">
+                    ${capitalize(status)}
                 </span>
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                ${isPending ? 'Pending Approval' : displayDate}
-            </td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm">
-                <button class="text-primary hover:text-primary/80">
-                    <i class="fa fa-eye"></i> View
-                </button>
-                ${request.status === 'approved' ? `
-                    <button class="text-green-600 hover:text-green-700 ml-2" onclick="completePurchase(${request.purchase_id})">
-                        <i class="fa fa-check"></i> Receive
-                    </button>
-                ` : ''}
+                ${isPending ? 'Pending Approval' : (completedDate ? formatDate(completedDate) : 'In Progress')}
             </td>
         `;
 
@@ -840,6 +834,23 @@ function renderStockRequests(data) {
         pendingList.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">No pending requests</td></tr>';
     }
 }
+
+/**
+ * 查看请求详情
+ */
+window.viewRequestDetails = function(id) {
+    const request = globalStockRequests.find(r => (r.request_id || r.REQUEST_ID) == id);
+    if (request) {
+        const requestId = request.request_id || request.REQUEST_ID;
+        const bookName = request.book_name || request.BOOK_NAME || 'Unknown';
+        const qty = request.requested_quantity || request.REQUESTED_QUANTITY || 0;
+        const status = request.status || request.STATUS || 'pending';
+        const date = request.request_date || request.REQUEST_DATE;
+        const note = request.note || request.NOTE || '-';
+        
+        alert(`Request Details:\n------------------\nID: #${requestId}\nBook: ${bookName}\nQuantity: ${qty}\nStatus: ${status.toUpperCase()}\nDate: ${date}\nNote: ${note}`);
+    }
+};
 
 
 // 绑定动态生成的按钮事件 (Edit/Delete)
@@ -1146,10 +1157,23 @@ window.closeRequestModal = function () {
     document.getElementById('stock-request-form').reset();
     document.getElementById('request-items-body').innerHTML = `
         <tr>
-            <td class="p-2"><input type="text" class="form-input text-sm item-title" placeholder="Enter book title or ISBN" required></td>
-            <td class="p-2"><input type="number" class="form-input text-sm text-center item-qty" min="1" value="10" required></td>
-            <td class="p-2 text-center"><button type="button" class="text-red-500 hover:text-red-700" onclick="this.closest('tr').remove()"><i class="fa fa-trash"></i></button></td>
+            <td class="p-1">
+                <input type="text" class="form-input text-xs item-title" placeholder="Search book..." list="book-suggestions" required>
+            </td>
+            <td class="p-1"><input type="text" class="form-input text-xs item-isbn" placeholder="ISBN" readonly></td>
+            <td class="p-1"><input type="text" class="form-input text-xs item-sku" placeholder="SKU" readonly></td>
+            <td class="p-1"><input type="number" class="form-input text-xs text-center item-qty" min="1" value="10" required></td>
+            <td class="p-1 text-center">
+                <button type="button" class="text-red-500 hover:text-red-700" onclick="this.closest('tr').remove()"><i class="fa fa-trash"></i></button>
+            </td>
         </tr>`;
+    
+    // 重新绑定初始行的事件
+    const initialTitleInput = document.querySelector('#request-items-body .item-title');
+    if (initialTitleInput) {
+        initialTitleInput.addEventListener('input', () => searchBooksForRequest(initialTitleInput));
+        initialTitleInput.addEventListener('change', () => handleBookSelection(initialTitleInput));
+    }
 };
 
 // 动态添加一行请求项
@@ -1157,16 +1181,60 @@ window.addRequestRow = function () {
     const tbody = document.getElementById('request-items-body');
     const tr = document.createElement('tr');
     tr.innerHTML = `
-        <td class="p-1"><input type="text" class="form-input text-xs item-title" placeholder="Title" required></td>
-        <td class="p-1"><input type="text" class="form-input text-xs item-isbn" placeholder="ISBN"></td>
-        <td class="p-1"><input type="text" class="form-input text-xs item-sku" placeholder="SKU"></td>
+        <td class="p-1">
+            <input type="text" class="form-input text-xs item-title" placeholder="Search book..." list="book-suggestions" required>
+        </td>
+        <td class="p-1"><input type="text" class="form-input text-xs item-isbn" placeholder="ISBN" readonly></td>
+        <td class="p-1"><input type="text" class="form-input text-xs item-sku" placeholder="SKU" readonly></td>
         <td class="p-1"><input type="number" class="form-input text-xs text-center item-qty" min="1" value="10" required></td>
         <td class="p-1 text-center">
             <button type="button" class="text-red-500 hover:text-red-700" onclick="this.closest('tr').remove()"><i class="fa fa-trash"></i></button>
         </td>
     `;
     tbody.appendChild(tr);
+
+    // 绑定搜索建议事件
+    const titleInput = tr.querySelector('.item-title');
+    titleInput.addEventListener('input', () => searchBooksForRequest(titleInput));
+    titleInput.addEventListener('change', () => handleBookSelection(titleInput));
 };
+
+// 搜索书籍并填充建议列表
+async function searchBooksForRequest(input) {
+    const term = input.value.trim();
+    if (term.length < 2) return;
+
+    try {
+        const response = await fetch(`../api/staff/get_inventory.php?search=${encodeURIComponent(term)}&store_id=${currentStaff.store_id}`);
+        const result = await response.json();
+
+        if (result.success) {
+            const datalist = document.getElementById('book-suggestions');
+            const suggestions = result.data.slice(0, 10);
+            datalist.innerHTML = suggestions.map(book => 
+                `<option value="${book.book_name}">`
+            ).join('');
+            
+            // 存储这些数据以便后续填充
+            input._suggestions = suggestions;
+        }
+    } catch (error) {
+        console.error('Search Error:', error);
+    }
+}
+
+// 当用户选择建议时填充字段
+function handleBookSelection(input) {
+    const val = input.value;
+    const suggestions = input._suggestions || [];
+    const book = suggestions.find(b => b.book_name === val);
+    
+    if (book) {
+        const row = input.closest('tr');
+        row.querySelector('.item-isbn').value = book.ISBN || '';
+        row.querySelector('.item-sku').value = book.sku_id || '';
+    }
+}
 
 // 提交库存请求
 async function submitStockRequest() {
@@ -1174,17 +1242,18 @@ async function submitStockRequest() {
     const items = [];
 
     rows.forEach(row => {
-        // 假设我们在输入框加了 data-sku-id 属性，或者用户直接输入了 SKU ID
-        // 为了简化，这里假设输入框 class="item-sku" 填的就是 SKU ID (数字)
         const skuInput = row.querySelector('.item-sku');
+        const isbnInput = row.querySelector('.item-isbn');
         const qtyInput = row.querySelector('.item-qty');
 
-        const skuId = skuInput.value;
-        const qty = qtyInput.value;
+        const skuId = skuInput ? skuInput.value.trim() : '';
+        const isbn = isbnInput ? isbnInput.value.trim() : '';
+        const qty = qtyInput ? qtyInput.value.trim() : '';
 
-        if (skuId && qty) {
+        if ((skuId || isbn) && qty) {
             items.push({
-                sku_id: parseInt(skuId),
+                sku_id: skuId ? parseInt(skuId) : null,
+                isbn: isbn,
                 quantity: parseInt(qty)
             });
         }
@@ -1207,9 +1276,9 @@ async function submitStockRequest() {
         const result = await response.json();
 
         if (result.success) {
-            alert("Stock Request Submitted! ID: " + result.id);
+            alert("Stock Request Submitted Successfully!");
             closeRequestModal();
-            // 可以在这里刷新一下申请列表 fetchStockRequests()
+            fetchStockRequests(currentStaff.store_id);
         } else {
             alert("Error: " + result.message);
         }
@@ -1217,6 +1286,35 @@ async function submitStockRequest() {
         console.error(e);
     }
 }
+
+/**
+ * 完成补货请求 (收货)
+ */
+window.completeRequest = async function (requestId) {
+    if (!confirm(`Are you sure you have received the items for request #${requestId}?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('../api/staff/complete_stock_request.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ request_id: requestId })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification(`Request #${requestId} marked as completed`);
+            fetchStockRequests(currentStaff.store_id); // 刷新列表
+        } else {
+            alert("Error: " + result.message);
+        }
+    } catch (error) {
+        console.error('Complete Request Error:', error);
+        alert("Failed to complete request");
+    }
+};
 
 function capitalize(str) {
     if (!str) return '';
