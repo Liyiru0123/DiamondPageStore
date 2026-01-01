@@ -103,9 +103,10 @@ function logout() {
 }
 
 /**
- * 核心逻辑：数据切片工具
+ * 此处的 getPaginatedData 已废弃，请改用后端 API 的 LIMIT/OFFSET 分页。
  */
 function getPaginatedData(data, currentPage, pageSize = 10) {
+    console.warn("[Deprecation] getPaginatedData is deprecated. Use backend pagination instead.");
     const startIndex = (currentPage - 1) * pageSize;
     return data.slice(startIndex, startIndex + pageSize);
 }
