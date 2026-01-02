@@ -25,8 +25,39 @@ try {
     switch ($action) {
         case 'list':
             //获取当前登录用户的分店 ID
-            session_start();
-            $current_store_id = isset($_SESSION['store_id']) ? $_SESSION['store_id'] : 0;
+            // session_start();
+            // $current_store_id = isset($_SESSION['store_id']) ? $_SESSION['store_id'] : 0;
+            // $current_store_id = 1;
+
+            //获取当前登录用户的分店 ID
+            // 修改策略：优先接收前端传来的 store_id (因为 finance.js 已经传了)
+            // 如果前端没传，再尝试用 Session，最后兜底为 0
+            //$storeIdParam = isset($_GET['store_id']) ? (int)$_GET['store_id'] : 0;
+            //$sessionStoreId = isset($_SESSION['store_id']) ? (int)$_SESSION['store_id'] : 0;
+            
+            // 最终使用的 store_id
+            //$current_store_id = ($storeIdParam > 0) ? $storeIdParam : $sessionStoreId;
+
+            // 1. 第一来源：URL 参数 (对应 JS 发送的 params.append('store_id', ...))
+            // 这是最直接的方式，也是你在 Network 里能看到的
+            $reqStoreId = isset($_GET['store_id']) ? (int)$_GET['store_id'] : 0;
+            
+            // 2. 第二来源：Session (登录时的缓存)
+            // 如果前端忘传了，PHP 尝试自己去 Session 里找
+            if (session_status() == PHP_SESSION_NONE) {
+                session_start();
+            }
+            $sessStoreId = isset($_SESSION['store_id']) ? (int)$_SESSION['store_id'] : 0;
+
+            // 3. 最终决定用哪个 ID
+            if ($reqStoreId > 0) {
+                $current_store_id = $reqStoreId; // 优先用前端传的
+            } elseif ($sessStoreId > 0) {
+                $current_store_id = $sessStoreId; // 备选 Session
+            } else {
+                $current_store_id = 0; // 实在没有，那就是 0 (查不到数据)
+            }
+
             // 1. 接收基础参数
             $search = isset($_GET['search']) ? $_GET['search'] : null;
             $status = isset($_GET['status']) ? $_GET['status'] : null;

@@ -22,6 +22,9 @@ async function initFinanceSession() {
         if (result.success) {
             // 成功后存储到全局变量
             currentFinanceUser = result.data;
+
+            // 把用户信息挂载到 window 上，让 finance-api.js 能看见它！
+            window.currentFinanceUser = result.data;
             
             // 更新 Header 中的分店名和用户名
             const headerStoreEl = document.getElementById('header-store-name');
@@ -1404,6 +1407,11 @@ async function resetInvoiceFilters() {
 async function loadInvoiceList(filters = {}) {
     const container = document.getElementById('invoice-table-body');
     if (!container) return;
+
+    // 既然全局变量 currentFinanceUser 在 finance.js 里是有的，那就直接传过去，别让 API 层去猜
+    if (currentFinanceUser && currentFinanceUser.store_id) {
+        filters.store_id = currentFinanceUser.store_id; 
+    }
     
     try {
         // 显示加载状态
@@ -1813,6 +1821,9 @@ function syncStoreAndUserInfo() {
         }
 
         const user = JSON.parse(userJson);
+        // 这样即使 API 还没返回，程序也能先用本地缓存的 store_id
+        currentFinanceUser = user;
+        window.currentFinanceUser = user;
         
         // 2. 替换分店名称 (对应 layout.js 第 513 行预留的 ID)
         const storeNameEl = document.getElementById('header-store-name');
@@ -1830,8 +1841,9 @@ function syncStoreAndUserInfo() {
     }
 }
 
-function initFinancePage() {
-    syncStoreAndUserInfo();
+async function initFinancePage() {
+    //syncStoreAndUserInfo();
+    await initFinanceSession();
     addStatusStyles();
 
     document.querySelectorAll('.sidebar-link[data-page]').forEach(link => {

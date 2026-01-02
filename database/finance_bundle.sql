@@ -529,3 +529,124 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+
+
+
+
+-- 补丁0103
+-- 1. 先删除旧的
+
+DROP PROCEDURE IF EXISTS sp_finance_invoice_list;
+
+
+
+-- 2. 重建 (注意：参数强制指定为 unicode_ci 以匹配视图)
+
+DELIMITER ;;
+
+CREATE PROCEDURE sp_finance_invoice_list(
+
+    IN p_search VARCHAR(255) COLLATE utf8mb4_unicode_ci, -- 👈 关键修改：匹配视图的 Unicode 规则
+
+    IN p_status VARCHAR(50) COLLATE utf8mb4_unicode_ci,  -- 👈 关键修改
+
+    IN p_order_id INT,
+
+    IN p_start_date DATETIME,
+
+    IN p_end_date DATETIME,
+
+    IN p_min_amount DECIMAL(10,2),
+
+    IN p_max_amount DECIMAL(10,2),
+
+    IN p_store_id INT
+
+)
+
+BEGIN
+
+    SELECT 
+
+        invoice_id,
+
+        invoice_number,
+
+        order_id,
+
+        store_id,
+
+        store_name,
+
+        member_id,
+
+        member_name,
+
+        display_status,
+
+        invoice_status,
+
+        issue_date,
+
+        due_date,
+
+        invoice_amount,
+
+        paid_amount,
+
+        outstanding_amount,
+
+        last_paid_at,
+
+        is_settled
+
+    FROM vw_finance_invoice_list
+
+    WHERE 
+
+        (p_store_id IS NULL OR store_id = p_store_id)
+
+        
+
+        -- 搜索部分
+
+        -- 现在两边都是 unicode_ci，不会再打架了
+
+        AND (p_search IS NULL OR p_search = '' 
+
+             OR member_name LIKE CONCAT('%', p_search, '%')
+
+             OR invoice_number LIKE CONCAT('%', p_search, '%')
+
+             OR CAST(order_id AS CHAR) LIKE CONCAT('%', p_search, '%')
+
+        )
+
+        
+
+        -- 状态部分
+
+        AND (p_status IS NULL OR p_status = '' OR p_status = 'All Statuses' OR invoice_status = p_status)
+
+        
+
+        -- 其他筛选保持不变
+
+        AND (p_order_id IS NULL OR p_order_id = 0 OR order_id = p_order_id)
+
+        AND (p_start_date IS NULL OR issue_date >= p_start_date)
+
+        AND (p_end_date IS NULL OR issue_date < DATE_ADD(p_end_date, INTERVAL 1 DAY))
+
+        AND (p_min_amount IS NULL OR invoice_amount >= p_min_amount)
+
+        AND (p_max_amount IS NULL OR invoice_amount <= p_max_amount)
+
+        
+
+    ORDER BY issue_date DESC;
+
+END;;
+
+DELIMITER ;

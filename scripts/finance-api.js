@@ -111,12 +111,51 @@ async function createInvoiceForOrder(orderId) {
     });
 }
 
+
+// 文件：scripts/finance-api.js
+
 async function fetchInvoiceList(filters = {}) {
     const params = new URLSearchParams();
 
+    
+    // 逻辑：优先用 filters 传进来的 ID，如果没有，再去找全局变量兜底
+    const storeId = filters.store_id || (window.currentFinanceUser ? window.currentFinanceUser.store_id : null);
+
+    //const storeId = 1;
+
+    // 只要拿到了 ID，就拼接到 URL 里
+    if (storeId) {
+        params.append('store_id', storeId);
+        // console.log("[API] 发送 Invoice 请求，store_id:", storeId); // 调试用
+    }
+
+    // 拼接其他参数 (保持不变)
+    if (filters.search) params.append('search', filters.search);
+    if (filters.status) params.append('status', filters.status);
+    if (filters.orderId) params.append('order_id', filters.orderId);
+    if (filters.startDate) params.append('start_date', filters.startDate);
+    if (filters.endDate) params.append('end_date', filters.endDate);
+    if (filters.minAmount) params.append('min_amount', filters.minAmount);
+    if (filters.maxAmount) params.append('max_amount', filters.maxAmount);
+
+    const url = FINANCE_API_CONFIG.endpoints.invoices.list + (params.toString() ? '&' + params.toString() : '');
+    const res = await financeApiRequest(url);
+    return res.data;
+}
+/*async function fetchInvoiceList(filters = {}) {
+    const params = new URLSearchParams();
+
     // 自动注入当前登录用户的 store_id
-    if (window.currentFinanceUser && window.currentFinanceUser.store_id) {
-        params.append('store_id', window.currentFinanceUser.store_id);
+    //if (window.currentFinanceUser && window.currentFinanceUser.store_id) {
+    //    params.append('store_id', window.currentFinanceUser.store_id);
+    //}
+    const storeId = filters.store_id || (window.currentFinanceUser ? window.currentFinanceUser.store_id : null);
+    
+    if (storeId) {
+        params.append('store_id', storeId);
+        console.log("[API] fetchInvoiceList with store_id:", storeId); // 方便调试
+    } else {
+        console.warn("[API] Warning: No store_id provided for invoice list!");
     }
 
     if (filters.search) params.append('search', filters.search);
@@ -129,7 +168,8 @@ async function fetchInvoiceList(filters = {}) {
     const url = FINANCE_API_CONFIG.endpoints.invoices.list + (params.toString() ? '&' + params.toString() : '');
     const res = await financeApiRequest(url);
     return res.data;
-}
+}*/
+
 
 async function fetchInvoiceDetail(invoiceId) {
     const url = `${FINANCE_API_CONFIG.endpoints.invoices.detail}&invoice_id=${invoiceId}`;
