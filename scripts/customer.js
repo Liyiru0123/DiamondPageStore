@@ -200,7 +200,7 @@ async function searchBooks(keyword = "", page = 1) {
     // 渲染分页按钮
     renderPaginationControls(
       'search-pagination-controls',
-      searchAllBooks.length,
+      allBooks.length,
       currentSearchPage,
       (newPage) => {
         searchBooks(keyword, newPage);
@@ -883,7 +883,6 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// 新增处理个人信息函数
 async function handleProfileUpdate(e) {
   e.preventDefault();
 
@@ -899,7 +898,6 @@ async function handleProfileUpdate(e) {
   try {
     await updateProfileAPI({ username, contact, password });
 
-    // 更新成功后：
     // 1. 更新本地存储的用户名
     const currentUser = JSON.parse(localStorage.getItem('current_user') || '{}');
     currentUser.username = username;
@@ -929,12 +927,10 @@ async function openAnnouncements() {
   const modal = document.getElementById('announcement-modal');
   if (!container || !modal) return;
 
-  // 1. 先显示弹窗并展示加载状态
   modal.classList.remove('hidden');
   container.innerHTML = `<div class="text-center py-10"><i class="fa fa-spinner fa-spin text-2xl text-brown"></i></div>`;
 
   try {
-    // 2. 从 API 获取真实数据
     const data = await fetchAnnouncements();
     const list = Array.isArray(data) ? data : [];
 
@@ -943,14 +939,18 @@ async function openAnnouncements() {
       return;
     }
 
-    // 3. 渲染数据（保持你原有的样式完全不动）
     container.innerHTML = list.map(ann => `
-      <div class="p-4 bg-brown-cream/30 border-l-4 border-brown rounded-r-lg mb-3">
-        <div class="flex justify-between items-center mb-1">
-          <h4 class="font-bold text-brown-dark">${ann.title}</h4>
-          <span class="text-xs text-gray-500">${new Date(ann.date || ann.created_at).toLocaleDateString()}</span>
-        </div>
-        <p class="text-sm text-gray-700">${ann.content}</p>
+      <div class= "p-4 bg-brown-cream/30 border-l-4 border-brown rounded-r-lg mb-3">
+        <div class="flex flex-col items-start mb-3"> 
+          <h4 class="font-bold text-brown-dark text-lg mb-1">${ann.title}</h4>
+          <div class="flex items-center text-gray-500 text-xs tracking-wide">
+            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>${formatTimeRange(ann.publishAt, ann.expireAt)}</span>
+          </div>
+        </div> 
+        <p class="text-sm text-gray-700 leading-relaxed">${ann.content}</p>
       </div>
     `).join('');
   } catch (e) {
@@ -959,13 +959,11 @@ async function openAnnouncements() {
 }
 
 function startCountdownLogic() {
-  // 如果已经有计时器在跑，先关掉，防止叠加
   if (globalTimer) clearInterval(globalTimer);
 
   globalTimer = setInterval(() => {
     const timerElements = document.querySelectorAll('.countdown-timer');
 
-    // 如果页面上没有倒计时元素了，就停止计时器
     if (timerElements.length === 0) {
       clearInterval(globalTimer);
       return;
@@ -983,10 +981,20 @@ function startCountdownLogic() {
       remain--;
       el.dataset.seconds = remain;
 
-      // 格式化为 MM:SS
       const m = Math.floor(remain / 60);
       const s = remain % 60;
       el.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
     });
   }, 1000);
 }
+
+const formatTimeRange = (startStr, endStr) => {
+  if (!startStr || !endStr) return "No date available";
+  const clean = (str) => {
+    return str
+      .replace(/-/g, '/')
+      .replace('T', ' ')
+      .substring(0, 16);
+  };
+  return `${clean(startStr)} to ${clean(endStr)}`;
+};
