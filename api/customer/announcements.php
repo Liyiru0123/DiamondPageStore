@@ -44,8 +44,8 @@ function getAnnouncements($conn) {
             'id' => $row['announcement_id'],
             'title' => $row['title'],
             'content' => $row['content'],
-            'publishAt' => $row['publish_at'],
-            'expireAt' => $row['expire_at']
+            'publishAt' => $row['publish_at'] ? str_replace(' ', 'T', $row['publish_at']) : null,
+            'expireAt' => $row['expire_at'] ? str_replace(' ', 'T', $row['expire_at']) : null
         ];
     }
 
