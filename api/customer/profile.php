@@ -50,21 +50,34 @@ try {
  * 获取用户资料
  */
 function getProfile($conn) {
+    $userId = isset($_GET['user_id']) ? intval($_GET['user_id']) : 0;
     $memberId = isset($_GET['member_id']) ? intval($_GET['member_id']) : 0;
 
-    if ($memberId === 0) {
+    if ($userId === 0 && $memberId === 0) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Member ID is required']);
+        echo json_encode(['success' => false, 'message' => 'User ID or Member ID is required']);
         return;
     }
 
-    $stmt = $conn->prepare("
-        SELECT m.*, u.username
-        FROM members m
-        JOIN users u ON m.user_id = u.user_id
-        WHERE m.member_id = :member_id
-    ");
-    $stmt->execute([':member_id' => $memberId]);
+    if ($userId !== 0) {
+        $stmt = $conn->prepare("
+            SELECT m.member_id, m.user_id, m.first_name, m.last_name, m.email, m.address, m.birthday, u.username
+            FROM members m
+            JOIN users u ON m.user_id = u.user_id
+            WHERE m.user_id = :user_id
+            LIMIT 1
+        ");
+        $stmt->execute([':user_id' => $userId]);
+    } else {
+        $stmt = $conn->prepare("
+            SELECT m.member_id, m.user_id, m.first_name, m.last_name, m.email, m.address, m.birthday, u.username
+            FROM members m
+            JOIN users u ON m.user_id = u.user_id
+            WHERE m.member_id = :member_id
+            LIMIT 1
+        ");
+        $stmt->execute([':member_id' => $memberId]);
+    }
 
     if ($row = $stmt->fetch()) {
         echo json_encode([
@@ -74,7 +87,7 @@ function getProfile($conn) {
                 'userId' => $row['user_id'],
                 'firstName' => $row['first_name'],
                 'lastName' => $row['last_name'],
-                'phone' => $row['phone'],
+                'email' => $row['email'],
                 'address' => $row['address'],
                 'birthday' => $row['birthday'],
                 'username' => $row['username']
@@ -92,41 +105,36 @@ function getProfile($conn) {
 function updateProfile($conn) {
     $data = json_decode(file_get_contents('php://input'), true);
 
-    $memberId = isset($data['member_id']) ? intval($data['member_id']) : 0;
-    $firstName = isset($data['first_name']) ? $data['first_name'] : '';
-    $lastName = isset($data['last_name']) ? $data['last_name'] : '';
-    $phone = isset($data['phone']) ? intval($data['phone']) : 0;
-    $address = isset($data['address']) ? $data['address'] : '';
-    $birthday = isset($data['birthday']) ? $data['birthday'] : null;
+    $userId = isset($data['user_id']) ? intval($data['user_id']) : 0;
+    $username = isset($data['username']) ? $data['username'] : '';
+    $password = isset($data['password']) ? $data['password'] : '';
+    $contact = isset($data['contact']) ? $data['contact'] : '';
 
-    if ($memberId === 0) {
+    if ($userId === 0 || $username === '') {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Member ID is required']);
+        echo json_encode(['success' => false, 'message' => 'User ID and username are required']);
         return;
     }
 
-    // 调用存储过程
+    // ??????
     $stmt = $conn->prepare("
-        CALL sp_customer_update_profile(:member_id, :first_name, :last_name, :phone, :address, :birthday, @result_code, @result_message)
+        CALL sp_customer_update_profile(:user_id, :username, :password, :contact, @success, @message)
     ");
     $stmt->execute([
-        ':member_id' => $memberId,
-        ':first_name' => $firstName,
-        ':last_name' => $lastName,
-        ':phone' => $phone,
-        ':address' => $address,
-        ':birthday' => $birthday
+        ':user_id' => $userId,
+        ':username' => $username,
+        ':password' => $password,
+        ':contact' => $contact
     ]);
     $stmt = null;
 
-    // 获取结果
-    $result = $conn->query("SELECT @result_code AS code, @result_message AS message");
+    // ????
+    $result = $conn->query("SELECT @success AS success, @message AS message");
     $row = $result->fetch();
 
-    if ($row['code'] == 1) {
-        echo json_encode(['success' => true, 'message' => $row['message']]);
-    } else {
-        echo json_encode(['success' => false, 'message' => $row['message']]);
-    }
+    echo json_encode([
+        'success' => (bool)$row['success'],
+        'message' => $row['message']
+    ]);
 }
 ?>
