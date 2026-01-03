@@ -347,6 +347,7 @@ CREATE OR REPLACE VIEW vw_staff_details AS
 SELECT
     u.user_id,
     u.username,
+    e.email as email,
     u.status as account_status,
     e.employee_id,
     e.first_name,

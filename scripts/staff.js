@@ -61,16 +61,30 @@ async function initStaffSession() {
                 store_id: rawData.store_id || rawData.STORE_ID,
                 store_name: rawData.store_name || rawData.STORE_NAME,
                 full_name: rawData.full_name || rawData.FULL_NAME,
-                job_title: rawData.job_title || rawData.JOB_TITLE
+                job_title: rawData.job_title || rawData. JOB_TITLE,
+                username: rawData.username || rawData.USERNAME,  // ✅ 新增
+                email: rawData. email || rawData.EMAIL            // ✅ 新增
             };
 
-            console.log("Staff Session Initialized:", currentStaff);
-
-            const headerStoreEl = document.getElementById('header-store-name');
+            // ✅ 完整更新所有 Header 元素
+            const headerStoreEl = document. getElementById('header-store-name');
             if (headerStoreEl) headerStoreEl.textContent = currentStaff.store_name;
+            
             const headerUserEl = document.getElementById('header-user-name');
             if (headerUserEl) headerUserEl.textContent = currentStaff.full_name;
-
+            
+            const headerRoleEl = document.getElementById('header-user-role');
+            if (headerRoleEl) headerRoleEl.textContent = currentStaff.job_title;
+            
+            // ✅ 【关键修复】更新右上角的员工信息 (username · ID · email)
+            const headerMetaEl = document.getElementById('header-user-meta');
+            if (headerMetaEl) {
+                const parts = [];
+                if (currentStaff.username) parts.push(currentStaff.username);
+                if (currentStaff.user_id) parts.push(`ID ${currentStaff.user_id}`);
+                if (currentStaff.email) parts.push(currentStaff.email);
+                headerMetaEl.textContent = parts.join(' · ');
+            }
             fetchCategories();  // 先加载类别
             fetchOrderStatuses(); // 加载订单状态
             fetchInventory();   // 加载库存（使用默认筛选）
