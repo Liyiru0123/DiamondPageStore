@@ -1,7 +1,7 @@
 // scripts/login.js
 
 // 状态变量，用于记录当前选择的身份
-let currentLoginMode = null; // 'staff' 或 'customer'
+let currentLoginMode = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. 绑定身份选择按钮事件
@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnUser) btnUser.addEventListener('click', () => showLoginForm('customer'));
     if (btnBack) btnBack.addEventListener('click', showIdentitySection);
     
-    // 注册/登录切换仅针对 Customer 有效，暂略，核心是登录
     if (btnSwitch) {
         btnSwitch.addEventListener('click', () => {
            alert("Registration feature is coming soon!"); 

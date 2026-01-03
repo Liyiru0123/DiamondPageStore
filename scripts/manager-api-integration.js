@@ -3,7 +3,7 @@
  * Overrides manager.js mock data functions with API calls.
  */
 
-const MANAGER_CURRENCY_LABEL = 'CNY';
+const MANAGER_CURRENCY_LABEL = '￡';
 
 // =============================================================================
 // HTML Escaping Function (XSS Protection)
@@ -179,7 +179,6 @@ async function loadStaffData() {
 }
 
 async function deleteStaff(employeeId) {
-    // 注意：确认对话框已经在 setupStaffActionListeners 中处理，这里不再重复确认
     try {
         await deleteEmployeeAPI(employeeId);
         showMessage('Employee deleted successfully', 'success');
@@ -253,7 +252,6 @@ async function loadPricingData() {
             renderPricingRows(books);
         }
 
-        // ??? originalContent?????hideLoading ????????????
         delete tableBody.dataset.originalContent;
     } catch (error) {
         console.error('Failed to load pricing data:', error);
@@ -417,7 +415,6 @@ async function loadUserManagementData() {
 
         addUserActionButtonListeners();
 
-        // 删除 originalContent，防止 hideLoading 覆盖已渲染的数据
         delete tableBody.dataset.originalContent;
     } catch (error) {
         console.error('Failed to load user management data:', error);
@@ -521,7 +518,6 @@ async function updateUser() {
     const formData = {
         user_id: userId,
         username: document.getElementById('edit-username').value.trim(),
-        // user_type 不再允许修改，不发送给后端
         full_name: document.getElementById('edit-full-name').value.trim(),
         account_status: document.getElementById('edit-account-status').value
     };
@@ -1010,13 +1006,12 @@ function showMessage(message, type = 'info') {
         info: 'bg-blue-100 text-blue-800 border border-blue-300'
     };
 
-    // 移除之前的消息提示（避免重叠）
     const existingMessages = document.querySelectorAll('.message-toast');
     existingMessages.forEach(msg => msg.remove());
 
     const messageDiv = document.createElement('div');
     messageDiv.className = `message-toast fixed top-20 right-4 px-6 py-4 rounded-lg shadow-xl ${colors[type]}`;
-    messageDiv.style.zIndex = '9999'; // 确保在最上层
+    messageDiv.style.zIndex = '9999';
     messageDiv.innerHTML = `
         <div class="flex items-center gap-2">
             <i class="fa ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
@@ -1314,8 +1309,6 @@ function renderUserManagementRows(users) {
         tableBody.appendChild(row);
     });
 
-    // 不需要在这里调用 addUserActionButtonListeners()
-    // 因为使用了事件委托，监听器只需要添加一次
 }
 
 function renderPricingRows(books) {
@@ -1448,7 +1441,6 @@ async function performStaffSearch(searchTerm) {
 
     try {
         const employees = await searchEmployeesAPI(searchTerm);
-        // 搜索结果是筛选后的数据，传递 isFiltered=true
         renderStaffTable(employees, true);
     } catch (error) {
         console.error('Failed to search staff:', error);
