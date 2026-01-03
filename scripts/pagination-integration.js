@@ -14,6 +14,17 @@ window.allDataCache = {
     stockBranch: []
 };
 
+// 存储原始完整数据的缓存（用于筛选和搜索）
+window.originalDataCache = {
+    staff: [],
+    users: [],
+    pricing: [],
+    suppliers: [],
+    notifications: [],
+    replenishment: [],
+    stockBranch: []
+};
+
 // 存储原始渲染函数
 window.originalRenderFunctions = {};
 
@@ -45,12 +56,17 @@ function wrapRenderFunctionWithPagination(functionName, managerKey, countElement
         const originalFunc = window.originalRenderFunctions[functionName];
 
         // 创建包装函数
-        window[functionName] = function(data) {
+        window[functionName] = function(data, isFiltered = false) {
             const totalCount = (data || []).length;
-            console.log(`📊 ${functionName} called with ${totalCount} items`);
+            console.log(`📊 ${functionName} called with ${totalCount} items (filtered: ${isFiltered})`);
 
             // 保存完整数据
             window.allDataCache[managerKey] = data || [];
+
+            // 如果不是筛选结果，也保存到原始数据缓存
+            if (!isFiltered) {
+                window.originalDataCache[managerKey] = data || [];
+            }
 
             // 检查分页管理器是否存在
             if (window.paginationManagers && window.paginationManagers[managerKey]) {
