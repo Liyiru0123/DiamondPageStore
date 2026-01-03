@@ -742,6 +742,11 @@ function viewRequestDetail(requestId) {
     const content = document.getElementById('request-detail-content');
     if (!modal || !content) return;
 
+    const reasonText = request.status === 'rejected'
+        ? (request.rejection_reason || 'N/A')
+        : (request.reason || 'N/A');
+    const reasonLabel = request.status === 'rejected' ? 'Rejection Reason' : 'Reason';
+
     content.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div><strong>Request ID:</strong> ${escapeHtml(request.request_id)}</div>
@@ -752,7 +757,7 @@ function viewRequestDetail(requestId) {
             <div><strong>Quantity:</strong> ${escapeHtml(request.requested_quantity)}</div>
             <div><strong>Urgency:</strong> ${escapeHtml(request.urgency_level)}</div>
             <div><strong>Date:</strong> ${escapeHtml(new Date(request.request_date).toLocaleString())}</div>
-            <div class="md:col-span-2"><strong>Reason:</strong> ${escapeHtml(request.reason || 'N/A')}</div>
+            <div class="md:col-span-2"><strong>${escapeHtml(reasonLabel)}:</strong> ${escapeHtml(reasonText)}</div>
         </div>
     `;
 

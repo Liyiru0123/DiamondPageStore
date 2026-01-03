@@ -102,20 +102,29 @@ async function viewSupplierDetailsAPI(supplierId) {
         );
         const supplier = response.data;
 
-        const lines = [
-            `Supplier ID: ${supplier.supplier_id}`,
-            `Name: ${supplier.supplier_name}`,
-            `Phone: ${supplier.phone || 'N/A'}`,
-            `Email: ${supplier.email || 'N/A'}`,
-            `Address: ${supplier.address || 'N/A'}`,
-            `Total Purchases: ${supplier.total_purchases ?? 0}`,
-            `Stores Served: ${supplier.stores_served ?? 0}`,
-            `Last Purchase: ${supplier.last_purchase_date ? new Date(supplier.last_purchase_date).toLocaleDateString() : 'N/A'}`,
-            `Total Items Supplied: ${supplier.total_items_supplied ?? 0}`,
-            `Total Purchase Value: ${MANAGER_CURRENCY_LABEL} ${parseFloat(supplier.total_purchase_value || 0).toFixed(2)}`
-        ];
+        const modal = document.getElementById('view-supplier-modal');
+        const content = document.getElementById('view-supplier-content');
+        if (!modal || !content) return;
 
-        alert(lines.join('\n'));
+        const lastPurchase = supplier.last_purchase_date
+            ? new Date(supplier.last_purchase_date).toLocaleDateString()
+            : 'N/A';
+        const totalValue = `${MANAGER_CURRENCY_LABEL} ${parseFloat(supplier.total_purchase_value || 0).toFixed(2)}`;
+
+        content.innerHTML = `
+            <div><strong>Supplier ID:</strong> ${escapeHtml(supplier.supplier_id)}</div>
+            <div><strong>Name:</strong> ${escapeHtml(supplier.supplier_name)}</div>
+            <div><strong>Phone:</strong> ${escapeHtml(supplier.phone || 'N/A')}</div>
+            <div><strong>Email:</strong> ${escapeHtml(supplier.email || 'N/A')}</div>
+            <div class="md:col-span-2"><strong>Address:</strong> ${escapeHtml(supplier.address || 'N/A')}</div>
+            <div><strong>Total Purchases:</strong> ${escapeHtml(supplier.total_purchases ?? 0)}</div>
+            <div><strong>Stores Served:</strong> ${escapeHtml(supplier.stores_served ?? 0)}</div>
+            <div><strong>Last Purchase:</strong> ${escapeHtml(lastPurchase)}</div>
+            <div><strong>Total Items Supplied:</strong> ${escapeHtml(supplier.total_items_supplied ?? 0)}</div>
+            <div><strong>Total Purchase Value:</strong> ${escapeHtml(totalValue)}</div>
+        `;
+
+        modal.classList.remove('hidden');
     } catch (error) {
         console.error('Failed to view supplier details:', error);
         alert('Failed to load supplier details: ' + error.message);
@@ -421,6 +430,24 @@ function setupSupplierModalListeners() {
         cancelEditBtn.dataset.listenerAttached = 'true';
         cancelEditBtn.addEventListener('click', () => {
             const modal = document.getElementById('edit-supplier-modal');
+            if (modal) modal.classList.add('hidden');
+        });
+    }
+
+    // Close View Supplier Modal
+    const closeViewBtn = document.getElementById('close-view-supplier');
+    if (closeViewBtn && !closeViewBtn.dataset.listenerAttached) {
+        closeViewBtn.dataset.listenerAttached = 'true';
+        closeViewBtn.addEventListener('click', () => {
+            const modal = document.getElementById('view-supplier-modal');
+            if (modal) modal.classList.add('hidden');
+        });
+    }
+    const closeViewFooterBtn = document.getElementById('close-view-supplier-footer');
+    if (closeViewFooterBtn && !closeViewFooterBtn.dataset.listenerAttached) {
+        closeViewFooterBtn.dataset.listenerAttached = 'true';
+        closeViewFooterBtn.addEventListener('click', () => {
+            const modal = document.getElementById('view-supplier-modal');
             if (modal) modal.classList.add('hidden');
         });
     }
