@@ -123,7 +123,7 @@ BEGIN
         SELECT points_change INTO v_points_to_change 
         FROM point_ledgers 
         WHERE order_id = NEW.order_id AND points_change > 0 
-        ORDER BY ledger_id DESC LIMIT 1;
+        ORDER BY point_ledger_id DESC LIMIT 1;
 
         -- 如果日志没记录，再按当前倍率兜底计算
         IF v_points_to_change IS NULL THEN
