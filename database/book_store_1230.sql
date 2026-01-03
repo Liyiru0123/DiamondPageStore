@@ -146,6 +146,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_customer_create_order` (IN `p_me
     DECLARE v_sku_id INT;
     DECLARE v_quantity INT;
     DECLARE v_stock INT;
+    DECLARE v_book_name VARCHAR(255);
     DECLARE v_index INT DEFAULT 0;
     DECLARE v_items_count INT;
     DECLARE v_failed INT DEFAULT 0;
@@ -181,8 +182,22 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_customer_create_order` (IN `p_me
         WHERE sku_id = v_sku_id AND store_id = p_store_id;
 
         IF v_stock < v_quantity THEN
+            SELECT b.name INTO v_book_name
+            FROM skus s
+            JOIN books b ON s.ISBN = b.ISBN
+            WHERE s.sku_id = v_sku_id
+            LIMIT 1;
+
             SET p_result_code = 0;
-            SET p_result_message = CONCAT('Insufficient stock for SKU ', v_sku_id);
+            SET p_result_message = CONCAT(
+                '库存不足：',
+                IFNULL(v_book_name, 'Unknown Book'),
+                ' (SKU ',
+                v_sku_id,
+                ')，可用 ',
+                v_stock,
+                ' 本'
+            );
             SET p_order_id = NULL;
             SET v_failed = 1;
             LEAVE item_loop;
@@ -211,6 +226,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_customer_pay_order` (IN `p_order
     DECLARE v_sku_id INT;
     DECLARE v_quantity INT;
     DECLARE v_stock INT;
+    DECLARE v_book_name VARCHAR(255);
     DECLARE v_done INT DEFAULT 0;
     DECLARE v_payment_id INT;
     DECLARE v_total_amount DECIMAL(10,2);
@@ -296,8 +312,22 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_customer_pay_order` (IN `p_order
             WHERE sku_id = v_sku_id AND store_id = v_store_id;
 
             IF v_stock < v_quantity THEN
+                SELECT b.name INTO v_book_name
+                FROM skus s
+                JOIN books b ON s.ISBN = b.ISBN
+                WHERE s.sku_id = v_sku_id
+                LIMIT 1;
+
                 SET p_result_code = 0;
-                SET p_result_message = CONCAT('Insufficient stock for SKU ', v_sku_id);
+                SET p_result_message = CONCAT(
+                    '库存不足：',
+                    IFNULL(v_book_name, 'Unknown Book'),
+                    ' (SKU ',
+                    v_sku_id,
+                    ')，可用 ',
+                    v_stock,
+                    ' 本'
+                );
                 SET v_failed = 1;
                 LEAVE read_loop;
             END IF;
@@ -2914,14 +2944,11 @@ INSERT INTO `members` (`member_id`, `user_id`, `member_tier_id`, `first_name`, `
 -- 触发器 `members`
 --
 DELIMITER $$
-CREATE TRIGGER `trg_update_member_tier` AFTER UPDATE ON `members` FOR EACH ROW BEGIN
+CREATE TRIGGER `trg_update_member_tier` BEFORE UPDATE ON `members` FOR EACH ROW BEGIN
     DECLARE v_total_spent DECIMAL(10,2) DEFAULT 0;
     DECLARE v_new_tier_id INT;
-    DECLARE v_current_tier_id INT;
 
     IF NEW.point != OLD.point THEN
-        SET v_current_tier_id = NEW.member_tier_id;
-
         SELECT COALESCE(SUM(oi.quantity * s.unit_price), 0)
         INTO v_total_spent
         FROM orders o
@@ -2937,10 +2964,8 @@ CREATE TRIGGER `trg_update_member_tier` AFTER UPDATE ON `members` FOR EACH ROW B
         ORDER BY min_lifetime_spend DESC
         LIMIT 1;
 
-        IF v_new_tier_id IS NOT NULL AND v_new_tier_id != v_current_tier_id THEN
-            UPDATE members
-            SET member_tier_id = v_new_tier_id
-            WHERE member_id = NEW.member_id;
+        IF v_new_tier_id IS NOT NULL AND v_new_tier_id != NEW.member_tier_id THEN
+            SET NEW.member_tier_id = v_new_tier_id;
         END IF;
     END IF;
 END

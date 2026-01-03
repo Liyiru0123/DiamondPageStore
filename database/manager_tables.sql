@@ -341,9 +341,23 @@ WHERE quantity IS NULL OR quantity < 20;
 SELECT 'inventory_batches stock updated' AS message;
 
 -- Ensure every store/SKU has at least one inventory batch row
+-- Ensure purchases exist for inventory batch foreign keys
+INSERT INTO purchases (store_id, supplier_id, purchase_date, note, status)
+SELECT
+    st.store_id,
+    (SELECT supplier_id FROM suppliers ORDER BY supplier_id LIMIT 1),
+    NOW(),
+    'Seeded for inventory batches',
+    'completed'
+FROM stores st
+WHERE NOT EXISTS (
+    SELECT 1 FROM purchases p WHERE p.store_id = st.store_id
+);
+
 INSERT INTO inventory_batches (
     sku_id,
     store_id,
+    purchase_id,
     quantity,
     unit_cost,
     received_date,
@@ -352,16 +366,20 @@ INSERT INTO inventory_batches (
 SELECT
     s.sku_id,
     st.store_id,
+    p.purchase_id,
     30 + (s.sku_id % 51) AS quantity,
     ROUND(s.unit_price * 0.6, 2) AS unit_cost,
     NOW() AS received_date,
     CONCAT('AUTO-', st.store_id, '-', s.sku_id) AS batch_code
 FROM skus s
 CROSS JOIN stores st
+JOIN purchases p
+    ON p.store_id = st.store_id
 LEFT JOIN inventory_batches ib
     ON ib.sku_id = s.sku_id
    AND ib.store_id = st.store_id
-WHERE ib.batch_id IS NULL;
+WHERE ib.batch_id IS NULL
+GROUP BY s.sku_id, st.store_id;
 
 SELECT 'inventory_batches seeded' AS message;
 

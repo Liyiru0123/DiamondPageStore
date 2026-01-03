@@ -184,16 +184,13 @@ END$$
 -- Member points change: update tier
 DROP TRIGGER IF EXISTS trg_update_member_tier$$
 CREATE TRIGGER trg_update_member_tier
-AFTER UPDATE ON members
+BEFORE UPDATE ON members
 FOR EACH ROW
 BEGIN
     DECLARE v_total_spent DECIMAL(10,2) DEFAULT 0;
     DECLARE v_new_tier_id INT;
-    DECLARE v_current_tier_id INT;
 
     IF NEW.point != OLD.point THEN
-        SET v_current_tier_id = NEW.member_tier_id;
-
         SELECT COALESCE(SUM(oi.quantity * s.unit_price), 0)
         INTO v_total_spent
         FROM orders o
@@ -209,10 +206,8 @@ BEGIN
         ORDER BY min_lifetime_spend DESC
         LIMIT 1;
 
-        IF v_new_tier_id IS NOT NULL AND v_new_tier_id != v_current_tier_id THEN
-            UPDATE members
-            SET member_tier_id = v_new_tier_id
-            WHERE member_id = NEW.member_id;
+        IF v_new_tier_id IS NOT NULL AND v_new_tier_id != NEW.member_tier_id THEN
+            SET NEW.member_tier_id = v_new_tier_id;
         END IF;
     END IF;
 END$$
