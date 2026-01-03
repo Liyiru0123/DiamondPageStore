@@ -39,9 +39,26 @@
 * 其他功能以此类推
 
 ## 4.3 For Managers (经理指南)
-* **Staff Management**: (截图 + 说明，展示过滤和添加员工功能)
-* **User Management**: (截图 + 说明，展示账号维护功能)
-* **Performance Overview**: (截图 + 说明)
+* **Dashboard**:
+登录之后来到一个Diamond Page Store的总览界面，包含各分店的订单情况对比，订单支付方式的使用情况对比，热销书籍各种类贡献率分析，还添加了适合经理统领全局使用的“业绩最好分店”，“最受欢迎支付方式”以及“最畅销书种类”，方便经理登录上去就能一览各分店的近期销售情况。
+* **Inventory Management**:
+点击侧边栏的“Inventory Management"，这一页允许经理处理员工提交的“补货申请”、查看“库存总览”以及修改书本定价。
+Replenishment Requests: 经理可以处理staff提交的补货申请(初始为pending状态)，对于pending状态的申请，经理可以approve，也可以Reject,approve之后的申请可以标记为completed。每一条记录都可以查看详情。对于这些补货申请记录，可以通过分店、申请状态、日期范围以及紧急程度进行筛选，reset按钮可以初始化筛选条件。
+Stock Overview: 点击此分界面，可以查看各分店的库存情况。筛选条件有两个：一是分店，二是SKU，两个筛选条件下都可以通过SKU，book title和ISBN来查询具体的记录。
+Pricing Management: 经理可以在此界面修改书本定价，可以通过ISBN，book title以及SKU来查询到具体书籍。
+* **Staff Management**:
+在这里经理可以查看员工的详细信息
+经理可以通过edit按钮修改他们的分店、名字、职位以及邮箱，删除按键来删除员工记录。
+可以按照branch, position来筛选员工记录，reset按钮可以初始化筛选条件。
+可以由employeeID, UserID, name和email的关键词查询具体员工
+Add staff: 点击右上角的add staff按钮，然后填写详细员工信息来添加新员工。
+* **User Management**:
+这个界面可以查看用户账户相关的详细信息
+可以通过UserID, username, name, 以及email来搜索具体账户
+提供edit, delete user以及quick reset password的功能。
+Edit功能中可以修改账户名、个人名字，账户状态以及重置密码
+* **Supplier Management**:
+这个界面展示了供应商的信息，可以通过name，phone, address以及email来查询具体供应商。
 * 其他功能以此类推
 
 ## 4.4 For Finance (财务指南)
