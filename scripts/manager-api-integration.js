@@ -97,7 +97,7 @@ function renderStaffTable(employees) {
         row.dataset.branchname = employee.store_name;
         row.dataset.name = employee.full_name;
         row.dataset.email = employee.email;
-        row.dataset.storeID = employee.store_id;
+        row.dataset.storeId = String(employee.store_id ?? '');
 
         let positionClass = 'role-staff';
         let positionName = 'Staff';
@@ -217,7 +217,7 @@ function setupStaffActionListeners() {
                 name: row.dataset.name,
                 position: row.dataset.position,
                 email: row.dataset.email,
-                storeID: row.dataset.storeid
+                storeID: row.dataset.storeId
             };
             openEditStaffModal(staffData);
         });
@@ -768,32 +768,56 @@ function viewRequestDetail(requestId) {
     if (rejectButton) rejectButton.classList.toggle('hidden', !allowActions);
 
     modal.dataset.currentRequestId = requestId;
+    modal.dataset.actionInProgress = '0';
+    modal.dataset.confirmLock = '0';
     modal.classList.remove('hidden');
 }
 
 async function approveRequestById(requestId) {
-    if (!confirm(`Approve request ${requestId}?`)) return;
+    const modal = document.getElementById('request-detail-modal');
+    if (modal?.dataset.actionInProgress === '1' || modal?.dataset.confirmLock === '1') return;
+    if (modal) modal.dataset.confirmLock = '1';
+    if (!confirm(`Approve request ${requestId}?`)) {
+        if (modal) modal.dataset.confirmLock = '0';
+        return;
+    }
+    if (modal) modal.dataset.actionInProgress = '1';
     try {
         await approveReplenishmentRequestAPI({ request_id: requestId });
         showMessage('Request approved successfully', 'success');
+        modal?.classList.add('hidden');
         loadReplenishmentRequests();
     } catch (error) {
         console.error('Failed to approve request:', error);
         showMessage('Failed to approve request: ' + error.message, 'error');
+    } finally {
+        if (modal) modal.dataset.actionInProgress = '0';
+        if (modal) modal.dataset.confirmLock = '0';
     }
 }
 
 async function rejectRequestById(requestId) {
+    const modal = document.getElementById('request-detail-modal');
+    if (modal?.dataset.actionInProgress === '1' || modal?.dataset.confirmLock === '1') return;
+    if (modal) modal.dataset.confirmLock = '1';
     const reason = prompt('Please provide a reason for rejection:');
-    if (!reason) return;
+    if (!reason) {
+        if (modal) modal.dataset.confirmLock = '0';
+        return;
+    }
 
+    if (modal) modal.dataset.actionInProgress = '1';
     try {
         await rejectReplenishmentRequestAPI({ request_id: requestId, rejection_reason: reason });
         showMessage('Request rejected successfully', 'success');
+        modal?.classList.add('hidden');
         loadReplenishmentRequests();
     } catch (error) {
         console.error('Failed to reject request:', error);
         showMessage('Failed to reject request: ' + error.message, 'error');
+    } finally {
+        if (modal) modal.dataset.actionInProgress = '0';
+        if (modal) modal.dataset.confirmLock = '0';
     }
 }
 
@@ -810,28 +834,28 @@ async function completeRequest(requestId) {
     }
 }
 
-// Map modal buttons to current request id
-function resetRequestModalButton(buttonId, handler) {
-    const button = document.getElementById(buttonId);
-    if (!button || !button.parentNode) return;
-    const freshButton = button.cloneNode(true);
-    button.parentNode.replaceChild(freshButton, button);
-    freshButton.addEventListener('click', handler);
+// Map modal buttons to current request id (delegate to avoid duplicate listeners)
+const requestDetailModal = document.getElementById('request-detail-modal');
+if (requestDetailModal && requestDetailModal.dataset.bound !== '1') {
+    requestDetailModal.dataset.bound = '1';
+    requestDetailModal.addEventListener('click', (event) => {
+        const button = event.target.closest('button');
+        if (!button) return;
+        const requestId = requestDetailModal.dataset.currentRequestId;
+        if (button.id === 'close-request-detail') {
+            requestDetailModal.classList.add('hidden');
+            return;
+        }
+        if (!requestId) return;
+        if (button.id === 'approve-request') {
+            approveRequestById(requestId);
+            return;
+        }
+        if (button.id === 'reject-request') {
+            rejectRequestById(requestId);
+        }
+    });
 }
-
-resetRequestModalButton('close-request-detail', () => {
-    document.getElementById('request-detail-modal')?.classList.add('hidden');
-});
-resetRequestModalButton('approve-request', () => {
-    const modal = document.getElementById('request-detail-modal');
-    const requestId = modal?.dataset.currentRequestId;
-    if (requestId) approveRequestById(requestId);
-});
-resetRequestModalButton('reject-request', () => {
-    const modal = document.getElementById('request-detail-modal');
-    const requestId = modal?.dataset.currentRequestId;
-    if (requestId) rejectRequestById(requestId);
-});
 
 // =============================================================================
 // Inventory Management
@@ -1022,98 +1046,6 @@ function showMessage(message, type = 'info') {
 // =============================================================================
 // Staff Search - 使用 API 版本
 // =============================================================================
-
-/**
- * 员工搜索函数 - 使用后端 API
- * @param {string} searchTerm - 搜索关键词
- */
-async function performStaffSearch(searchTerm) {
-    const tableBody = document.getElementById('staff-table-body');
-    if (!tableBody) return;
-
-    // 如果搜索词为空，重新加载所有数据
-    if (!searchTerm || searchTerm.trim() === '') {
-        loadStaffData();
-        return;
-    }
-
-    try {
-        const employees = await searchEmployeesAPI(searchTerm);
-        const staffCount = document.getElementById('staff-count');
-
-        tableBody.innerHTML = '';
-
-        if (employees.length === 0) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="px-4 py-8 text-center text-gray-500">
-                        <div class="flex flex-col items-center">
-                            <i class="fa fa-user-times text-3xl text-gray-300 mb-2"></i>
-                            <p>No staff found matching "${escapeHtml(searchTerm)}"</p>
-                        </div>
-                    </td>
-                </tr>
-            `;
-            if (staffCount) staffCount.textContent = '0';
-            return;
-        }
-
-        employees.forEach(employee => {
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50 transition-colors';
-            row.dataset.storeID = String(employee.store_id);
-
-            let position = 'staff';
-            if (employee.job_title && employee.job_title.toLowerCase().includes('manager')) {
-                position = 'manager';
-            } else if (employee.job_title && employee.job_title.toLowerCase().includes('finance')) {
-                position = 'finance';
-            }
-            row.dataset.position = position;
-
-            row.innerHTML = `
-                <td class="px-4 py-4 text-sm font-medium">${escapeHtml(employee.employee_id)}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(employee.user_id)}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(employee.store_name)}</td>
-                <td class="px-4 py-4 text-sm">${escapeHtml(employee.full_name)}</td>
-                <td class="px-4 py-4 text-sm">
-                    <span class="px-2 py-1 text-xs ${position === 'manager' ? 'role-manager' : position === 'finance' ? 'role-finance' : 'role-staff'} rounded-full">
-                        ${escapeHtml(employee.job_title || 'Staff')}
-                    </span>
-                </td>
-                <td class="px-4 py-4 text-sm w-56 max-w-xs">
-                    <div class="flex items-center gap-2 min-w-0 staff-email-cell" title="${escapeHtml(employee.email || 'N/A')}" data-email="${escapeHtml(employee.email || '')}">
-                        <span class="min-w-0 flex-1 truncate">${escapeHtml(employee.email || 'N/A')}</span>
-                        <span class="text-[10px] text-gray-400 whitespace-nowrap">dblclick</span>
-                    </div>
-                </td>
-                <td class="px-4 py-4 text-sm">
-                    <div class="flex gap-2">
-                        <button class="text-primary hover:text-primary/80 edit-staff" title="Edit">
-                            <i class="fa fa-edit"></i>
-                        </button>
-                        <button class="text-blue-600 hover:text-blue-800 view-staff" title="View Details">
-                            <i class="fa fa-eye"></i>
-                        </button>
-                        <button class="text-red-600 hover:text-red-800 delete-staff" title="Delete">
-                            <i class="fa fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
-
-        if (staffCount) {
-            staffCount.textContent = String(employees.length);
-        }
-
-        setupStaffActionListeners();
-    } catch (error) {
-        console.error('Failed to search staff:', error);
-        showMessage('Failed to search staff: ' + error.message, 'error');
-    }
-}
 
 // =============================================================================
 // User Search - 使用 API 版本
@@ -1516,7 +1448,8 @@ async function performStaffSearch(searchTerm) {
 
     try {
         const employees = await searchEmployeesAPI(searchTerm);
-        renderStaffTable(employees);
+        // 搜索结果是筛选后的数据，传递 isFiltered=true
+        renderStaffTable(employees, true);
     } catch (error) {
         console.error('Failed to search staff:', error);
         showMessage('Failed to search staff: ' + error.message, 'error');

@@ -3067,15 +3067,21 @@ DELIMITER $$
 CREATE TRIGGER `trg_order_payment_add_points` AFTER UPDATE ON `orders` FOR EACH ROW BEGIN
     DECLARE v_total_amount DECIMAL(10,2) DEFAULT 0;
     DECLARE v_points_to_add INT DEFAULT 0;
+    DECLARE v_earn_rate DECIMAL(9,2) DEFAULT 10.00;
 
     IF NEW.order_status = 'paid' AND OLD.order_status != 'paid' THEN
+        SELECT mt.earn_point_rate INTO v_earn_rate
+        FROM members m
+        JOIN member_tiers mt ON m.member_tier_id = mt.member_tier_id
+        WHERE m.member_id = NEW.member_id;
+
         SELECT COALESCE(SUM(oi.quantity * s.unit_price), 0)
         INTO v_total_amount
         FROM order_items oi
         JOIN skus s ON oi.sku_id = s.sku_id
         WHERE oi.order_id = NEW.order_id;
 
-        SET v_points_to_add = FLOOR(v_total_amount);
+        SET v_points_to_add = FLOOR(v_total_amount * v_earn_rate);
 
         UPDATE members
         SET point = point + v_points_to_add
@@ -3088,7 +3094,7 @@ CREATE TRIGGER `trg_order_payment_add_points` AFTER UPDATE ON `orders` FOR EACH 
             v_points_to_add,
             v_points_to_add,
             CURRENT_TIMESTAMP,
-            CONCAT('Order #', NEW.order_id, ' payment - points added: ', v_points_to_add)
+            CONCAT('Order #', NEW.order_id, ' payment - points added: ', v_points_to_add, ' (rate ', v_earn_rate, ')')
         );
     END IF;
 END

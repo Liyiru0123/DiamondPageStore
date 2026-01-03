@@ -349,9 +349,15 @@ function performSupplierSearch(searchTerm) {
         return;
     }
 
+    const tableBody = document.getElementById('supplier-table-body');
     showLoading('supplier-table-body');
     searchSuppliersAPI(searchTerm)
-        .then(renderSupplierResults)
+        .then((suppliers) => {
+            renderSupplierResults(suppliers);
+            if (tableBody) {
+                delete tableBody.dataset.originalContent;
+            }
+        })
         .catch(error => {
             console.error('Failed to search suppliers:', error);
             showMessage('Failed to search suppliers: ' + error.message, 'error');
