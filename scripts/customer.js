@@ -29,8 +29,7 @@ const App = {
       // 2. 并发初始化基础数据 (不阻塞)
       await Promise.all([
         this.syncFavorites(),
-        this.syncCart(),
-        this.renderHomepageBanner()
+        this.syncCart()
       ]);
 
       // 3. 初始首屏渲染 (默认显示全部书籍)
@@ -61,39 +60,7 @@ const App = {
     const saved = localStorage.getItem('bookCart');
     cart = saved ? JSON.parse(saved) : [];
     updateCartUI();
-  },
-
-  async renderHomepageBanner() {
-    const bannerTitle = document.querySelector('#home-page h2');
-    const bannerText = document.querySelector('#home-page p');
-    const bannerSection = document.querySelector('#home-page .relative'); // 整个 Banner 容器
-
-    try {
-      const data = await fetchAnnouncements();
-      const now = new Date();
-
-      // 筛选逻辑：当前时间在发布和过期时间之间
-      const activeAnnouncements = data.filter(ann => {
-        const start = new Date(ann.publishAt);
-        const end = new Date(ann.expireAt);
-        return now >= start && now <= end;
-      });
-
-      if (activeAnnouncements.length > 0) {
-        // 取最新的一条有效公告显示
-        const latest = activeAnnouncements[0];
-        if (bannerTitle) bannerTitle.textContent = latest.title;
-        if (bannerText) bannerText.textContent = latest.content;
-      } else {
-        // 如果没有有效公告，可以选择隐藏 Banner 或者显示默认提示
-        // bannerSection.classList.add('hidden'); 
-        if (bannerTitle) bannerTitle.textContent = "Welcome back!";
-        if (bannerText) bannerText.textContent = "Check out our latest collection of books below.";
-      }
-    } catch (e) {
-      console.error("Failed to load banner announcements:", e);
-    }
-  },
+  }
 };
 
 // 入口点
@@ -399,7 +366,6 @@ async function handleCheckout() {
       cart = [];
       localStorage.setItem('bookCart', JSON.stringify(cart));
       updateCartUI();
-      allBooks = [];
       showAlert("Order created successfully!");
       if (typeof switchPage === 'function') switchPage('orders');
     } else {
@@ -786,8 +752,8 @@ function bindEvents() {
   });
 
   // 【新增】Learn More 按钮点击
-  const learnMoreBtn = document.getElementById('learn-more-btn');
-  if (learnMoreBtn) {
+  const learnMoreBtn = document.querySelector('#home-page button');
+  if (learnMoreBtn && learnMoreBtn.textContent.includes('Learn More')) {
     learnMoreBtn.addEventListener('click', openAnnouncements);
   }
 
@@ -835,8 +801,7 @@ async function handlePaymentExecution() {
     await payMultipleOrdersAPI(pendingPayIds);
     document.getElementById('payment-modal').classList.add('hidden');
     showAlert("Payment Successful!");
-    currentOrderPage = 1;
-    await renderOrdersUI(currentOrderStatus, 1); 
+    renderOrdersUI();
   } catch (e) {
     showAlert("Payment failed: " + e.message);
   } finally {
@@ -847,23 +812,9 @@ async function handlePaymentExecution() {
 }
 
 window.customerSwitchPage = function (pageId) {
-  console.log(`[Customer Hook] Triggered for page: ${pageId}`);
-
   if (pageId === 'favorites') updateFavoritesUI();
   if (pageId === 'member') updateMemberPageUI();
   if (pageId === 'orders') renderOrdersUI();
-
-  // === 【新增逻辑】解决库存不刷新的核心代码 ===
-  if (pageId === 'categories' || pageId === 'home') {
-    console.log("[Stock Sync] Refreshing books to sync stock levels...");
-    
-    // 找到当前选中的分类按钮，如果没有（比如刚从订单页跳回来），默认显示 'all'
-    const activeBtn = document.querySelector('.category-btn.bg-brown');
-    const currentCat = activeBtn ? activeBtn.dataset.category : 'all';
-    
-    // 强制触发一次 API 请求，这样 allBooks 就会被后端最新的库存覆盖
-    renderCategoryBooks(currentCat, 1); 
-  }
 };
 
 async function updateFavoritesUI() {
@@ -981,54 +932,27 @@ async function openAnnouncements() {
 
   try {
     const data = await fetchAnnouncements();
-    const now = new Date();
-    
-    // 按发布时间倒序排列（最新的在前面）
-    const list = Array.isArray(data) ? data.sort((a,b) => new Date(b.publishAt) - new Date(a.publishAt)) : [];
+    const list = Array.isArray(data) ? data : [];
 
     if (list.length === 0) {
       container.innerHTML = '<p class="text-center py-10 text-gray-400">No announcements found.</p>';
       return;
     }
 
-    container.innerHTML = list.map(ann => {
-      const start = new Date(ann.publishAt);
-      const end = new Date(ann.expireAt);
-      const isActive = now >= start && now <= end; // 判断是否正在进行
-
-      // 动态样式
-      // isActive: 深色背景 + 粗边框
-      // inactive: 浅色背景 + 细边框
-      const cardClass = isActive 
-        ? 'bg-brown/10 border-brown shadow-md scale-[1.02] transform' 
-        : 'bg-brown-cream/20 border-brown-light/30 opacity-90';
-      
-      const titleClass = isActive ? 'text-brown-dark' : 'text-brown-dark/70';
-
-      return `
-      <div class="p-5 border-l-4 rounded-r-xl mb-4 transition-all duration-300 ${cardClass}">
-        <div class="flex justify-between items-start mb-2"> 
-          <div class="flex flex-col">
-            <h4 class="font-bold text-lg ${titleClass} flex items-center gap-2">
-              ${ann.title}
-              ${isActive ? `
-                <span class="flex h-2 w-2 relative">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                </span>
-                <span class="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded uppercase tracking-wider">Active</span>
-              ` : ''}
-            </h4>
-            <div class="flex items-center text-gray-500 text-[11px] mt-1 tracking-wide">
-              <i class="fa fa-clock-o mr-1"></i>
-              <span>${formatTimeRange(ann.publishAt, ann.expireAt)}</span>
-            </div>
+    container.innerHTML = list.map(ann => `
+      <div class= "p-4 bg-brown-cream/30 border-l-4 border-brown rounded-r-lg mb-3">
+        <div class="flex flex-col items-start mb-3"> 
+          <h4 class="font-bold text-brown-dark text-lg mb-1">${ann.title}</h4>
+          <div class="flex items-center text-gray-500 text-xs tracking-wide">
+            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>${formatTimeRange(ann.publishAt, ann.expireAt)}</span>
           </div>
-          ${!isActive ? '<span class="text-[10px] text-gray-400 font-medium italic">Past Event</span>' : ''}
         </div> 
         <p class="text-sm text-gray-700 leading-relaxed">${ann.content}</p>
       </div>
-    `}).join('');
+    `).join('');
   } catch (e) {
     container.innerHTML = `<p class="text-center py-10 text-red-500">Failed to load announcements.</p>`;
   }

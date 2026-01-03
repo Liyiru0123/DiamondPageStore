@@ -6,7 +6,7 @@ staff：
 【ywt：现在能实现生成一个order就生成一条状态为draft的invoice记录吗？】
 
 customer:
-  收藏也加个小分页？
+  首页的大公告现在是硬编码，改成展示这段时间有效的活动。如果多个活动就轮播？
 
 database:
   密码需替换为hash形式
@@ -22,4 +22,4 @@ xian:我这里看的finance界面加载不出来数据，一直在loading【ywt�
 可以看一下有哪些按钮不需要了可以进行删除：例如create invoice这种【ywt：明天删】【已修改完毕1230】
 
 report:
-  03_user_manual这一块的registration & login要不要单独拎一个板块放在最前面【wsh：已经修改】
+03_user_manual这一块的registration & login要不要单独拎一个板块放在最前面
