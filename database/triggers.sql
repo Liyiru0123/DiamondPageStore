@@ -82,55 +82,66 @@ AFTER UPDATE ON orders
 FOR EACH ROW
 BEGIN
     DECLARE v_total_amount DECIMAL(10,2) DEFAULT 0;
-    DECLARE v_points_to_add INT DEFAULT 0;
+    DECLARE v_points_to_change INT DEFAULT 0;
+    DECLARE v_earn_rate DECIMAL(9,2) DEFAULT 10.00;
 
-    -- 逻辑 1: 支付成功，增加积分
+    -- 1. 获取该会员当前的积分倍率
+    SELECT mt.earn_point_rate INTO v_earn_rate
+    FROM members m
+    JOIN member_tiers mt ON m.member_tier_id = mt.member_tier_id
+    WHERE m.member_id = NEW.member_id;
+
+    -- 2. 计算订单总金额
+    SELECT COALESCE(SUM(oi.quantity * s.unit_price), 0)
+    INTO v_total_amount
+    FROM order_items oi
+    JOIN skus s ON oi.sku_id = s.sku_id
+    WHERE oi.order_id = NEW.order_id;
+
+    -- 逻辑 A: 支付成功，增加积分 (金额 * 等级倍率)
     IF NEW.order_status = 'paid' AND OLD.order_status != 'paid' THEN
-        SELECT COALESCE(SUM(oi.quantity * s.unit_price), 0)
-        INTO v_total_amount
-        FROM order_items oi
-        JOIN skus s ON oi.sku_id = s.sku_id
-        WHERE oi.order_id = NEW.order_id;
-
-        SET v_points_to_add = FLOOR(v_total_amount);
+        SET v_points_to_change = FLOOR(v_total_amount * v_earn_rate);
 
         UPDATE members
-        SET point = point + v_points_to_add
+        SET point = point + v_points_to_change
         WHERE member_id = NEW.member_id;
 
         INSERT INTO point_ledgers (member_id, order_id, points_change, points_delta, change_date, reason)
         VALUES (
             NEW.member_id,
             NEW.order_id,
-            v_points_to_add,
-            v_points_to_add,
+            v_points_to_change,
+            v_points_to_change,
             CURRENT_TIMESTAMP,
-            CONCAT('Order #', NEW.order_id, ' payment - points added: ', v_points_to_add)
+            CONCAT('Order #', NEW.order_id, ' paid. Tier rate: ', v_earn_rate)
         );
     END IF;
 
-    -- 逻辑 2: 订单退款，扣除积分
+    -- 逻辑 B: 订单退款，精准扣除该订单曾发放的积分
     IF NEW.order_status = 'refunded' AND OLD.order_status != 'refunded' THEN
-        SELECT COALESCE(SUM(oi.quantity * s.unit_price), 0)
-        INTO v_total_amount
-        FROM order_items oi
-        JOIN skus s ON oi.sku_id = s.sku_id
-        WHERE oi.order_id = NEW.order_id;
+        -- 优先从日志里找当时加了多少分，防止会员等级变动导致扣错分
+        SELECT points_change INTO v_points_to_change 
+        FROM point_ledgers 
+        WHERE order_id = NEW.order_id AND points_change > 0 
+        ORDER BY ledger_id DESC LIMIT 1;
 
-        SET v_points_to_add = FLOOR(v_total_amount);
+        -- 如果日志没记录，再按当前倍率兜底计算
+        IF v_points_to_change IS NULL THEN
+            SET v_points_to_change = FLOOR(v_total_amount * v_earn_rate);
+        END IF;
 
         UPDATE members
-        SET point = GREATEST(0, CAST(point AS SIGNED) - v_points_to_add)
+        SET point = GREATEST(0, CAST(point AS SIGNED) - v_points_to_change)
         WHERE member_id = NEW.member_id;
 
         INSERT INTO point_ledgers (member_id, order_id, points_change, points_delta, change_date, reason)
         VALUES (
             NEW.member_id,
             NEW.order_id,
-            -v_points_to_add,
-            -v_points_to_add,
+            -v_points_to_change,
+            -v_points_to_change,
             CURRENT_TIMESTAMP,
-            CONCAT('Order #', NEW.order_id, ' refunded - points deducted: ', v_points_to_add)
+            CONCAT('Order #', NEW.order_id, ' refunded. Deducting original points.')
         );
     END IF;
 END$$
@@ -190,7 +201,10 @@ BEGIN
     DECLARE v_total_spent DECIMAL(10,2) DEFAULT 0;
     DECLARE v_new_tier_id INT;
 
+    -- 当积分发生变化时，顺便检查等级是否需要提升
+    -- (或者你也可以在 orders 表的支付触发器里做这件事)
     IF NEW.point != OLD.point THEN
+        -- 计算该会员所有已支付订单的总金额
         SELECT COALESCE(SUM(oi.quantity * s.unit_price), 0)
         INTO v_total_spent
         FROM orders o
@@ -199,14 +213,15 @@ BEGIN
         WHERE o.member_id = NEW.member_id
         AND o.order_status = 'paid';
 
-        SELECT member_tier_id
-        INTO v_new_tier_id
+        -- 根据总消费金额寻找匹配的最高等级
+        SELECT member_tier_id INTO v_new_tier_id
         FROM member_tiers
         WHERE min_lifetime_spend <= v_total_spent
         ORDER BY min_lifetime_spend DESC
         LIMIT 1;
 
-        IF v_new_tier_id IS NOT NULL AND v_new_tier_id != NEW.member_tier_id THEN
+        -- 更新等级
+        IF v_new_tier_id IS NOT NULL THEN
             SET NEW.member_tier_id = v_new_tier_id;
         END IF;
     END IF;
