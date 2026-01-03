@@ -46,11 +46,15 @@ class Database {
 
 // Local development configuration (for XAMPP/WAMP)
 class DatabaseLocal extends Database {
-    private $host = "localhost";
-    private $db_name = "book_store";
-    private $username = "root";
-    private $password = "";  // Default XAMPP password is empty
+    // private $host = "localhost";
+    // private $db_name = "book_store";
+    // private $username = "root";
+    // private $password = "";  // Default XAMPP password is empty
     private $port = "3306";
+    private $host = "127.0.0.1";     // MySQL 与 PHP 同机
+    private $db_name = "book_store";
+    private $username = "book_app";  // 你新建的专用用户
+    private $password = "StrongPassw0rd!"; // 你设置的密码
 
     public $conn;
 
