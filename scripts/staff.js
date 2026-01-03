@@ -568,7 +568,7 @@ function renderLowStockItems(inventoryData) {
     // 修改筛选逻辑：qty == 1 (根据之前的需求)
     const criticalItems = inventoryData.filter(item => {
         const qty = parseInt(item.quantity || item.stock || 0);
-        return qty === 1;
+        return qty > 0 && qty <= 5;
     });
 
     criticalItems.forEach(item => {
@@ -595,7 +595,7 @@ function renderLowStockItems(inventoryData) {
     });
 
     if (criticalItems.length === 0) {
-        lowStockList.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-400">No low stock items (Qty: 1)</td></tr>';
+        lowStockList.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-400">No low stock items (threshold: ≤ 5)</td></tr>';
     }
 }
 
@@ -695,7 +695,7 @@ function updateDashboardStats(inventoryData = [], ordersData = []) {
     // B. 统计低库存
     const lowStockCount = inventoryData.filter(item => {
         const qty = parseInt(item.quantity || item.stock || 0);
-        return qty === 1;
+        return qty > 0 && qty <= 5;
     }).length;
 
     // C. 统计总订单数 (增加安全性检查)
