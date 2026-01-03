@@ -221,7 +221,7 @@ BEGIN
     DECLARE v_unit_price DECIMAL(9,2);
     DECLARE v_purchase_id INT;
 
-    -- 当状态变为 'completed' 时触发
+    -- 当状态变为 'completed' 时触发 
     IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
         -- 1. 获取单价作为成本
         SELECT unit_price INTO v_unit_price FROM skus WHERE sku_id = NEW.sku_id;
