@@ -1,0 +1,162 @@
+│  structure.txt
+│  DI31003-CW1-2025.pdf
+│  DI31003-CW2-2025.pdf
+│  finance的sql文件使用方法.md
+│  README.md
+│  README_DEPLOY_XAMPP.md
+│  TEST_INSTRUCTIONS.txt
+│  在xampp上的部署步骤.md
+│  有待修改问题的建议.txt
+│  
+├─.vscode
+├─api
+│  ├─auth
+│  │      login.php
+│  │      register.php
+│  │      
+│  ├─customer
+│  │      announcements.php
+│  │      books.php
+│  │      cart.php
+│  │      favorites.php
+│  │      member.php
+│  │      orders.php
+│  │      profile.php
+│  │      search.php
+│  │      update_profile.php
+│  │      
+│  ├─finance
+│  │      invoices.php
+│  │      orders.php
+│  │      reports.php
+│  │      
+│  ├─manager
+│  │      books.php
+│  │      change_password.php
+│  │      employees.php
+│  │      get_current_manager.php
+│  │      inventory.php
+│  │      notifications.php
+│  │      profile.php
+│  │      purchases.php
+│  │      replenishment.php
+│  │      reports.php
+│  │      stores.php
+│  │      suppliers.php
+│  │      update_profile.php
+│  │      users.php
+│  │      
+│  └─staff
+│          add_book.php
+│          complete_stock_request.php
+│          create_stock_request.php
+│          get_categories.php
+│          get_current_staff.php
+│          get_inventory.php
+│          get_orders.php
+│          get_order_details.php
+│          get_order_statuses.php
+│          get_stock_requests.php
+│          update_inventory.php
+│          update_order_status.php
+│          
+├─assets
+│  ├─icons
+│  │      主页.png
+│  │      书籍.png
+│  │      多类型.png
+│  │      帮助.png
+│  │      搜索.png
+│  │      登录.png
+│  │      订单.png
+│  │      设置.png
+│  │      购物车.png
+│  │      
+│  └─images
+│          customer-home-bg.jpg
+│          logo.png
+│          logo_copy.png
+│          
+├─config
+│      database.php
+│      
+├─database
+│  │  all_procedures.sql
+│  │  all_views.sql
+│  │  book_store_1230.sql
+│  │  deploy_all.sql
+│  │  finance_bundle.sql
+│  │  manager_tables.sql
+│  │  triggers.sql
+│  │  
+│  └─backup_sql
+│          auth_procedures.sql
+│          auth_views.sql
+│          customer_procedures.sql
+│          customer_view.sql
+│          finance_events.sql
+│          finance_procedures.sql
+│          finance_triggers.sql
+│          finance_update.sql
+│          finance_update1230.sql
+│          finance_update1230_new.sql
+│          finance_update_1231.sql
+│          finance_views.sql
+│          fix_payment_amounts.sql
+│          manager_procedures.sql
+│          manager_views.sql
+│          staff_procedures.sql
+│          staff_views.sql
+│          test_requests.sql
+│          
+├─pages
+│      customer.html
+│      finance.html
+│      login.html
+│      manager.html
+│      staff.html
+│      
+├─report
+│      01_access_and_intro.md
+│      02_database_design.md
+│      03_user_manual.md
+│      04_technical_annex.md
+│      customer-announcement.png
+│      customer-book-detail.png
+│      customer-cancel-order.png
+│      customer-cart.png
+│      customer-category.png
+│      customer-favorite.png
+│      customer-home.png
+│      customer-membership.png
+│      customer-order-payment.png
+│      customer-order.png
+│      customer-profile.png
+│      customer-search.png
+│      login-customer.png
+│      login-identify.png
+│      login-staff.png
+│      
+├─scripts
+│      book-detail.js
+│      common.js
+│      customer-api.js
+│      customer.js
+│      finance-api.js
+│      finance-data.js
+│      finance.js
+│      layout.js
+│      login.js
+│      manager-api-integration.js
+│      manager-api.js
+│      manager-profile.js
+│      manager-supplier-api.js
+│      manager.js
+│      pagination-integration.js
+│      pagination-manager.js
+│      staff.js
+│      tailwind.js
+│      
+└─styles
+        global.css
+        staff.css
