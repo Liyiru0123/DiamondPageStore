@@ -383,6 +383,48 @@ GROUP BY s.sku_id, st.store_id;
 
 SELECT 'inventory_batches seeded' AS message;
 
+-- Set controlled stock levels for the first 4 stores and first 9 SKUs
+CREATE TEMPORARY TABLE tmp_sku_list AS
+SELECT sku_id, (@rn := @rn + 1) AS rn
+FROM skus, (SELECT @rn := 0) r
+ORDER BY sku_id
+LIMIT 9;
+
+CREATE TEMPORARY TABLE tmp_qty (rn INT PRIMARY KEY, qty INT);
+INSERT INTO tmp_qty (rn, qty) VALUES
+    (1, 0), (2, 0), (3, 0),
+    (4, 1), (5, 1), (6, 1),
+    (7, 10), (8, 11), (9, 12);
+
+CREATE TEMPORARY TABLE tmp_targets AS
+SELECT l.sku_id, q.qty AS target_qty
+FROM tmp_sku_list l
+JOIN tmp_qty q ON q.rn = l.rn;
+
+UPDATE inventory_batches ib
+JOIN (SELECT store_id FROM stores ORDER BY store_id LIMIT 4) s4
+    ON s4.store_id = ib.store_id
+JOIN tmp_targets t ON t.sku_id = ib.sku_id
+SET ib.quantity = 0;
+
+UPDATE inventory_batches ib
+JOIN (
+    SELECT ib.store_id, ib.sku_id, MIN(ib.batch_id) AS batch_id
+    FROM inventory_batches ib
+    JOIN (SELECT store_id FROM stores ORDER BY store_id LIMIT 4) s4
+        ON s4.store_id = ib.store_id
+    JOIN tmp_targets t ON t.sku_id = ib.sku_id
+    GROUP BY ib.store_id, ib.sku_id
+) pick ON pick.batch_id = ib.batch_id
+JOIN tmp_targets t ON t.sku_id = ib.sku_id
+SET ib.quantity = t.target_qty;
+
+DROP TEMPORARY TABLE IF EXISTS tmp_targets;
+DROP TEMPORARY TABLE IF EXISTS tmp_qty;
+DROP TEMPORARY TABLE IF EXISTS tmp_sku_list;
+
+SELECT 'inventory_batches stock normalized for demo' AS message;
+
 -- Fix payment totals for dashboard analytics (paid/finished orders only)
 UPDATE payments p
 JOIN (
