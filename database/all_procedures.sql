@@ -2667,9 +2667,9 @@ BEGIN
     WHERE 
         (p_store_id IS NULL OR p_store_id = 0 OR store_id = p_store_id)
         AND (p_search IS NULL OR p_search = '' 
-        OR CONVERT(member_name USING utf8mb4) COLLATE utf8mb4_unicode_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_unicode_ci
-        OR CAST(invoice_number AS CHAR) COLLATE utf8mb4_unicode_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_unicode_ci
-        OR CAST(order_id AS CHAR) COLLATE utf8mb4_unicode_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_unicode_ci)
+        OR CONVERT(member_name USING utf8mb4) COLLATE utf8mb4_general_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_general_ci
+        OR CAST(invoice_number AS CHAR) COLLATE utf8mb4_general_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_general_ci
+        OR CAST(order_id AS CHAR) COLLATE utf8mb4_general_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_general_ci)
         AND (p_status IS NULL OR p_status = '' OR p_status = 'All Statuses' OR invoice_status = p_status)
         AND (p_order_id IS NULL OR p_order_id = 0 OR order_id = p_order_id)
         AND (p_start_date IS NULL OR issue_date >= p_start_date)
