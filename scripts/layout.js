@@ -1,5 +1,17 @@
 // scripts/layout.js
 
+(function () {
+    const path = window.location.pathname;
+    const marker = '/pages/';
+    const basePrefix = path.includes(marker) ? path.split(marker)[0] : '';
+
+    window.APP_BASE_PATH = basePrefix;
+    window.buildPagePath = function (pageName) {
+        const normalized = pageName.startsWith('/') ? pageName.slice(1) : pageName;
+        return `${basePrefix}/pages/${normalized}`;
+    };
+})();
+
 /**
  * 1. Tailwind 配置 (合并了 Customer 和 Finance 的风格)
  */
@@ -229,7 +241,7 @@ document.addEventListener('click', function (e) {
             console.warn("logout() function not found, forcing clear.");
             localStorage.clear();
             sessionStorage.clear();
-            window.location.href = 'login.html';
+            window.location.href = window.buildPagePath ? window.buildPagePath('login.html') : 'login.html';
         }
     }
 });

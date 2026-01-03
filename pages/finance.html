@@ -192,6 +192,10 @@
             // 1. 获取凭证
             const token = localStorage.getItem('auth_token');
             const role = localStorage.getItem('user_role');
+            const path = window.location.pathname;
+            const marker = '/pages/';
+            const basePrefix = path.includes(marker) ? path.split(marker)[0] : '';
+            const pagesBase = `${basePrefix}/pages`;
             
             // 2. 定义回退函数 (清除垃圾数据并跳转)
             function rejectAccess() {
@@ -201,7 +205,7 @@
                 localStorage.removeItem('current_user');
                 sessionStorage.clear();
                 // 使用 replace 替换历史记录，防止用户点“后退”按钮回来
-                window.location.replace('/pages/login.html');
+                window.location.replace(`${pagesBase}/login.html`);
             }
 
             // 3. 严格检查

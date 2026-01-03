@@ -57,7 +57,7 @@ function handleAuthFailure() {
     localStorage.removeItem('current_user');
     localStorage.removeItem('user_role');
     alert("Session expired. Please login again.");
-    window.location.href = 'login.html';
+    window.location.href = (window.buildPagePath ? window.buildPagePath('login.html') : 'login.html');
 }
 
 // ==========================================
@@ -1871,7 +1871,7 @@ async function initFinancePage() {
                 localStorage.removeItem('user_role');
                 localStorage.removeItem('current_user');
                 sessionStorage.clear();
-                window.location.href = 'login.html';
+                window.location.href = (window.buildPagePath ? window.buildPagePath('login.html') : 'login.html');
             }
         }
     });

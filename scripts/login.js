@@ -129,7 +129,17 @@ async function handleLogin(e) {
             }
 
             // 4. 跳转
-            window.location.href = result.redirect_to;
+            const target = result.redirect_to || 'login.html';
+            if (target.startsWith('/pages/')) {
+                const basePrefix = window.APP_BASE_PATH || '';
+                window.location.href = `${basePrefix}${target}`;
+            } else if (target.startsWith('/')) {
+                window.location.href = target;
+            } else if (typeof window.buildPagePath === 'function') {
+                window.location.href = window.buildPagePath(target);
+            } else {
+                window.location.href = target;
+            }
 
         } else {
             // 登录失败提示

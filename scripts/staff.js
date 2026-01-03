@@ -100,7 +100,7 @@ async function initStaffSession() {
             
             // 2. 强制跳回登录页
             alert("Session expired. Please login again.");
-            window.location.href = 'login.html';
+            window.location.href = (window.buildPagePath ? window.buildPagePath('login.html') : 'login.html');
         }
     } catch (error) {
         console.error('Session Init Failed:', error);
@@ -424,7 +424,7 @@ function setupInternalEventListeners() {
                 // 兜底逻辑：如果 common.js 没加载到，手动清除并跳转
                 localStorage.clear();
                 sessionStorage.clear();
-                window.location.href = 'login.html';
+                window.location.href = (window.buildPagePath ? window.buildPagePath('login.html') : 'login.html');
             }
         }
     });

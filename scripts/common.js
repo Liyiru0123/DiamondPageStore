@@ -1,5 +1,12 @@
 // scripts/common.js
 
+function getPagePath(pageName) {
+    if (typeof window.buildPagePath === 'function') {
+        return window.buildPagePath(pageName);
+    }
+    return pageName;
+}
+
 // 1. 弹窗提示 (统一使用更美观的样式，废弃原生 alert)
 function showNotification(message) {
     if (typeof showAlert === 'function') {
@@ -62,7 +69,7 @@ function checkAuth(allowedRoles = []) {
 
     // 如果没有 Token 或 角色不匹配
     if (!token) {
-        window.location.href = 'login.html';
+        window.location.href = getPagePath('login.html');
         return;
     }
 
@@ -70,12 +77,12 @@ function checkAuth(allowedRoles = []) {
         alert("Access Denied: You do not have permission for this area.");
         // 根据实际角色遣返
         const fallback = {
-            'customer': 'customer.html',
-            'staff': 'staff.html',
-            'manager': 'manager.html',
-            'finance': 'finance.html'
+            'customer': getPagePath('customer.html'),
+            'staff': getPagePath('staff.html'),
+            'manager': getPagePath('manager.html'),
+            'finance': getPagePath('finance.html')
         };
-        window.location.href = fallback[userRole] || 'login.html';
+        window.location.href = fallback[userRole] || getPagePath('login.html');
     }
 }
 
@@ -99,7 +106,7 @@ function logout() {
 
     // 4. 跳转回纯净的登录页，不带任何参数
     // 这样 login.html 就会显示“Identity Yourself”选择界面，而不是直接进入输入密码界面
-    window.location.href = 'login.html';
+    window.location.href = getPagePath('login.html');
 }
 
 /**

@@ -35,7 +35,7 @@ async function initManagerSession() {
 
             // 2. 强制跳回登录页
             alert("Session expired. Please login again.");
-            window.location.href = 'login.html';
+            window.location.href = (window.buildPagePath ? window.buildPagePath('login.html') : 'login.html');
         }
     } catch (error) {
         console.error('Manager Session Init Failed:', error);
