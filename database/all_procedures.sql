@@ -12,7 +12,8 @@ DELIMITER //
 -- Procedure: sp_auth_get_user
 -- 作用: 登录时根据用户名查询用户信息（包含明文密码）。
 -- ---------------------------------------------------------
-CREATE OR REPLACE PROCEDURE sp_auth_get_user(
+DROP PROCEDURE IF EXISTS sp_auth_get_user//
+CREATE PROCEDURE sp_auth_get_user(
     IN p_username VARCHAR(50)
 )
 BEGIN
@@ -33,7 +34,8 @@ END //
 -- 作用: 注册新顾客 (明文存储)。
 -- 逻辑: 开启事务，同时向 users 表和 members 表插入数据。
 -- ---------------------------------------------------------
-CREATE OR REPLACE PROCEDURE sp_auth_register_customer(
+DROP PROCEDURE IF EXISTS sp_auth_register_customer//
+CREATE PROCEDURE sp_auth_register_customer(
     IN p_username VARCHAR(50),
     IN p_password VARCHAR(50),   -- 接收明文密码，长度需符合数据库限制
     OUT p_message VARCHAR(100),
