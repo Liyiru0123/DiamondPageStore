@@ -455,3 +455,47 @@ SET pa.allocated_amount = order_totals.order_total
 WHERE pa.allocated_amount IS NULL OR pa.allocated_amount = 0;
 
 SELECT 'payment totals updated' AS message;
+
+-- Recalculate earned points using tier earn_point_rate
+UPDATE point_ledgers pl
+JOIN (
+    SELECT
+        o.order_id,
+        o.member_id,
+        FLOOR((
+            SELECT COALESCE(SUM(oi_sub.quantity * s_sub.unit_price), 0)
+            FROM order_items oi_sub
+            JOIN skus s_sub ON oi_sub.sku_id = s_sub.sku_id
+            WHERE oi_sub.order_id = o.order_id
+        ) * (
+            SELECT mt.earn_point_rate
+            FROM member_tiers mt
+            WHERE mt.min_lifetime_spend <= (
+                SELECT COALESCE(SUM(oi_h.quantity * s_h.unit_price), 0)
+                FROM orders o_h
+                JOIN order_items oi_h ON o_h.order_id = oi_h.order_id
+                JOIN skus s_h ON oi_h.sku_id = s_h.sku_id
+                WHERE o_h.member_id = o.member_id
+                  AND o_h.order_status = 'paid'
+                  AND o_h.order_id <= o.order_id
+            )
+            ORDER BY mt.min_lifetime_spend DESC
+            LIMIT 1
+        )) AS expected_points
+    FROM orders o
+    WHERE o.order_status = 'paid'
+) calc
+    ON calc.order_id = pl.order_id AND calc.member_id = pl.member_id
+SET pl.points_change = calc.expected_points,
+    pl.points_delta = calc.expected_points
+WHERE pl.points_change > 0;
+
+UPDATE members m
+LEFT JOIN (
+    SELECT member_id, COALESCE(SUM(points_delta), 0) AS total_points
+    FROM point_ledgers
+    GROUP BY member_id
+) totals ON totals.member_id = m.member_id
+SET m.point = GREATEST(COALESCE(totals.total_points, 0), 0);
+
+SELECT 'member points recalculated' AS message;
