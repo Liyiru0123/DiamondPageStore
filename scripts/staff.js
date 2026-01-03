@@ -62,11 +62,10 @@ async function initStaffSession() {
                 store_name: rawData.store_name || rawData.STORE_NAME,
                 full_name: rawData.full_name || rawData.FULL_NAME,
                 job_title: rawData.job_title || rawData. JOB_TITLE,
-                username: rawData.username || rawData.USERNAME,  // ✅ 新增
-                email: rawData. email || rawData.EMAIL            // ✅ 新增
+                username: rawData.username || rawData.USERNAME,
+                email: rawData. email || rawData.EMAIL
             };
 
-            // ✅ 完整更新所有 Header 元素
             const headerStoreEl = document. getElementById('header-store-name');
             if (headerStoreEl) headerStoreEl.textContent = currentStaff.store_name;
             
@@ -76,7 +75,6 @@ async function initStaffSession() {
             const headerRoleEl = document.getElementById('header-user-role');
             if (headerRoleEl) headerRoleEl.textContent = currentStaff.job_title;
             
-            // ✅ 【关键修复】更新右上角的员工信息 (username · ID · email)
             const headerMetaEl = document.getElementById('header-user-meta');
             if (headerMetaEl) {
                 const parts = [];
@@ -92,7 +90,6 @@ async function initStaffSession() {
             fetchStockRequests(currentStaff.store_id);
 
         } else {
-            // --- 核心修复 ---
             // 如果后端返回 success: false (说明 Session 过期或无效)
             console.warn("Session expired or invalid:", result.message);
             
@@ -110,75 +107,6 @@ async function initStaffSession() {
         // 如果是网络错误，可以保留在页面但显示断网提示
     }
 }
-
-/**
- * ------------------------------------------------------------------
- * 2. 模拟数据 (Sample Data)
- * ------------------------------------------------------------------
- */
-const books = [
-    { id: 1, title: "The Great Gatsby", author: "F. Scott Fitzgerald", isbn: "9780743273565", category: "fiction", price: 15.99, stock: 12 },
-    { id: 2, title: "Sapiens: A Brief History of Humankind", author: "Yuval Noah Harari", isbn: "9780062316097", category: "non-fiction", price: 19.99, stock: 8 },
-    { id: 3, title: "A Brief History of Time", author: "Stephen Hawking", isbn: "9780553380163", category: "science", price: 14.99, stock: 3 },
-    { id: 4, title: "1984", author: "George Orwell", isbn: "9780451524935", category: "fiction", price: 12.99, stock: 25 },
-    { id: 5, title: "The Diary of a Young Girl", author: "Anne Frank", isbn: "9780553573404", category: "biography", price: 11.99, stock: 5 },
-    { id: 6, title: "To Kill a Mockingbird", author: "Harper Lee", isbn: "9780061120084", category: "fiction", price: 13.99, stock: 18 },
-    { id: 7, title: "The Theory of Everything", author: "Stephen Hawking", isbn: "9780553380163", category: "science", price: 16.99, stock: 2 },
-    { id: 8, title: "Educated", author: "Tara Westover", isbn: "9780399590504", category: "biography", price: 17.99, stock: 10 },
-    { id: 9, title: "The Guns of August", author: "Barbara W. Tuchman", isbn: "9780345476098", category: "history", price: 21.99, stock: 7 },
-    { id: 10, title: "Pride and Prejudice", author: "Jane Austen", isbn: "9780141439518", category: "fiction", price: 9.99, stock: 32 }
-];
-
-const mockInventory = [
-    { batch_id: 1, book_name: "The Great Gatsby", publisher: "Scribner", ISBN: "9780743273565", binding: "Hardcover", unit_price: 15.99, quantity: 1, category: "Fiction" },
-    { batch_id: 2, book_name: "Sapiens", publisher: "Harper", ISBN: "9780062316097", binding: "Paperback", unit_price: 19.99, quantity: 12, category: "Non-Fiction" },
-    { batch_id: 3, book_name: "A Brief History of Time", publisher: "Bantam", ISBN: "9780553380163", binding: "Paperback", unit_price: 14.99, quantity: 1, category: "Science" },
-    { batch_id: 4, book_name: "1984", publisher: "Signet", ISBN: "9780451524935", binding: "Mass Market", unit_price: 12.99, quantity: 25, category: "Fiction" },
-    { batch_id: 5, book_name: "Educated", publisher: "Random House", ISBN: "9780399590504", binding: "Hardcover", unit_price: 17.99, quantity: 8, category: "Biography" }
-];
-
-const mockOrders = [
-    {
-        order_id: 1001,
-        customer: "John Smith",
-        order_date: "2023-12-01 10:30:00",
-        items: 3,
-        total: 45.97,
-        status: "paid",
-        book_list: [
-            { title: "The Great Gatsby", isbn: "9780743273565", qty: 2, price: 15.99 },
-            { title: "1984", isbn: "9780451524935", qty: 1, price: 13.99 }
-        ]
-    },
-    {
-        order_id: 1002,
-        customer: "Jane Doe",
-        order_date: "2023-12-25 14:20:00",
-        items: 1,
-        total: 19.99,
-        status: "created",
-        book_list: [
-            { title: "Sapiens", isbn: "9780062316097", qty: 1, price: 19.99 }
-        ]
-    },
-    {
-        order_id: 1003,
-        customer: "Robert Johnson",
-        order_date: "2023-12-26 09:15:00",
-        items: 1,
-        total: 15.99,
-        status: "cancelled",
-        book_list: [
-            { title: "The Great Gatsby", isbn: "9780743273565", qty: 1, price: 15.99 }
-        ]
-    }
-];
-
-const stockRequests = [
-    { id: 501, dateRequested: "2023-06-10", items: 5, status: "pending", expectedDelivery: "2023-06-20" },
-    { id: 502, dateRequested: "2023-06-05", items: 3, status: "delivered", expectedDelivery: "2023-06-12" },
-    { id: 503, dateRequested: "2023-05-28", items: 7, status: "delivered", expectedDelivery: "2023-06-05" }
-];
 
 /**
  * ------------------------------------------------------------------
@@ -262,7 +190,6 @@ function populateCategoryDropdowns() {
     // 填充筛选器中的类别下拉框
     const filterSelect = document.getElementById('category-filter');
     if (filterSelect && globalCategories.length > 0) {
-        // 保留"All Categories"选项，添加数据库中的类别
         const currentValue = filterSelect.value;
         const options = '<option value="">All Categories</option>' +
             globalCategories.map(cat =>
@@ -545,18 +472,10 @@ function renderRecentOrders(data) {
     recent.forEach(order => {
         const row = document.createElement('tr');
 
-        // --- 修复重点 START ---
-        // 1. 兼容字段名: 数据库可能是 order_id, 也可能是 id
         const displayId = order.order_id || order.id;
-
-        // 2. 兼容字段名: 数据库可能是 order_date, 也可能是 date
         const displayDate = order.order_date || order.date;
-
-        // 3. 修复报错核心: 获取状态字符串，如果为空则给默认值 'created'
-        // 同时兼容数据库字段 order_status 和前端字段 status
         const rawStatus = order.order_status || order.status || 'created';
-        const safeStatus = rawStatus.toLowerCase(); // 确保它是小写
-        // --- 修复重点 END ---
+        const safeStatus = rawStatus.toLowerCase();
 
         row.innerHTML = `
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#${displayId}</td>
@@ -573,13 +492,13 @@ function renderRecentOrders(data) {
     }
 }
 
-// A. 渲染 Dashboard: 低库存预警列表 (Dashboard 修正)
+// A. 渲染 Dashboard: 低库存预警列表
 function renderLowStockItems(inventoryData) {
     const lowStockList = document.getElementById('low-stock-list');
     if (!lowStockList) return;
     lowStockList.innerHTML = '';
 
-    // 修改筛选逻辑：qty == 1 (根据之前的需求)
+    // 修改筛选逻辑：qty == 1
     const criticalItems = inventoryData.filter(item => {
         const qty = parseInt(item.quantity || item.stock || 0);
         return qty === 1;
@@ -589,7 +508,6 @@ function renderLowStockItems(inventoryData) {
         const row = document.createElement('tr');
 
         const name = item.book_name || item.title || 'Unknown';
-        // 修正：优先使用 category，如果没有则显示 binding
         const cat = item.category || item.binding || 'General';
 
         row.innerHTML = `
