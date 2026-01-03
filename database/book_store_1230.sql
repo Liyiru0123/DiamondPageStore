@@ -1682,7 +1682,7 @@ INSERT INTO `announcements` (`announcement_id`, `title`, `content`, `publish_at`
 (4, 'Final Exam Season Reading Recommendations', 'To support students during the final exam season, we have curated a special list of recommended textbooks and reference books. Selected titles are available with limited-time discounts.', '2025-10-05 10:00:00', '2025-10-20 23:59:59'),
 (5, 'Extended Opening Hours This Weekend', 'Our physical bookstore will extend opening hours this weekend, staying open until 10:00 PM on Saturday and Sunday. Welcome to visit and enjoy a quieter reading environment.', '2025-10-12 08:00:00', '2025-10-13 22:00:00'),
 (6, 'New Year 2026 Promotion', 'To celebrate the New Year 2026, enjoy up to 25% off on selected books across all categories. Members can receive extra discounts during the promotion period. Happy New Year and happy reading!', '2025-12-01 10:00:00', '2026-01-07 23:59:59'),
-(7, 'Spring 2026 Book Sale', 'Welcome the Spring 2026 season with our special book sale. Selected titles across literature, science, and technology are available with discounts of up to 20%. Members enjoy additional exclusive offers during the promotion.', '2026-03-10 09:00:00', '2026-03-24 23:59:59');
+(7, 'Spring 2026 Book Sale', 'Welcome the Spring 2026 season with our special book sale. Selected titles across literature, science, and technology are available with discounts of up to 20%. Members enjoy additional exclusive offers during the promotion.', '2026-02-10 09:00:00', '2026-02-24 23:59:59');
 
 -- --------------------------------------------------------
 
