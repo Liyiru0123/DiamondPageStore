@@ -409,15 +409,18 @@ SET ib.quantity = 0;
 
 UPDATE inventory_batches ib
 JOIN (
-    SELECT ib.store_id, ib.sku_id, MIN(ib.batch_id) AS batch_id
+    SELECT
+        ib.store_id,
+        ib.sku_id,
+        MIN(ib.batch_id) AS batch_id,
+        t.target_qty AS target_qty
     FROM inventory_batches ib
     JOIN (SELECT store_id FROM stores ORDER BY store_id LIMIT 4) s4
         ON s4.store_id = ib.store_id
     JOIN tmp_targets t ON t.sku_id = ib.sku_id
-    GROUP BY ib.store_id, ib.sku_id
+    GROUP BY ib.store_id, ib.sku_id, t.target_qty
 ) pick ON pick.batch_id = ib.batch_id
-JOIN tmp_targets t ON t.sku_id = ib.sku_id
-SET ib.quantity = t.target_qty;
+SET ib.quantity = pick.target_qty;
 
 DROP TEMPORARY TABLE IF EXISTS tmp_targets;
 DROP TEMPORARY TABLE IF EXISTS tmp_qty;
