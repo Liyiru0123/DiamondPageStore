@@ -1,7 +1,7 @@
 # 1. Access Instructions & Introduction (访问说明与简介)
 
 ## 1.1 Deployment Information (部署信息)
-* **Hosting Platform**: Alibaba Cloud (阿里云)
+* **Hosting Platform**: Alibaba Cloud 
 * **Development Stack**: 等待填写
 * **Application URL**: [在此填入阿里云的访问链接]
 * **Database Connection**:

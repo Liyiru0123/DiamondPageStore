@@ -1,7 +1,7 @@
 -- deploy_all.sql
 -- One-shot deploy (run from database/ with: mysql < deploy_all.sql)
 
-CREATE DATABASE IF NOT EXISTS book_store CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+CREATE DATABASE IF NOT EXISTS book_store CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 USE book_store;
 SET @OLD_FOREIGN_KEY_CHECKS = @@FOREIGN_KEY_CHECKS;
 SET FOREIGN_KEY_CHECKS = 0;

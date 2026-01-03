@@ -93,8 +93,8 @@ BEGIN
     WHERE
         -- 搜索条件：书名或ISBN包含搜索词 (增加 COLLATE 修复字符集冲突)
         (p_search_term IS NULL OR p_search_term = '' OR
-         book_name LIKE CONCAT('%', p_search_term, '%') COLLATE utf8mb4_general_ci OR
-         ISBN LIKE CONCAT('%', p_search_term, '%') COLLATE utf8mb4_general_ci)
+         book_name LIKE CONCAT('%', p_search_term, '%') COLLATE utf8mb4_0900_ai_ci OR
+         ISBN LIKE CONCAT('%', p_search_term, '%') COLLATE utf8mb4_0900_ai_ci)
         
         -- 类别条件：使用FIND_IN_SET或LIKE匹配逗号分隔的类别
         AND (p_category IS NULL OR p_category = '' OR
@@ -160,8 +160,8 @@ BEGIN
     LEFT JOIN skus s ON oi.sku_id = s.sku_id
     WHERE o.store_id = p_store_id
         AND (p_search_term IS NULL OR p_search_term = '' OR 
-             CAST(o.order_id AS CHAR) LIKE CONCAT('%', p_search_term, '%') COLLATE utf8mb4_general_ci OR 
-             CONCAT(m.first_name, ' ', m.last_name) LIKE CONCAT('%', p_search_term, '%') COLLATE utf8mb4_general_ci)
+             CAST(o.order_id AS CHAR) LIKE CONCAT('%', p_search_term, '%') COLLATE utf8mb4_0900_ai_ci OR 
+             CONCAT(m.first_name, ' ', m.last_name) LIKE CONCAT('%', p_search_term, '%') COLLATE utf8mb4_0900_ai_ci)
         AND (p_status IS NULL OR p_status = '' OR o.order_status = p_status)
         AND (p_date_from IS NULL OR DATE(o.order_date) >= p_date_from)
         AND (p_date_to IS NULL OR DATE(o.order_date) <= p_date_to)

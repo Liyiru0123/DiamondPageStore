@@ -623,10 +623,10 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_finance_invoice_list` (IN `p_sea
         last_paid_at
     FROM vw_finance_invoice_list
     WHERE (p_search IS NULL OR p_search = ''
-        OR CONVERT(CAST(invoice_id AS CHAR) USING utf8mb4) COLLATE utf8mb4_general_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_general_ci
-        OR CONVERT(CAST(order_id AS CHAR) USING utf8mb4) COLLATE utf8mb4_general_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_general_ci
-        OR CONVERT(CAST(invoice_number AS CHAR) USING utf8mb4) COLLATE utf8mb4_general_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_general_ci
-        OR CONVERT(member_name USING utf8mb4) COLLATE utf8mb4_general_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_general_ci)
+        OR CONVERT(CAST(invoice_id AS CHAR) USING utf8mb4) COLLATE utf8mb4_0900_ai_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_0900_ai_ci
+        OR CONVERT(CAST(order_id AS CHAR) USING utf8mb4) COLLATE utf8mb4_0900_ai_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_0900_ai_ci
+        OR CONVERT(CAST(invoice_number AS CHAR) USING utf8mb4) COLLATE utf8mb4_0900_ai_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_0900_ai_ci
+        OR CONVERT(member_name USING utf8mb4) COLLATE utf8mb4_0900_ai_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_0900_ai_ci)
       AND (p_status IS NULL OR p_status = '' OR display_status = p_status)
       AND (p_order_id IS NULL OR p_order_id = 0 OR order_id = p_order_id)
       AND (p_start IS NULL OR DATE(issue_date) >= p_start)
@@ -683,9 +683,9 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_finance_order_list` (IN `p_searc
         total_quantity
     FROM vw_finance_order_list
     WHERE (p_search IS NULL OR p_search = ''
-        OR CONVERT(CAST(order_id AS CHAR) USING utf8mb4) COLLATE utf8mb4_general_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_general_ci
-        OR CONVERT(CAST(member_id AS CHAR) USING utf8mb4) COLLATE utf8mb4_general_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_general_ci
-        OR CONVERT(member_name USING utf8mb4) COLLATE utf8mb4_general_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_general_ci)
+        OR CONVERT(CAST(order_id AS CHAR) USING utf8mb4) COLLATE utf8mb4_0900_ai_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_0900_ai_ci
+        OR CONVERT(CAST(member_id AS CHAR) USING utf8mb4) COLLATE utf8mb4_0900_ai_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_0900_ai_ci
+        OR CONVERT(member_name USING utf8mb4) COLLATE utf8mb4_0900_ai_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_0900_ai_ci)
       AND (p_status IS NULL OR p_status = '' OR order_status = p_status)
       AND (p_store_id IS NULL OR p_store_id = 0 OR store_id = p_store_id)
       AND (p_start IS NULL OR DATE(order_date) >= p_start)
@@ -3891,7 +3891,7 @@ CREATE TABLE `replenishment_requests` (
   `rejection_date` datetime DEFAULT NULL,
   `completed_date` datetime DEFAULT NULL,
   `note` varchar(500) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 

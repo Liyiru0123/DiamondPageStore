@@ -118,9 +118,9 @@ BEGIN
         
         -- 1. 关键词搜索 (支持成员名、发票号、订单号)
         AND (p_search IS NULL OR p_search = '' 
-        OR CONVERT(member_name USING utf8mb4) COLLATE utf8mb4_general_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_general_ci
-        OR CAST(invoice_number AS CHAR) COLLATE utf8mb4_general_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_general_ci
-        OR CAST(order_id AS CHAR) COLLATE utf8mb4_general_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_general_ci)
+        OR CONVERT(member_name USING utf8mb4) COLLATE utf8mb4_0900_ai_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_0900_ai_ci
+        OR CAST(invoice_number AS CHAR) COLLATE utf8mb4_0900_ai_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_0900_ai_ci
+        OR CAST(order_id AS CHAR) COLLATE utf8mb4_0900_ai_ci LIKE CONCAT('%', CONVERT(p_search USING utf8mb4), '%') COLLATE utf8mb4_0900_ai_ci)
         
         -- 2. 状态筛选
         AND (p_status IS NULL OR p_status = '' OR p_status = 'All Statuses' OR invoice_status = p_status)
@@ -547,9 +547,9 @@ DELIMITER ;;
 
 CREATE PROCEDURE sp_finance_invoice_list(
 
-    IN p_search VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci, -- 👈 关键修改：匹配视图的 Unicode 规则
+    IN p_search VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci, -- 👈 关键修改：匹配视图的 Unicode 规则
 
-    IN p_status VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,  -- 👈 关键修改
+    IN p_status VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,  -- 👈 关键修改
 
     IN p_order_id INT,
 
