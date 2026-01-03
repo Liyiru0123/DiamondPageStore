@@ -772,7 +772,10 @@ function viewRequestDetail(requestId) {
 }
 
 async function approveRequestById(requestId) {
+    const modal = document.getElementById('request-detail-modal');
+    if (modal?.dataset.actionInProgress === '1') return;
     if (!confirm(`Approve request ${requestId}?`)) return;
+    if (modal) modal.dataset.actionInProgress = '1';
     try {
         await approveReplenishmentRequestAPI({ request_id: requestId });
         showMessage('Request approved successfully', 'success');
@@ -780,13 +783,18 @@ async function approveRequestById(requestId) {
     } catch (error) {
         console.error('Failed to approve request:', error);
         showMessage('Failed to approve request: ' + error.message, 'error');
+    } finally {
+        if (modal) modal.dataset.actionInProgress = '0';
     }
 }
 
 async function rejectRequestById(requestId) {
+    const modal = document.getElementById('request-detail-modal');
+    if (modal?.dataset.actionInProgress === '1') return;
     const reason = prompt('Please provide a reason for rejection:');
     if (!reason) return;
 
+    if (modal) modal.dataset.actionInProgress = '1';
     try {
         await rejectReplenishmentRequestAPI({ request_id: requestId, rejection_reason: reason });
         showMessage('Request rejected successfully', 'success');
@@ -794,6 +802,8 @@ async function rejectRequestById(requestId) {
     } catch (error) {
         console.error('Failed to reject request:', error);
         showMessage('Failed to reject request: ' + error.message, 'error');
+    } finally {
+        if (modal) modal.dataset.actionInProgress = '0';
     }
 }
 
@@ -810,28 +820,28 @@ async function completeRequest(requestId) {
     }
 }
 
-// Map modal buttons to current request id
-function resetRequestModalButton(buttonId, handler) {
-    const button = document.getElementById(buttonId);
-    if (!button || !button.parentNode) return;
-    const freshButton = button.cloneNode(true);
-    button.parentNode.replaceChild(freshButton, button);
-    freshButton.addEventListener('click', handler);
+// Map modal buttons to current request id (delegate to avoid duplicate listeners)
+const requestDetailModal = document.getElementById('request-detail-modal');
+if (requestDetailModal && requestDetailModal.dataset.bound !== '1') {
+    requestDetailModal.dataset.bound = '1';
+    requestDetailModal.addEventListener('click', (event) => {
+        const button = event.target.closest('button');
+        if (!button) return;
+        const requestId = requestDetailModal.dataset.currentRequestId;
+        if (button.id === 'close-request-detail') {
+            requestDetailModal.classList.add('hidden');
+            return;
+        }
+        if (!requestId) return;
+        if (button.id === 'approve-request') {
+            approveRequestById(requestId);
+            return;
+        }
+        if (button.id === 'reject-request') {
+            rejectRequestById(requestId);
+        }
+    });
 }
-
-resetRequestModalButton('close-request-detail', () => {
-    document.getElementById('request-detail-modal')?.classList.add('hidden');
-});
-resetRequestModalButton('approve-request', () => {
-    const modal = document.getElementById('request-detail-modal');
-    const requestId = modal?.dataset.currentRequestId;
-    if (requestId) approveRequestById(requestId);
-});
-resetRequestModalButton('reject-request', () => {
-    const modal = document.getElementById('request-detail-modal');
-    const requestId = modal?.dataset.currentRequestId;
-    if (requestId) rejectRequestById(requestId);
-});
 
 // =============================================================================
 // Inventory Management
