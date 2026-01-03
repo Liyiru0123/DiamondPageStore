@@ -2,13 +2,17 @@
 
 ## 1.1 Deployment Information (部署信息)
 * **Hosting Platform**: Alibaba Cloud 
-* **Development Stack**: 等待填写
-* **Application URL**: [在此填入阿里云的访问链接]
+* **Development Stack**:
+    OS: Ubuntu 20.04 
+    Web Server: Nginx
+    Backend: PHP 8.3 / Node.js 
+    Database: MySQL 8.0
+* **Application URL**: [http://8.138.128.9/pages/login.html]
 * **Database Connection**:
-    * **Host**: [阿里云 RDS 或 ECS IP]
-    * **Port**: 
-    * **Username**: 
-    * **Password**: 
+    * **Host**: localhost
+    * **Port**: 3306
+    * **Username**: root
+    * **Password**: ""
 
 ## 1.2 User Test Accounts (用户测试账号)
 > **Note to Marker**: All passwords are set to `123456` for testing convenience.
