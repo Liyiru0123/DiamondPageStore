@@ -493,7 +493,7 @@ function initEventListeners() {
                 name: row.dataset.name || row.cells[3]?.textContent,
                 position: row.dataset.position || 'staff',
                 email: row.dataset.email || row.cells[5]?.textContent,
-                storeID: row.dataset.storeid || ''
+                storeID: row.dataset.storeId || ''
             };
             openEditStaffModal(staffData);
         }
@@ -544,22 +544,37 @@ function applyFilters() {
     const branchFilter = document.getElementById('branch-filter').value;
     const positionFilter = document.getElementById('position-filter').value;
 
-    const rows = document.querySelectorAll('#staff-table-body tr');
-    let visibleCount = 0;
+    // 从原始数据缓存中获取完整数据
+    if (!window.originalDataCache || !window.originalDataCache.staff || window.originalDataCache.staff.length === 0) {
+        console.warn('Original staff data cache not available');
+        return;
+    }
 
-    rows.forEach(row => {
-        const branchMatch = branchFilter === 'all' || row.dataset.storeID === branchFilter;
-        const positionMatch = positionFilter === 'all' || row.dataset.position === positionFilter;
+    const allStaff = window.originalDataCache.staff;
 
-        if (branchMatch && positionMatch) {
-            row.style.display = '';
-            visibleCount++;
-        } else {
-            row.style.display = 'none';
+    // 根据筛选条件过滤数据
+    const filteredStaff = allStaff.filter(employee => {
+        const branchMatch = branchFilter === 'all' || String(employee.store_id) === branchFilter;
+
+        let positionMatch = positionFilter === 'all';
+        if (!positionMatch && employee.job_title) {
+            const jobTitleLower = employee.job_title.toLowerCase();
+            if (positionFilter === 'manager' && jobTitleLower.includes('manager')) {
+                positionMatch = true;
+            } else if (positionFilter === 'finance' && jobTitleLower.includes('finance')) {
+                positionMatch = true;
+            } else if (positionFilter === 'staff' && !jobTitleLower.includes('manager') && !jobTitleLower.includes('finance')) {
+                positionMatch = true;
+            }
         }
+
+        return branchMatch && positionMatch;
     });
 
-    updateStaffCount(visibleCount);
+    // 使用过滤后的数据重新渲染表格，传递 isFiltered=true 参数
+    if (typeof renderStaffTable === 'function') {
+        renderStaffTable(filteredStaff, true);
+    }
 
     // 添加布局修复
     fixLayoutAfterFilter();
@@ -570,12 +585,18 @@ function resetFilters() {
     document.getElementById('branch-filter').value = 'all';
     document.getElementById('position-filter').value = 'all';
 
-    const rows = document.querySelectorAll('#staff-table-body tr');
-    rows.forEach(row => {
-        row.style.display = '';
-    });
-
-    updateStaffCount(rows.length);
+    // 从原始数据缓存中获取完整数据并重新渲染
+    if (window.originalDataCache && window.originalDataCache.staff && window.originalDataCache.staff.length > 0) {
+        if (typeof renderStaffTable === 'function') {
+            // 传递 isFiltered=false 表示这是完整数据
+            renderStaffTable(window.originalDataCache.staff, false);
+        }
+    } else {
+        // 如果缓存不可用，重新加载数据
+        if (typeof loadStaffData === 'function') {
+            loadStaffData();
+        }
+    }
 
     // 添加布局修复
     fixLayoutAfterFilter();
