@@ -22,16 +22,16 @@
 
             // 1. 基础检查：无 Token 直接回退
             if (!token) {
-                window.location.href = 'login.html';
+                window.location.href = '/pages/login.html';
                 return;
             }
 
             // 2. 角色越权检查 (可选增强)
             const roleRouteMap = {
-                'customer': 'customer.html',
-                'staff': 'staff.html',
-                'manager': 'manager.html',
-                'finance': 'finance.html'
+                'customer': '/pages/customer.html',
+                'staff': '/pages/staff.html',
+                'manager': '/pages/manager.html',
+                'finance': '/pages/finance.html'
             };
 
             // 如果当前文件名不是该角色应属的页面，且不是 login.html，则强制纠正
@@ -40,7 +40,7 @@
                 localStorage.removeItem('user_role');
                 localStorage.removeItem('auth_token');
                 sessionStorage.removeItem('currentPage'); // 清除残留的页面ID
-                window.location.href = 'login.html';
+                window.location.href = '/pages/login.html';
             }
         })();
     </script>
