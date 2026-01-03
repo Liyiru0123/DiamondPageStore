@@ -144,7 +144,7 @@ const bookCardTemplate = (book) => {
 
         <!-- 价格与购买按钮 -->
         <div class="flex items-center justify-between pt-4 border-t border-brown-light/10">
-          <span class="text-xl font-bold text-brown">¥${Number(book.price).toFixed(2)}</span>
+          <span class="text-xl font-bold text-brown">￡${Number(book.price).toFixed(2)}</span>
           
           <button class="addCartBtn ${isOutOfStock ? 'bg-gray-300 cursor-not-allowed' : 'bg-brown hover:bg-brown-dark'} text-white px-4 py-1.5 rounded-full text-sm flex items-center gap-2 transition-colors"
                data-id="${book.id}" ${isOutOfStock ? 'disabled' : ''}>
@@ -354,7 +354,7 @@ async function updateCartUI() {
           <div class="flex flex-col flex-1 cursor-pointer hover:opacity-70" 
               onclick='showBookDetail(${JSON.stringify(fullBookData).replace(/'/g, "&apos;")})'>
             <h4 class="font-bold text-brown-dark">${item.title}</h4>
-            <p class="text-xs text-gray-400">Unit Price: ¥${item.unit_price.toFixed(2)}</p>
+            <p class="text-xs text-gray-400">Unit Price: ￡${item.unit_price.toFixed(2)}</p>
             <p class="text-[10px] text-brown/60 italic"><i class="fa fa-map-marker"></i> ${fullBookData.storeName || 'Store'}</p>
           </div>
           <div class="flex items-center gap-4">
@@ -363,14 +363,14 @@ async function updateCartUI() {
               <span class="px-2">${item.quantity}</span>
               <button class="cart-op p-1 w-8 h-8" data-id="${item.sku_id}" data-op="plus">+</button>
             </div>
-            <span class="font-bold text-red-600 w-20 text-right">¥${item.total.toFixed(2)}</span>
+            <span class="font-bold text-red-600 w-20 text-right">￡${item.total.toFixed(2)}</span>
             <button class="cart-op text-gray-400 hover:text-red-500" data-id="${item.sku_id}" data-op="remove"><i class="fa fa-trash"></i></button>
           </div>
         </div>
       `;
     }).join('');
 
-    cartTotal.textContent = `¥${result.data.total.toFixed(2)}`;
+    cartTotal.textContent = `￡${result.data.total.toFixed(2)}`;
   } catch (e) {
     // 容错处理：如果计价接口失败，依然显示列表，让用户能删除物品
     console.error("Cart Pricing Error:", e);
@@ -452,11 +452,11 @@ function openPaymentModal(orderIds) {
     summaryList.innerHTML = selectedOrders.map(o => `
             <div class="flex justify-between text-sm py-1">
                 <span class="text-gray-500">Order #${o.orderId}</span>
-                <span class="font-medium text-brown">¥${o.total.toFixed(2)}</span>
+                <span class="font-medium text-brown">￡${o.total.toFixed(2)}</span>
             </div>
         `).join('');
   }
-  if (totalDisplay) totalDisplay.textContent = `¥${totalAmount.toFixed(2)}`;
+  if (totalDisplay) totalDisplay.textContent = `￡${totalAmount.toFixed(2)}`;
   modal.classList.remove('hidden');
 }
 
@@ -559,7 +559,7 @@ function renderOrderCard(order) {
       <div class="flex justify-between items-end border-t pt-4">
         <span class="text-gray-500 text-sm">${new Date(order.date).toLocaleDateString()}</span>
         <div class="flex items-center gap-3">
-          <span class="text-lg font-bold text-brown">¥${order.total.toFixed(2)}</span>
+          <span class="text-lg font-bold text-brown">￡${order.total.toFixed(2)}</span>
           ${order.status === 'created' ? `
             <div class="flex gap-2">
               <button onclick="handleCancelOrder('${order.orderId}')" 
@@ -599,7 +599,7 @@ async function updateMemberPageUI() {
     const info = await fetchMemberInfo();
     const tiers = await fetchMemberTiers();
     document.getElementById('display-user-name').textContent = info.username;
-    document.getElementById('member-total-spent').textContent = `¥${info.totalSpent.toFixed(2)}`;
+    document.getElementById('member-total-spent').textContent = `￡${info.totalSpent.toFixed(2)}`;
     document.getElementById('member-points').textContent = info.points.toLocaleString();
     document.getElementById('member-level-badge').textContent = info.tier.name;
     document.getElementById('member-discount-text').textContent = `${info.tier.discountPercent}%`;
@@ -608,7 +608,7 @@ async function updateMemberPageUI() {
       tierContainer.innerHTML = tiers.map(t => `
         <div class="p-4 border-2 rounded-xl ${info.tier.tierId === t.tierId ? 'border-brown bg-brown/5' : 'border-gray-100 opacity-60'}">
           <h4 class="font-bold text-brown-dark">${t.name}</h4>
-          <p class="text-xs text-gray-500 mt-1">Spend ¥${t.minTotalSpent}+</p>
+          <p class="text-xs text-gray-500 mt-1">Spend ￡${t.minTotalSpent}+</p>
           <div class="mt-3 text-sm font-medium text-brown">${t.discountPercent}% OFF</div>
         </div>
       `).join('');
@@ -820,7 +820,7 @@ function updateOrderFooterUI() {
   const selectedOrders = ordersCache.filter(o => selected.includes(o.orderId.toString()));
   const total = selectedOrders.reduce((s, o) => s + o.total, 0);
   if (document.getElementById('selected-orders-count')) document.getElementById('selected-orders-count').textContent = selected.length;
-  if (document.getElementById('combined-total-price')) document.getElementById('combined-total-price').textContent = `¥${total.toFixed(2)}`;
+  if (document.getElementById('combined-total-price')) document.getElementById('combined-total-price').textContent = `￡${total.toFixed(2)}`;
   if (document.getElementById('merge-payment-btn')) document.getElementById('merge-payment-btn').disabled = selected.length === 0;
 }
 

@@ -56,7 +56,7 @@ function renderBookDetail(book) {
   // 基础字段填充 (利用 customer.js 中已经存在的字段名)
   elements.title.textContent = book.title || 'Unknown Title';
   elements.author.textContent = book.author_name || book.author || 'Unknown Author';
-  elements.price.textContent = `¥${Number(book.price || 0).toFixed(2)}`;
+  elements.price.textContent = `￡${Number(book.price || 0).toFixed(2)}`;
   
   // 收藏数渲染
   const fCount = book.fav_count !== undefined ? book.fav_count : (book.favCount || 0);
