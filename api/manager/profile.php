@@ -264,7 +264,7 @@ function changePassword($conn) {
         return;
     }
 
-    // 获取当前密码hash
+    // 获取当前密码
     $sql = "SELECT password_hash FROM users WHERE user_id = :user_id";
     $stmt = $conn->prepare($sql);
     $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
@@ -280,14 +280,8 @@ function changePassword($conn) {
         return;
     }
 
-    $storedHash = $user['password_hash'];
-    $isHashed = is_string($storedHash) && preg_match('/^\$2[aby]\$\d{2}\$/', $storedHash);
-    $isValidPassword = $isHashed
-        ? password_verify($currentPassword, $storedHash)
-        : ($currentPassword === (string)$storedHash);
-
     // 验证当前密码
-    if (!$isValidPassword) {
+    if ($currentPassword !== (string)$user['password_hash']) {
         http_response_code(401);
         echo json_encode([
             'success' => false,
@@ -296,8 +290,8 @@ function changePassword($conn) {
         return;
     }
 
-    // 更新为新密码
-    $newPasswordHash = password_hash($newPassword, PASSWORD_DEFAULT);
+    // 更新为新密码（明文）
+    $newPasswordHash = $newPassword;
     $updateSQL = "UPDATE users SET password_hash = :password_hash WHERE user_id = :user_id";
     $updateStmt = $conn->prepare($updateSQL);
     $updateStmt->bindParam(':password_hash', $newPasswordHash, PDO::PARAM_STR);
