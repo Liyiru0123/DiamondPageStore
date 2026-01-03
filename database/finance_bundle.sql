@@ -547,9 +547,9 @@ DELIMITER ;;
 
 CREATE PROCEDURE sp_finance_invoice_list(
 
-    IN p_search VARCHAR(255) COLLATE utf8mb4_unicode_ci, -- 👈 关键修改：匹配视图的 Unicode 规则
+    IN p_search VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci, -- 👈 关键修改：匹配视图的 Unicode 规则
 
-    IN p_status VARCHAR(50) COLLATE utf8mb4_unicode_ci,  -- 👈 关键修改
+    IN p_status VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,  -- 👈 关键修改
 
     IN p_order_id INT,
 
