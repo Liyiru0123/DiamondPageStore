@@ -280,8 +280,14 @@ function changePassword($conn) {
         return;
     }
 
+    $storedHash = $user['password_hash'];
+    $isHashed = is_string($storedHash) && preg_match('/^\$2[aby]\$\d{2}\$/', $storedHash);
+    $isValidPassword = $isHashed
+        ? password_verify($currentPassword, $storedHash)
+        : ($currentPassword === (string)$storedHash);
+
     // 验证当前密码
-    if (!password_verify($currentPassword, $user['password_hash'])) {
+    if (!$isValidPassword) {
         http_response_code(401);
         echo json_encode([
             'success' => false,
