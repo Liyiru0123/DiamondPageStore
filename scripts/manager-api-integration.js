@@ -761,6 +761,12 @@ function viewRequestDetail(requestId) {
         </div>
     `;
 
+    const approveButton = document.getElementById('approve-request');
+    const rejectButton = document.getElementById('reject-request');
+    const allowActions = request.status === 'pending';
+    if (approveButton) approveButton.classList.toggle('hidden', !allowActions);
+    if (rejectButton) rejectButton.classList.toggle('hidden', !allowActions);
+
     modal.dataset.currentRequestId = requestId;
     modal.classList.remove('hidden');
 }

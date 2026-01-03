@@ -126,34 +126,76 @@ function renderPaginationControls(containerId, totalItems, currentPage, onPageCh
     const totalPages = Math.ceil(totalItems / pageSize) || 1;
     let buttonsHtml = '';
 
-    // A. 统计信息 (左侧)
+    // A. 统计信息 (左侧) - 保持不变
     const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
     const end = Math.min(currentPage * pageSize, totalItems);
     const infoHtml = `<p class="text-sm text-gray-500">Showing ${start} to ${end} of <span class="font-bold">${totalItems}</span> records</p>`;
 
     // B. 数字按钮 (右侧)
-    // 上一页
+    // 1. 上一页
     buttonsHtml += `
         <button class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50" 
                 ${currentPage === 1 ? 'disabled' : ''} data-page="${currentPage - 1}">
             <i class="fa fa-chevron-left text-xs"></i>
         </button>`;
 
-    // 页码数字 (这里只做简单的 1, 2, 3...)
-    for (let i = 1; i <= totalPages; i++) {
-        const isActive = i === currentPage;
-        buttonsHtml += `
-            <button class="w-8 h-8 flex items-center justify-center rounded border ${isActive ? 'border-primary bg-primary text-white' : 'border-gray-300 hover:bg-gray-50'}" 
-                    data-page="${i}">${i}</button>`;
+    // 2. 核心页码计算逻辑
+    const pages = [];
+    if (totalPages <= 7) {
+        // 如果总页数较少（比如7页以内），全部显示
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+        // 如果页数很多，逻辑如下：
+        pages.push(1); // 始终显示第一页
+
+        if (currentPage > 4) {
+            pages.push('...'); // 左侧省略号
+        }
+
+        // 计算中间的范围
+        let startPage = Math.max(2, currentPage - 2);
+        let endPage = Math.min(totalPages - 1, currentPage + 2);
+
+        // 边界修正：靠近开头时
+        if (currentPage <= 4) {
+            endPage = 5;
+        }
+        // 边界修正：靠近结尾时
+        if (currentPage >= totalPages - 3) {
+            startPage = totalPages - 4;
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            pages.push(i);
+        }
+
+        if (currentPage < totalPages - 3) {
+            pages.push('...'); // 右侧省略号
+        }
+
+        pages.push(totalPages); // 始终显示最后一页
     }
 
-    // 下一页
+    // 3. 循环渲染生成的页码数组
+    pages.forEach(p => {
+        if (p === '...') {
+            buttonsHtml += `<span class="w-8 h-8 flex items-center justify-center text-gray-400">...</span>`;
+        } else {
+            const isActive = p === currentPage;
+            buttonsHtml += `
+                <button class="w-8 h-8 flex items-center justify-center rounded border ${isActive ? 'border-primary bg-primary text-white' : 'border-gray-300 hover:bg-gray-50'}" 
+                        data-page="${p}">${p}</button>`;
+        }
+    });
+
+    // 4. 下一页
     buttonsHtml += `
         <button class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50" 
                 ${currentPage === totalPages ? 'disabled' : ''} data-page="${currentPage + 1}">
             <i class="fa fa-chevron-right text-xs"></i>
         </button>`;
 
+    // C. 组装并渲染
     container.innerHTML = `
         <div class="flex justify-between items-center mt-5">
             ${infoHtml}
@@ -162,10 +204,14 @@ function renderPaginationControls(containerId, totalItems, currentPage, onPageCh
     `;
 
     // 绑定点击事件 (利用冒泡)
-    container.querySelector('.pagination-buttons-wrapper').onclick = (e) => {
-        const btn = e.target.closest('button');
-        if (btn && !btn.disabled) {
-            onPageChange(parseInt(btn.dataset.page));
-        }
-    };
+    const wrapper = container.querySelector('.pagination-buttons-wrapper');
+    if (wrapper) {
+        wrapper.onclick = (e) => {
+            const btn = e.target.closest('button');
+            // 注意：点击“...”(span)时不会触发 btn，所以不会跳转
+            if (btn && !btn.disabled && btn.dataset.page) {
+                onPageChange(parseInt(btn.dataset.page));
+            }
+        };
+    }
 }
