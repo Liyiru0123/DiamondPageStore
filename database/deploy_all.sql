@@ -3,6 +3,8 @@
 
 CREATE DATABASE IF NOT EXISTS book_store CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 USE book_store;
+SET @OLD_FOREIGN_KEY_CHECKS = @@FOREIGN_KEY_CHECKS;
+SET FOREIGN_KEY_CHECKS = 0;
 
 -- Base schema + seed
 SOURCE ./book_store_1230.sql;
@@ -20,3 +22,4 @@ SOURCE ./finance_bundle.sql;
 
 -- Core triggers
 SOURCE ./triggers.sql;
+SET FOREIGN_KEY_CHECKS = @OLD_FOREIGN_KEY_CHECKS;
