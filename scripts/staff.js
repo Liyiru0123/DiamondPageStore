@@ -653,7 +653,7 @@ function renderInventory(data) {
                     ${category}
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-semibold">¥${price}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-semibold">￡${price}</td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${stock}</td>
                 <td class="px-4 py-3 whitespace-nowrap">
                     <span class="status-${stockStatus}">${capitalize(stockStatus)}</span>
@@ -764,7 +764,7 @@ function renderOrders(data) {
                 ${displayItemsCount} items
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-semibold">
-                ¥${total.toFixed(2)}
+                ￡${total.toFixed(2)}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
                 <span class="${statusClass} border px-2 py-1 rounded-full text-xs font-medium">
@@ -1114,7 +1114,7 @@ window.viewOrderDetails = async function (orderId) {
             // A. 填充基本信息
             document.getElementById('detail-order-id').textContent = `#${order.order_id}`;
             document.getElementById('detail-customer-name').textContent = order.customer_name;
-            document.getElementById('detail-order-total').textContent = `¥${parseFloat(order.total_amount).toFixed(2)}`;
+            document.getElementById('detail-order-total').textContent = `￡${parseFloat(order.total_amount).toFixed(2)}`;
 
             // B. 更新状态显示样式
             const statusBadge = document.getElementById('detail-order-status-badge');
@@ -1135,7 +1135,7 @@ window.viewOrderDetails = async function (orderId) {
                     <td class="px-4 py-2 text-sm text-gray-800 font-medium">${item.book_title}</td>
                     <td class="px-4 py-2 text-sm text-gray-500 font-mono">${item.isbn}</td>
                     <td class="px-4 py-2 text-sm text-center text-gray-600">x${item.quantity}</td>
-                    <td class="px-4 py-2 text-sm text-right text-gray-800 font-semibold">¥${parseFloat(item.subtotal).toFixed(2)}</td>
+                    <td class="px-4 py-2 text-sm text-right text-gray-800 font-semibold">￡${parseFloat(item.subtotal).toFixed(2)}</td>
                 </tr>
             `).join('');
 
