@@ -220,7 +220,20 @@ async function fetchOrderDetail(orderId) {
  */
 async function createOrderAPI(cartItems, note = '') {
     const memberId = getCurrentMemberId();
-    const storeId = cartItems[0]?.storeId || 1; // 默认店铺ID，可根据购物车中的商品动态确定
+    const storeIds = cartItems
+        .map(item => item.storeId ?? item.store_id ?? '')
+        .filter(id => id !== '' && id !== null && id !== undefined)
+        .map(id => parseInt(id, 10))
+        .filter(id => Number.isFinite(id) && id > 0);
+
+    const uniqueStoreIds = [...new Set(storeIds)];
+    if (storeIds.length !== cartItems.length) {
+        throw new Error('Missing store information for some items. Please remove and re-add them.');
+    }
+    if (uniqueStoreIds.length !== 1) {
+        throw new Error('Please checkout items from one store at a time.');
+    }
+    const storeId = uniqueStoreIds[0];
 
     // 转换购物车格式为API需要的格式
     const items = cartItems.map(item => ({
