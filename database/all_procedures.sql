@@ -511,6 +511,144 @@ END$$
 
 -- 8. 自动更新会员等级
 -- 功能：根据会员的累计消费金额自动更新会员等级
+-- 7. customer book search
+-- Feature: full-text search with filters and sorting
+DROP PROCEDURE IF EXISTS sp_customer_search_books$$
+CREATE PROCEDURE sp_customer_search_books(
+    IN p_keyword VARCHAR(255),
+    IN p_language VARCHAR(50),
+    IN p_bucket VARCHAR(10),
+    IN p_sort VARCHAR(20)
+)
+BEGIN
+    DECLARE v_keyword VARCHAR(255);
+    DECLARE v_language VARCHAR(50);
+    DECLARE v_bucket VARCHAR(10);
+    DECLARE v_sort VARCHAR(20);
+
+    SET v_keyword = NULLIF(TRIM(p_keyword), '');
+    SET v_language = NULLIF(TRIM(p_language), '');
+    SET v_bucket = NULLIF(TRIM(p_bucket), '');
+    SET v_sort = NULLIF(TRIM(p_sort), '');
+
+    IF v_language = 'all' THEN
+        SET v_language = NULL;
+    END IF;
+
+    IF v_language IS NOT NULL AND v_language NOT IN (
+        'English',
+        'Chinese',
+        'French',
+        'Janpenese',
+        'Japanese',
+        'Russian',
+        'Korean',
+        'Italian'
+    ) THEN
+        SET v_language = NULL;
+    END IF;
+
+    IF v_bucket IS NOT NULL AND v_bucket NOT IN ('0-20', '20-50', '50+') THEN
+        SET v_bucket = NULL;
+    END IF;
+
+    IF v_sort IS NOT NULL AND v_sort NOT IN ('fav', 'price_asc', 'price_desc') THEN
+        SET v_sort = NULL;
+    END IF;
+
+    IF v_keyword IS NOT NULL THEN
+        WITH hits AS (
+            SELECT
+                b.ISBN,
+                MATCH(b.name, b.introduction, b.publisher)
+                    AGAINST (v_keyword IN NATURAL LANGUAGE MODE) AS score
+            FROM books b
+            WHERE MATCH(b.name, b.introduction, b.publisher)
+                AGAINST (v_keyword IN NATURAL LANGUAGE MODE)
+
+            UNION ALL
+
+            SELECT
+                b.ISBN,
+                MATCH(a.first_name, a.last_name)
+                    AGAINST (v_keyword IN NATURAL LANGUAGE MODE) AS score
+            FROM authors a
+            JOIN book_authors ba ON ba.author_id = a.author_id
+            JOIN books b ON b.ISBN = ba.ISBN
+            WHERE MATCH(a.first_name, a.last_name)
+                AGAINST (v_keyword IN NATURAL LANGUAGE MODE)
+        ),
+        hit_books AS (
+            SELECT ISBN, MAX(score) AS score
+            FROM hits
+            GROUP BY ISBN
+        )
+        SELECT
+            v.sku_id,
+            v.ISBN,
+            v.title,
+            v.author,
+            v.language,
+            v.category,
+            v.publisher,
+            v.description,
+            v.price,
+            v.binding,
+            v.stock,
+            v.store_id,
+            v.store_name,
+            v.fav_count,
+            hb.score
+        FROM hit_books hb
+        JOIN vw_customer_books v ON v.ISBN = hb.ISBN
+        WHERE (v_language IS NULL OR v.language = v_language)
+            AND (
+                v_bucket IS NULL
+                OR (v_bucket = '0-20' AND v.price >= 0 AND v.price < 20)
+                OR (v_bucket = '20-50' AND v.price >= 20 AND v.price < 50)
+                OR (v_bucket = '50+' AND v.price >= 50)
+            )
+        ORDER BY
+            CASE WHEN v_sort = 'fav' THEN v.fav_count END DESC,
+            CASE WHEN v_sort = 'fav' THEN hb.score END DESC,
+            CASE WHEN v_sort = 'price_asc' THEN v.price END ASC,
+            CASE WHEN v_sort = 'price_asc' THEN hb.score END DESC,
+            CASE WHEN v_sort = 'price_desc' THEN v.price END DESC,
+            CASE WHEN v_sort = 'price_desc' THEN hb.score END DESC,
+            CASE WHEN v_sort IS NULL THEN hb.score END DESC;
+    ELSE
+        SELECT
+            v.sku_id,
+            v.ISBN,
+            v.title,
+            v.author,
+            v.language,
+            v.category,
+            v.publisher,
+            v.description,
+            v.price,
+            v.binding,
+            v.stock,
+            v.store_id,
+            v.store_name,
+            v.fav_count,
+            NULL AS score
+        FROM vw_customer_books v
+        WHERE (v_language IS NULL OR v.language = v_language)
+            AND (
+                v_bucket IS NULL
+                OR (v_bucket = '0-20' AND v.price >= 0 AND v.price < 20)
+                OR (v_bucket = '20-50' AND v.price >= 20 AND v.price < 50)
+                OR (v_bucket = '50+' AND v.price >= 50)
+            )
+        ORDER BY
+            CASE WHEN v_sort = 'fav' THEN v.fav_count END DESC,
+            CASE WHEN v_sort = 'price_asc' THEN v.price END ASC,
+            CASE WHEN v_sort = 'price_desc' THEN v.price END DESC,
+            CASE WHEN v_sort IS NULL THEN v.ISBN END ASC;
+    END IF;
+END$$
+
 DROP PROCEDURE IF EXISTS sp_customer_update_member_tier$$
 CREATE PROCEDURE sp_customer_update_member_tier(
     IN p_member_id INT,
