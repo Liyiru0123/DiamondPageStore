@@ -55,9 +55,38 @@
 *   **技术栈**：HTML5 + Vanilla JS (原生JS) + Tailwind CSS + PHP API。
 
 ## 5.2 Advanced Features Implementation (高级功能实现)
-* **Advanced Queries**:
-    1. Query 1 (Description & SQL Code)
-    2. Query 2 (Description & SQL Code)
-    3. Query 3 (Description & SQL Code)
-* **Stored Procedures & Transactions&envent&trigger**: Code snippet for `create_order` transaction.
-* **Indexes**: List of indexes created for performance.
+
+本系统将复杂的业务逻辑下沉至数据库层，通过存储过程和视图确保了数据处理的高效性与一致性。以下是三个核心功能的业务逻辑实现流程：
+
+### 1. 订单支付与库存扣减 (`sp_customer_pay_order`)
+*   **业务场景**: 顾客在“我的订单”页面点击“Pay Now”，选择支付方式并确认支付。
+*   **调用链路**:
+    1.  **前端交互**: `scripts/customer.js` 捕获点击事件，调用 `handlePaymentExecution()`。
+    2.  **API 传递**: 通过 `scripts/customer-api.js` 向后端 `api/customer/orders.php?action=pay` 发送包含订单 ID 和支付方式的 POST 请求。
+    3.  **后端处理**: PHP 脚本验证权限后，直接调用存储过程 `sp_customer_pay_order`。
+*   **核心作用**: 
+    *   **事务控制**: 在一个数据库事务内完成支付记录创建、发票生成、支付分配。
+    *   **智能扣减**: 使用 **游标 (Cursor)** 遍历订单项，并根据 **FIFO (先进先出)** 原则从 `inventory_batches` 中扣减对应门店的库存。如果支付瞬间库存不足，事务将自动回滚，确保数据绝对准确。
+
+### 2. 跨店库存调拨 (`sp_manager_transfer_inventory`)
+*   **业务场景**: 经理在“库存管理”页面发现分店间库存分布不均，执行调拨操作。
+*   **调用链路**:
+    1.  **前端交互**: 经理在 `manager.html` 的调拨模态框中输入参数，点击“Confirm Transfer”。
+    2.  **API 传递**: 请求发送至 `api/manager/inventory.php?action=transfer`。
+    3.  **后端处理**: PHP 调用存储过程 `sp_manager_transfer_inventory`。
+*   **核心作用**: 
+    *   **批次完整性**: 该过程不仅是数字的转移。它通过游标从源门店提取具体的库存批次，并在目标门店创建带有 `TRF-` 前缀的新批次，确保了书籍的**采购成本 (Unit Cost)** 在调拨过程中得以保留，为后续的利润分析提供准确数据。
+
+### 3. 财务结算汇总视图 (`vw_finance_order_settlement`)
+*   **业务场景**: 财务人员或经理在 Dashboard 查看销售报表或结算进度。
+*   **调用链路**:
+    1.  **前端交互**: 页面加载时，业务脚本（如 `finance.js`）请求报表数据。
+    2.  **API 传递**: 后端 `api/finance/reports.php` 被触发。
+    3.  **后端处理**: PHP 无需编写复杂的 JOIN 语句，直接查询 `vw_finance_order_settlement` 视图。
+*   **核心作用**: 
+    *   **逻辑封装**: 订单的最终应付金额涉及原始价、会员折扣、积分抵扣等动态计算。该视图将这些复杂的数学逻辑封装在底层，前端只需像查询普通表一样即可获取“实付金额”和“是否结算”等关键指标，极大地降低了前后端的耦合度。
+
+* **Indexes**:
+    *   `idx_books_isbn`: 提高书籍查询效率。
+    *   `idx_orders_member_store`: 优化按会员或门店筛选订单的速度。
+    *   `idx_inventory_sku_store`: 加速库存检查和扣减操作。

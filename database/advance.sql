@@ -6,8 +6,12 @@
 USE book_store;
 
 -- 1. Advanced Stored Procedure: sp_customer_pay_order
--- Complexity: Uses CURSOR, TRANSACTION, multiple table joins, and conditional logic 
--- to handle payment processing, invoice generation, and inventory deduction.
+-- 业务逻辑: 订单支付与库存扣减
+-- 触发场景: 顾客在“我的订单”页面点击“Pay Now”并确认支付。
+-- 调用链路: scripts/customer.js (handlePaymentExecution) -> api/customer/orders.php (payOrder) -> sp_customer_pay_order
+-- 核心作用: 
+--   1. 事务原子性: 确保支付记录、发票生成、库存扣减在同一个事务中，要么全成功，要么全失败。
+--   2. FIFO库存管理: 使用 CURSOR 遍历订单项，按“先进先出”原则从 inventory_batches 中精准扣减对应门店的库存。
 DELIMITER //
 DROP PROCEDURE IF EXISTS sp_customer_pay_order//
 CREATE PROCEDURE sp_customer_pay_order(
@@ -130,8 +134,12 @@ DELIMITER ;
 
 
 -- 2. Advanced Stored Procedure: sp_manager_transfer_inventory
--- Complexity: Implements cross-store inventory transfer with batch integrity. 
--- Uses CURSOR to iterate through source batches and creates new batches in the target store.
+-- 业务逻辑: 跨店库存调拨
+-- 触发场景: 经理在“库存管理”页面执行调拨操作，将书籍从一个分店转移到另一个分店。
+-- 调用链路: manager.html (调拨模态框) -> api/manager/inventory.php (transferInventory) -> sp_manager_transfer_inventory
+-- 核心作用: 
+--   1. 批次追踪: 使用 CURSOR 从源门店提取具体库存批次，并在目标门店创建新批次。
+--   2. 成本保留: 确保书籍的采购成本 (Unit Cost) 在调拨过程中准确传递，维持财务数据的真实性。
 DELIMITER //
 DROP PROCEDURE IF EXISTS sp_manager_transfer_inventory//
 CREATE PROCEDURE sp_manager_transfer_inventory(
@@ -207,8 +215,12 @@ DELIMITER ;
 
 
 -- 3. Advanced View: vw_finance_order_settlement
--- Complexity: Aggregates data from multiple base views and tables to calculate 
--- complex financial metrics including discounts, point redemptions, and settlement status.
+-- 业务逻辑: 财务结算汇总
+-- 触发场景: 财务人员或经理查看销售报表、结算进度或 Dashboard 统计。
+-- 调用链路: finance.js/manager.js -> api/finance/reports.php -> vw_finance_order_settlement
+-- 核心作用: 
+--   1. 逻辑封装: 将复杂的应付金额计算（涉及原始价、会员折扣、积分抵扣）封装在数据库底层。
+--   2. 接口简化: 前端无需编写复杂的 JOIN 和数学运算，直接查询视图即可获取“实付金额”和“结算状态”。
 CREATE OR REPLACE VIEW vw_finance_order_settlement AS
 SELECT
     b.order_id,
