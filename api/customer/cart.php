@@ -69,10 +69,9 @@ function calculateCartTotal($conn) {
     $discountRate = 1.0; // 默认无折扣
     if ($memberId > 0) {
         $stmt = $conn->prepare("
-            SELECT mt.discount_rate
-            FROM members m
-            JOIN member_tiers mt ON m.member_tier_id = mt.member_tier_id
-            WHERE m.member_id = :member_id
+            SELECT discount_rate
+            FROM vw_customer_member_discount
+            WHERE member_id = :member_id
         ");
         $stmt->execute([':member_id' => $memberId]);
         $memberData = $stmt->fetch();
@@ -95,10 +94,9 @@ function calculateCartTotal($conn) {
 
         // 从数据库获取当前价格（防止前端篡改）
         $stmt = $conn->prepare("
-            SELECT s.unit_price, b.name AS title, s.sku_id
-            FROM skus s
-            JOIN books b ON s.ISBN = b.ISBN
-            WHERE s.sku_id = :sku_id
+            SELECT unit_price, title, sku_id
+            FROM vw_customer_cart_item_detail
+            WHERE sku_id = :sku_id
         ");
         $stmt->execute([':sku_id' => $skuId]);
         $product = $stmt->fetch();

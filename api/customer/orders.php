@@ -86,27 +86,19 @@ function getOrders($conn) {
     }
 
     // 2. 核心查询逻辑
-    // 子查询：通过 order_items -> skus -> books 路径聚合书籍名称(b.name)和数量
-    // 倒计时：在数据库层面用 900秒 减去 已过去秒数，确保无时区偏差
-    $sql = "SELECT v.*, 
-            (SELECT GROUP_CONCAT(CONCAT(b.name, ' (x', oi.quantity, ')') SEPARATOR '; ') 
-             FROM order_items oi 
-             JOIN skus s ON oi.sku_id = s.sku_id
-             JOIN books b ON s.isbn = b.isbn 
-             WHERE oi.order_id = v.order_id) as items_summary,
-            (900 - TIMESTAMPDIFF(SECOND, v.order_date, NOW())) as seconds_left
-            FROM vw_customer_orders v 
-            WHERE v.member_id = :member_id";
+    // 使用视图 vw_customer_order_summary，它已经包含了 items_summary 和 seconds_left
+    $sql = "SELECT * FROM vw_customer_order_summary 
+            WHERE member_id = :member_id";
 
     $params = [':member_id' => $memberId];
 
     // 如果前端传了特定状态（如 finished, refunded, cancelled 等）
     if ($status !== 'all') {
-        $sql .= " AND v.order_status = :status";
+        $sql .= " AND order_status = :status";
         $params[':status'] = $status;
     }
 
-    $sql .= " ORDER BY v.order_date DESC";
+    $sql .= " ORDER BY order_date DESC";
 
     try {
         $stmt = $conn->prepare($sql);
