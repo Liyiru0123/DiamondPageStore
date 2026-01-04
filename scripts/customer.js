@@ -370,7 +370,7 @@ async function updateCartUI() {
           <div class="flex flex-col flex-1 cursor-pointer hover:opacity-70" 
               onclick='showBookDetail(${JSON.stringify(fullBookData).replace(/'/g, "&apos;")})'>
             <h4 class="font-bold text-brown-dark">${fullBookData.title || pricing?.title || 'Unknown'}</h4>
-            <p class="text-xs text-gray-400">Unit Price: ?${unitPrice.toFixed(2)}</p>
+            <p class="text-xs text-gray-400">Unit Price: ￡${unitPrice.toFixed(2)}</p>
             <p class="text-[10px] text-brown/60 italic"><i class="fa fa-map-marker"></i> ${fullBookData.storeName || 'Store'}</p>
           </div>
           <div class="flex items-center gap-4">
@@ -379,7 +379,7 @@ async function updateCartUI() {
               <span class="px-2">${fullBookData.quantity}</span>
               <button class="cart-op p-1 w-8 h-8" data-id="${fullBookData.id}" data-store-id="${fullBookData.storeId || ''}" data-op="plus">+</button>
             </div>
-            <span class="font-bold text-red-600 w-20 text-right">?${itemTotal.toFixed(2)}</span>
+            <span class="font-bold text-red-600 w-20 text-right">￡${itemTotal.toFixed(2)}</span>
             <button class="cart-op text-gray-400 hover:text-red-500" data-id="${fullBookData.id}" data-store-id="${fullBookData.storeId || ''}" data-op="remove"><i class="fa fa-trash"></i></button>
           </div>
         </div>
