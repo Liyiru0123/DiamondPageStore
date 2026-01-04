@@ -61,19 +61,17 @@ function getProfile($conn) {
 
     if ($userId !== 0) {
         $stmt = $conn->prepare("
-            SELECT m.member_id, m.user_id, m.first_name, m.last_name, m.email, m.address, m.birthday, u.username
-            FROM members m
-            JOIN users u ON m.user_id = u.user_id
-            WHERE m.user_id = :user_id
+            SELECT *
+            FROM vw_customer_profile
+            WHERE user_id = :user_id
             LIMIT 1
         ");
         $stmt->execute([':user_id' => $userId]);
     } else {
         $stmt = $conn->prepare("
-            SELECT m.member_id, m.user_id, m.first_name, m.last_name, m.email, m.address, m.birthday, u.username
-            FROM members m
-            JOIN users u ON m.user_id = u.user_id
-            WHERE m.member_id = :member_id
+            SELECT *
+            FROM vw_customer_profile
+            WHERE member_id = :member_id
             LIMIT 1
         ");
         $stmt->execute([':member_id' => $memberId]);

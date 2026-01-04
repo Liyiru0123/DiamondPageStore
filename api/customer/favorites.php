@@ -69,13 +69,8 @@ function getFavorites($conn) {
 
     $stmt = $conn->prepare(
         "SELECT vf.*,
-                COALESCE(favs.fav_count, 0) AS fav_count
-         FROM vw_customer_favorites vf
-         LEFT JOIN (
-             SELECT ISBN, COUNT(DISTINCT member_id) AS fav_count
-             FROM favorites
-             GROUP BY ISBN
-         ) favs ON favs.ISBN = vf.ISBN
+                (SELECT COUNT(*) FROM favorites f2 WHERE f2.ISBN = vf.ISBN) AS fav_count
+         FROM vw_customer_favorites vf 
          WHERE vf.member_id = :member_id
          ORDER BY vf.create_date DESC"
     );
