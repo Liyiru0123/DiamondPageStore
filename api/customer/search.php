@@ -105,20 +105,7 @@ hit_books AS (
   GROUP BY ISBN
 )
 SELECT
-  v.sku_id,
-  v.ISBN,
-  v.title,
-  v.author,
-  v.language,
-  v.category,
-  v.publisher,
-  v.description,
-  v.price,
-  v.binding,
-  v.stock,
-  v.store_id,
-  v.store_name,
-  v.fav_count,
+  v.*,
   hb.score
 FROM hit_books hb
 JOIN vw_customer_books v ON v.ISBN = hb.ISBN
@@ -134,20 +121,7 @@ WHERE 1=1
 } else {
     $sql = "
 SELECT
-  v.sku_id,
-  v.ISBN,
-  v.title,
-  v.author,
-  v.language,
-  v.category,
-  v.publisher,
-  v.description,
-  v.price,
-  v.binding,
-  v.stock,
-  v.store_id,
-  v.store_name,
-  v.fav_count
+  v.*
 FROM vw_customer_books v
 WHERE 1=1
 ";
