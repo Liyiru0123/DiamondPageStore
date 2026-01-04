@@ -1140,10 +1140,13 @@ async function initCharts() {
             }
 
             const storePerformance = await fetchStorePerformanceAPI();
+            const filteredPerformance = storePerformance.filter(
+                store => String(store.store_name || '').toLowerCase() !== 'airport store'
+            );
 
             // 提取店铺名称和订单数
-            const labels = storePerformance.map(store => store.store_name);
-            const orderCounts = storePerformance.map(store => parseInt(store.total_orders) || 0);
+            const labels = filteredPerformance.map(store => store.store_name);
+            const orderCounts = filteredPerformance.map(store => parseInt(store.total_orders) || 0);
 
             new Chart(orderComparisonCtx.getContext('2d'), {
                 type: 'bar',
