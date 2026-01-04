@@ -147,7 +147,7 @@ const bookCardTemplate = (book) => {
           <span class="text-xl font-bold text-brown">￡${Number(book.price).toFixed(2)}</span>
           
           <button class="addCartBtn ${isOutOfStock ? 'bg-gray-300 cursor-not-allowed' : 'bg-brown hover:bg-brown-dark'} text-white px-4 py-1.5 rounded-full text-sm flex items-center gap-2 transition-colors"
-               data-id="${book.id}" ${isOutOfStock ? 'disabled' : ''}>
+               data-id="${book.id}" data-store-id="${book.storeId}" ${isOutOfStock ? 'disabled' : ''}>
             <i class="fa ${isOutOfStock ? 'fa-ban' : 'fa-plus'}"></i> Cart
           </button>
         </div>
@@ -300,15 +300,21 @@ function updateFavoriteUIState(isbn, isAdded, count) {
 
 // ========== 购物车逻辑 (API 计价) ==========
 
-function addToCart(bookId) {
-  const book = allBooks.find(b => b.id === parseInt(bookId));
+function addToCart(bookId, storeId) {
+  const bookIdNum = parseInt(bookId);
+  const storeIdNum = storeId !== undefined && storeId !== null && storeId !== ''
+    ? parseInt(storeId)
+    : null;
+  const book = allBooks.find(b =>
+    b.id === bookIdNum && (storeIdNum === null || String(b.storeId) === String(storeIdNum))
+  ) || allBooks.find(b => b.id === bookIdNum);
   if (!book) return;
 
   if (book.stock <= 0) {
     return showAlert("Sorry, this book is out of stock.", "warning");
   }
 
-  const existing = cart.find(i => i.id === book.id);
+  const existing = cart.find(i => i.id === book.id && String(i.storeId) === String(book.storeId));
   if (existing) {
     if (existing.quantity >= book.stock) {
       return showAlert(`Only ${book.stock} copies available.`, "info");
@@ -346,25 +352,35 @@ async function updateCartUI() {
   try {
     const apiItems = cart.map(i => ({ sku_id: i.id, quantity: i.quantity }));
     const result = await calculateCartTotalAPI(apiItems);
+    const pricingMap = new Map(
+      (result.data.items || []).map(item => [item.sku_id, item])
+    );
+    const discountRate = typeof result.data.discountRate === 'number'
+      ? result.data.discountRate
+      : 1;
 
-    cartList.innerHTML = result.data.items.map(item => {
-      const fullBookData = cart.find(i => i.id === item.sku_id) || item;
+    cartList.innerHTML = cart.map(cartItem => {
+      const pricing = pricingMap.get(cartItem.id);
+      const unitPrice = pricing ? Number(pricing.unit_price) : Number(cartItem.price || 0);
+      const itemSubtotal = unitPrice * cartItem.quantity;
+      const itemTotal = itemSubtotal * discountRate;
+      const fullBookData = cartItem;
       return `
         <div class="flex items-center justify-between p-4 bg-white border-b border-brown-light/30 rounded-lg shadow-sm mb-3">
           <div class="flex flex-col flex-1 cursor-pointer hover:opacity-70" 
               onclick='showBookDetail(${JSON.stringify(fullBookData).replace(/'/g, "&apos;")})'>
-            <h4 class="font-bold text-brown-dark">${item.title}</h4>
-            <p class="text-xs text-gray-400">Unit Price: ￡${item.unit_price.toFixed(2)}</p>
+            <h4 class="font-bold text-brown-dark">${fullBookData.title || pricing?.title || 'Unknown'}</h4>
+            <p class="text-xs text-gray-400">Unit Price: ?${unitPrice.toFixed(2)}</p>
             <p class="text-[10px] text-brown/60 italic"><i class="fa fa-map-marker"></i> ${fullBookData.storeName || 'Store'}</p>
           </div>
           <div class="flex items-center gap-4">
             <div class="flex items-center border border-brown-light rounded-full">
-              <button class="cart-op p-1 w-8 h-8" data-id="${item.sku_id}" data-op="minus">-</button>
-              <span class="px-2">${item.quantity}</span>
-              <button class="cart-op p-1 w-8 h-8" data-id="${item.sku_id}" data-op="plus">+</button>
+              <button class="cart-op p-1 w-8 h-8" data-id="${fullBookData.id}" data-store-id="${fullBookData.storeId || ''}" data-op="minus">-</button>
+              <span class="px-2">${fullBookData.quantity}</span>
+              <button class="cart-op p-1 w-8 h-8" data-id="${fullBookData.id}" data-store-id="${fullBookData.storeId || ''}" data-op="plus">+</button>
             </div>
-            <span class="font-bold text-red-600 w-20 text-right">￡${item.total.toFixed(2)}</span>
-            <button class="cart-op text-gray-400 hover:text-red-500" data-id="${item.sku_id}" data-op="remove"><i class="fa fa-trash"></i></button>
+            <span class="font-bold text-red-600 w-20 text-right">?${itemTotal.toFixed(2)}</span>
+            <button class="cart-op text-gray-400 hover:text-red-500" data-id="${fullBookData.id}" data-store-id="${fullBookData.storeId || ''}" data-op="remove"><i class="fa fa-trash"></i></button>
           </div>
         </div>
       `;
@@ -378,7 +394,7 @@ async function updateCartUI() {
       cart.map(item => `
         <div class="flex items-center justify-between p-4 bg-gray-50 mb-2 rounded">
           <span>${item.title} (x${item.quantity})</span>
-          <button class="cart-op text-red-500" data-id="${item.id}" data-op="remove">Remove</button>
+          <button class="cart-op text-red-500" data-id="${item.id}" data-store-id="${item.storeId || ''}" data-op="remove">Remove</button>
         </div>
       `).join('');
   }
@@ -388,6 +404,16 @@ async function updateCartUI() {
 
 async function handleCheckout() {
   if (cart.length === 0) return showAlert("Your cart is empty");
+  const missingStore = cart.some(item => !item.storeId);
+  if (missingStore) {
+    showAlert("Some items are missing store info. Please remove and re-add them.", "warning");
+    return;
+  }
+  const uniqueStores = new Set(cart.map(item => String(item.storeId)));
+  if (uniqueStores.size > 1) {
+    showAlert("Please checkout items from one store at a time.", "info");
+    return;
+  }
   const btn = document.getElementById('proceed-checkout');
   const originalText = btn.textContent;
   btn.disabled = true;
@@ -668,8 +694,11 @@ function bindEvents() {
     if (!btn) return;
 
     const bookId = parseInt(btn.dataset.id);
+    const storeId = btn.dataset.storeId;
     const op = btn.dataset.op;
-    const itemIndex = cart.findIndex(i => i.id === bookId);
+    const itemIndex = cart.findIndex(i =>
+      i.id === bookId && (!storeId || String(i.storeId) === String(storeId))
+    );
     if (itemIndex === -1) return;
 
     if (op === 'plus') {
@@ -806,7 +835,12 @@ function bindDynamicEvents() {
   //  };
   //});
   document.querySelectorAll('.addCartBtn').forEach(btn => {
-    btn.onclick = (e) => { e.stopPropagation(); addToCart(btn.dataset.id); };
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const card = btn.closest('.book-card-item');
+      const storeId = btn.dataset.storeId || card?.dataset.storeId;
+      addToCart(btn.dataset.id, storeId);
+    };
   });
   document.querySelectorAll('.favorite-btn').forEach(btn => {
     btn.onclick = (e) => { e.stopPropagation(); toggleFavorite(btn.dataset.isbn); };

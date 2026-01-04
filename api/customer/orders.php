@@ -209,13 +209,13 @@ function getOrderDetail($conn) {
 function createOrder($conn) {
     $data = json_decode(file_get_contents('php://input'), true);
     $memberId = isset($data['member_id']) ? intval($data['member_id']) : 0;
-    $storeId = isset($data['store_id']) ? intval($data['store_id']) : 1; // 默认店铺1
+    $storeId = isset($data['store_id']) ? intval($data['store_id']) : 0;
     $cartItems = isset($data['cart_items']) ? $data['cart_items'] : [];
     $note = isset($data['note']) ? $data['note'] : '';
 
-    if ($memberId === 0 || empty($cartItems)) {
+    if ($memberId === 0 || $storeId === 0 || empty($cartItems)) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Member ID and cart items are required']);
+        echo json_encode(['success' => false, 'message' => 'Member ID, store ID and cart items are required']);
         return;
     }
 

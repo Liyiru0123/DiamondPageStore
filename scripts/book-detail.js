@@ -132,7 +132,7 @@ function init() {
   if (elements.addToCartBtn) {
     elements.addToCartBtn.onclick = () => {
       if (currentBook && typeof addToCart === 'function') {
-        addToCart(currentBook.id);
+        addToCart(currentBook.id, currentBook.storeId);
         // hideBookDetail(); // 如果你想保持弹窗不关闭可以注释掉
       }
     };
