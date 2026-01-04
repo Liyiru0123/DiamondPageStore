@@ -2534,7 +2534,8 @@ END$$
 DROP PROCEDURE IF EXISTS sp_finance_payment_method_summary$$
 CREATE PROCEDURE sp_finance_payment_method_summary(
     IN p_start DATE,
-    IN p_end DATE
+    IN p_end DATE,
+    IN p_store_id INT
 )
 BEGIN
     IF p_start IS NULL THEN
@@ -2545,19 +2546,22 @@ BEGIN
     END IF;
 
     SELECT
-        payment_method,
-        ROUND(SUM(allocated_amount), 2) AS amount
-    FROM vm_finance_invoice_payment_allocation_detail
-    WHERE allocation_date >= p_start
-      AND allocation_date < DATE_ADD(p_end, INTERVAL 1 DAY)
-    GROUP BY payment_method
+        vm.payment_method,
+        ROUND(SUM(vm.allocated_amount), 2) AS amount
+    FROM vm_finance_invoice_payment_allocation_detail vm
+    JOIN vm_finance_invoice_base vb ON vb.invoice_id = vm.invoice_id
+    WHERE vm.allocation_date >= p_start
+      AND vm.allocation_date < DATE_ADD(p_end, INTERVAL 1 DAY)
+      AND (p_store_id IS NULL OR p_store_id = 0 OR vb.store_id = p_store_id)
+    GROUP BY vm.payment_method
     ORDER BY amount DESC;
 END$$
 
 DROP PROCEDURE IF EXISTS sp_finance_revenue_by_date$$
 CREATE PROCEDURE sp_finance_revenue_by_date(
     IN p_start DATE,
-    IN p_end DATE
+    IN p_end DATE,
+    IN p_store_id INT
 )
 BEGIN
     IF p_start IS NULL THEN
@@ -2573,6 +2577,7 @@ BEGIN
     FROM vw_finance_revenue_by_date
     WHERE order_day >= p_start
       AND order_day <= p_end
+      AND (p_store_id IS NULL OR p_store_id = 0 OR store_id = p_store_id)
     GROUP BY order_day
     ORDER BY order_day;
 END$$
@@ -2580,7 +2585,8 @@ END$$
 DROP PROCEDURE IF EXISTS sp_finance_purchase_cost_by_date$$
 CREATE PROCEDURE sp_finance_purchase_cost_by_date(
     IN p_start DATE,
-    IN p_end DATE
+    IN p_end DATE,
+    IN p_store_id INT
 )
 BEGIN
     IF p_start IS NULL THEN
@@ -2596,6 +2602,7 @@ BEGIN
     FROM vw_finance_purchase_cost_by_date
     WHERE cost_day >= p_start
       AND cost_day <= p_end
+      AND (p_store_id IS NULL OR p_store_id = 0 OR store_id = p_store_id)
     GROUP BY cost_day
     ORDER BY cost_day;
 END$$

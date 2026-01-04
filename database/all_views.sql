@@ -1130,14 +1130,16 @@ JOIN members m ON m.member_id = i.member_id;
 CREATE OR REPLACE VIEW vw_finance_revenue_by_date AS
 SELECT
     DATE(order_date) AS order_day,
+    store_id AS store_id,
     SUM(payable_amount) AS revenue
 FROM vw_finance_order_settlement
 WHERE is_settled = 1
-GROUP BY DATE(order_date);
+GROUP BY DATE(order_date), store_id;
 
 CREATE OR REPLACE VIEW vw_finance_purchase_cost_by_date AS
 SELECT
     DATE(received_date) AS cost_day,
+    store_id AS store_id,
     SUM(unit_cost * quantity) AS cost
 FROM inventory_batches
-GROUP BY DATE(received_date);
+GROUP BY DATE(received_date), store_id;
