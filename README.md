@@ -140,22 +140,6 @@ Visit our live demo:  **[http://8.138.128.9/](http://8.138.128.9/)**
    http://localhost/DiamondPageStore/pages/login.html
    ```
 
-### Default Test Accounts
-
-After database deployment, you can use these accounts: 
-
-**Customer:**
-- Username: `customer1` / Password: `password123`
-
-**Staff:**
-- Username: `staff1` / Password: `password123`
-
-**Manager:**
-- Username: `manager1` / Password: `password123`
-
-**Finance:**
-- Username: `finance1` / Password: `password123`
-
 ## User Roles and Permissions
 
 ### 1. Customer
