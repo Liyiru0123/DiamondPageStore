@@ -108,6 +108,7 @@ Visit our live demo:  **[http://8.138.128.9/](http://8.138.128.9/)**
 
 ---
 
+### 💻 Local Installation
 ### Prerequisites
 - PHP 7.4 or higher
 - MySQL 8.0 or higher
