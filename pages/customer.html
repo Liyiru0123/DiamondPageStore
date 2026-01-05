@@ -13,7 +13,6 @@
 
   <!-- 在各页面 head 标签最顶部插入 -->
   <script>
-    // [文件名]: customer.html 
     (function () {
       const token = localStorage.getItem('auth_token');
       const role = localStorage.getItem('user_role');
@@ -165,7 +164,7 @@
         <!-- 搜索筛选区 -->
         <div class="bg-white p-4 rounded-lg shadow-sm mb-6 border border-brown-light/20">
           <div class="flex flex-wrap gap-6">
-            <!-- 任务 4：价格筛选 -->
+            <!-- 价格筛选 -->
             <div class="flex items-center">
               <label class="text-sm font-bold text-brown-dark mr-2">Price Range:</label>
               <select
@@ -177,7 +176,7 @@
                 <option value="50+">Above ￡50</option>
               </select>
             </div>
-            <!-- 任务 4：语言筛选 -->
+            <!-- 语言筛选 -->
             <div class="flex items-center">
               <label class="text-sm font-bold text-brown-dark mr-2">Language:</label>
               <select
@@ -193,7 +192,7 @@
                 <option value="Italian">Italian</option>
               </select>
             </div>
-            <!-- 任务 5：增强排序功能 -->
+            <!-- 增强排序功能 -->
             <div class="flex items-center">
               <label class="text-sm font-bold text-brown-dark mr-2">Sort By:</label>
               <select
@@ -240,7 +239,7 @@
 
         <h2 class="text-2xl font-bold text-brown-dark mb-6 border-b border-brown-light pb-2">Book Categories</h2>
 
-        <!-- 【任务 2 更新】分类标签导航栏 -->
+        <!-- 分类标签导航栏 -->
         <div class="space-y-6 mb-10 bg-white/50 p-6 rounded-xl backdrop-blur-sm">
           <!-- 全部 -->
           <div class="flex items-center gap-4">
@@ -430,7 +429,7 @@
           <p class="pagination-info text-sm text-gray-500"></p>
           <div class="pagination-buttons flex gap-1 justify-center"></div>
         </div>
-        <!-- 任务 3.2 新增：订单页底部操作栏 -->
+        <!-- 订单页底部操作栏 -->
         <div id="orders-footer"
           class="hidden mt-8 pt-6 border-t border-brown-light/30 flex flex-col md:flex-row justify-between items-center gap-4 bg-brown-cream/30 p-4 rounded-lg">
           <div class="flex items-center gap-4">
@@ -652,7 +651,7 @@
     </div>
   </div>
 
-  <!-- 任务 3.3：支付弹窗 -->
+  <!-- 支付弹窗 -->
   <div id="payment-modal" class="fixed inset-0 bg-black/60 z-[60] hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl transform transition-all">
       <div class="p-6 border-b border-gray-100 flex justify-between items-center">
@@ -704,8 +703,6 @@
   <script src="../scripts/customer-api.js"></script>
   <script src="../scripts/book-detail.js"></script>
   <script src="../scripts/customer.js"></script>
-  <!-- API集成脚本（覆盖customer.js中的函数） -->
-  <!-- script src="../scripts/customer-api-integration.js"></！script-->
 </body>
 
 </html>

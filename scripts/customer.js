@@ -1,9 +1,9 @@
 // scripts/customer.js
 
 // ========== 全局状态映射 ==========
-let allBooks = [];      // 当前页面显示的图书缓存 (由 API 填充)
-let favorites = [];    // 用户收藏列表 (由 API 填充)
-let cart = [];         // 购物车列表 (由本地存储 + 后端计价同步)
+let allBooks = [];      // 当前页面显示的图书缓存
+let favorites = [];    // 用户收藏列表
+let cart = [];         // 购物车列表
 let ordersCache = [];  // 订单列表缓存
 let pendingPayIds = []; // 待支付订单 ID 组
 let searchTimer = null;
@@ -66,7 +66,7 @@ const App = {
   async renderHomepageBanner() {
     const bannerTitle = document.querySelector('#home-page h2');
     const bannerText = document.querySelector('#home-page p');
-    const bannerSection = document.querySelector('#home-page .relative'); // 整个 Banner 容器
+    const bannerSection = document.querySelector('#home-page .relative'); 
 
     try {
       const data = await fetchAnnouncements();
@@ -105,7 +105,6 @@ const bookCardTemplate = (book) => {
   // 1. 逻辑变量准备
   const isFav = favorites.some(f => String(f.isbn) === String(book.isbn));
 
-  // 兼容不同的后端字段名 (stock/stock_count, favCount/fav_count)
   const realStock = book.stock_count !== undefined ? book.stock_count : (book.stock || 0);
   const fCount = book.fav_count !== undefined ? book.fav_count : (book.favCount || 0);
   const isOutOfStock = realStock <= 0;
@@ -666,8 +665,7 @@ function bindEvents() {
       return;
     }
 
-    // B. 修复购物车图标点击：
-    // 逻辑：点击带 .fa-shopping-cart 的图标，或者 ID 包含 cart 的按钮
+    // B. 购物车图标点击：
     const cartTrigger = e.target.closest('.fa-shopping-cart, [id*="cart"], [class*="cart"]');
     if (cartTrigger) {
       // 排除掉“加入购物车”按钮本身，只处理跳转按钮
@@ -683,12 +681,12 @@ function bindEvents() {
     if (e.target.closest('#logout-btn')) logout();
   });
 
-  // 【新增】个人资料弹窗关闭监听
+  //个人资料弹窗关闭监听
   document.querySelectorAll('.close-profile').forEach(btn => {
     btn.onclick = () => document.getElementById('profile-modal').classList.add('hidden');
   });
 
-  // 【新增】购物车内操作的事件委托 (处理动态生成的加减按钮)
+  //购物车内操作的事件委托 (处理动态生成的加减按钮)
   document.getElementById('cart-list')?.addEventListener('click', (e) => {
     const btn = e.target.closest('.cart-op');
     if (!btn) return;
@@ -814,26 +812,19 @@ function bindEvents() {
     if (selectedIds.length > 0) openPaymentModal(selectedIds);
   });
 
-  // 【新增】Learn More 按钮点击
+  // Learn More 按钮点击
   const learnMoreBtn = document.getElementById('learn-more-btn');
   if (learnMoreBtn) {
     learnMoreBtn.addEventListener('click', openAnnouncements);
   }
 
-  // 【新增】关闭公告弹窗
+  // 关闭公告弹窗
   document.getElementById('close-announcement')?.addEventListener('click', () => {
     document.getElementById('announcement-modal').classList.add('hidden');
   });
 }
 
 function bindDynamicEvents() {
-  //document.querySelectorAll('.book-card-item').forEach(card => {
-  //  card.onclick = (e) => {
-  //    if (e.target.closest('.addCartBtn, .favorite-btn')) return;
-  //    const isbn = card.dataset.isbn;
-  //    if (window.showBookDetail) window.showBookDetail(isbn);
-  //  };
-  //});
   document.querySelectorAll('.addCartBtn').forEach(btn => {
     btn.onclick = (e) => {
       e.stopPropagation();
@@ -887,7 +878,7 @@ window.customerSwitchPage = function (pageId) {
   if (pageId === 'member') updateMemberPageUI();
   if (pageId === 'orders') renderOrdersUI();
 
-  // === 【新增逻辑】解决库存不刷新的核心代码 ===
+  // === 解决库存不刷新的核心代码 ===
   if (pageId === 'categories' || pageId === 'home') {
     console.log("[Stock Sync] Refreshing books to sync stock levels...");
     

@@ -1,5 +1,4 @@
 // scripts/customer-api.js
-// API调用封装 - 用于替换模拟数据
 
 // API配置
 const API_CONFIG = {
@@ -50,7 +49,6 @@ function getCurrentMemberId() {
     
     try {
         const user = JSON.parse(userData);
-        // 关键：检查你的后端传回来的到底是 id 还是 member_id 还是其他名字
         const id = user.member_id || user.user_id || user.user_name; 
         if (!id) {
             console.warn("解析到了用户对象，但找不到 ID 字段", user);
@@ -315,7 +313,6 @@ async function updateProfileAPI(profileData) {
     // 1. 获取当前用户信息
     const user = JSON.parse(localStorage.getItem('current_user') || '{}');
     
-    // DEBUG: 在控制台打印出来看看结构（按F12 -> Console查看）
     console.log("[Profile Update] Current User Data:", user);
 
     const userId = user.user_id || user.id;
@@ -326,7 +323,7 @@ async function updateProfileAPI(profileData) {
     }
 
     const payload = {
-        user_id: userId, // 使用修正后的 ID
+        user_id: userId,
         username: profileData.username,
         contact: profileData.contact,
         password: profileData.password
