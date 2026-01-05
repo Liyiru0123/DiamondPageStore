@@ -1,4 +1,3 @@
-// scripts/layout.js
 
 (function () {
     const path = window.location.pathname;
@@ -13,7 +12,7 @@
 })();
 
 /**
- * 1. Tailwind 配置 (合并了 Customer 和 Finance 的风格)
+ * 1. Tailwind 配置
  */
 tailwind.config = {
     theme: {
@@ -89,13 +88,7 @@ const MENU_CONFIG = {
     ]
 };
 
-/**
- * [文件名]: scripts/layout.js
- * [修改说明]: 
- * 1. 修复了变量提升导致的 ReferenceError。
- * 2. 增加了页面不存在时的强制回退逻辑，解决首屏空白问题。
- * 3. 优化了入场动画的执行顺序。
- */
+
 window.switchPage = function (pageId) {
     if (!pageId) return;
     console.log(`[Router] Switching to: ${pageId}`);
@@ -583,7 +576,7 @@ function pickAvatarColor(name) {
 }
 
 /**
- * 用户区域下拉菜单控制（简化版，确保可点击）
+ * 用户区域下拉菜单控制
  */
 function initUserMenu() {
     console.log('[Layout] Initializing user menu...');
@@ -738,7 +731,6 @@ function showEditProfileModal() {
         const username = document.getElementById('edit-username').value;
         const email = document.getElementById('edit-email').value;
 
-        // 简单演示 - 实际应该调用API
         console.log('Saving profile:', { username, email });
 
         // 更新localStorage

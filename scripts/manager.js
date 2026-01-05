@@ -1,4 +1,4 @@
-// Manager Dashboard JavaScript - 与layout.js整合版
+// Manager Dashboard JavaScript
 
 // 全局变量存储当前管理员信息
 let currentManager = {
@@ -62,7 +62,6 @@ window.managerSwitchPage = function (pageId) {
 
     // Load page-specific data
     if (pageId === 'inventory') {
-        // 这些函数现在由 manager-api-integration.js 提供
         if (typeof loadReplenishmentRequests === 'function') {
             loadReplenishmentRequests();
         }
@@ -122,11 +121,11 @@ window.managerSwitchPage = function (pageId) {
             loadUserManagementData();
         }
     } else if (pageId === 'overview') {
-        // 确保图表和表格已初始化 - 使用 API 版本
+        // 确保图表和表格已初始化 
         if (typeof initCharts === 'function') {
             setTimeout(initCharts, 100);
         }
-        // 使用 API 版本的表格加载函数
+        // 表格加载
         if (typeof loadPaymentComparisonTable === 'function') {
             setTimeout(loadPaymentComparisonTable, 150);
         }
@@ -146,9 +145,8 @@ window.managerSwitchPage = function (pageId) {
         }
     }
 
-    // 添加布局修复 - 延迟执行确保内容已渲染
+
     setTimeout(() => {
-        // 修复主内容区域高度
         const mainContent = document.querySelector('main');
         if (mainContent) {
             const header = document.querySelector('#layout-header');
@@ -156,7 +154,6 @@ window.managerSwitchPage = function (pageId) {
             mainContent.style.minHeight = `calc(100vh - ${headerHeight}px)`;
         }
 
-        // 修复表格容器宽度
         document.querySelectorAll('.overflow-x-auto').forEach(container => {
             if (container.closest('.card')) {
                 container.style.maxWidth = '100%';
@@ -176,13 +173,12 @@ window.managerSwitchPage = function (pageId) {
     }, 150);
 };
 
-// manager.js - 修改 DOMContentLoaded 部分
 document.addEventListener('DOMContentLoaded', function () {
 
     // Initialize date display
     initDateDisplay();
 
-    // Initialize charts - 使用 API 版本
+    // Initialize charts
     if (typeof initCharts === 'function') {
         initCharts();
     }
@@ -195,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function () {
         setTimeout(loadBookCategoryTable, 200);
     }
 
-    // 加载汇总统计卡片 - 使用 API 版本
+    // 加载汇总统计卡片
     if (typeof loadSummaryStatistics === 'function') {
         setTimeout(loadSummaryStatistics, 250);
     }
@@ -209,14 +205,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 300);
 });
 
-// 只保留基本的布局和UI相关函数，数据加载函数已移动到 API 集成文件
-
-// 只保留通用的工具函数和UI交互函数
-
-// ============================================
-// 保留基本的工具函数
-// ============================================
-
 // Initialize date display
 function initDateDisplay() {
     const now = new Date();
@@ -225,8 +213,6 @@ function initDateDisplay() {
     if (dateElem) dateElem.textContent = now.toLocaleDateString('en-US', options);
 }
 
-// initCharts 函数已移至 manager-api-integration.js，使用 API 数据
-
 // 保留基本的工具函数
 function formatDate(dateString) {
     const date = new Date(dateString);
@@ -234,9 +220,6 @@ function formatDate(dateString) {
     const day = date.getDate();
     return `${month} ${day}`;
 }
-
-// loadBranchPerformance 函数已删除（已从 HTML 中移除）
-// loadInitialData 函数不再需要
 
 // 分支库存搜索功能
 function initBranchStockSearch() {
@@ -310,9 +293,8 @@ function updateStockSearchCount(count) {
     }
 }
 
-// Initialize event listeners (移除与layout.js冲突的部分)
+// Initialize event listeners
 function initEventListeners() {
-    // 注意: 侧边栏切换、导航、登出按钮现在由layout.js处理
 
     // Trend period buttons
     document.querySelectorAll('.trend-period-btn').forEach(btn => {
@@ -338,7 +320,7 @@ function initEventListeners() {
         });
     });
 
-    // Staff filter buttons - 保留过滤功能
+    // Staff filter buttons 
     document.getElementById('apply-filters')?.addEventListener('click', applyFilters);
     document.getElementById('reset-filters')?.addEventListener('click', resetFilters);
 
@@ -385,7 +367,7 @@ function initEventListeners() {
         document.getElementById('notification-form').reset();
     });
 
-    // Notification form submission - 使用 API 版本
+    // Notification form submission
     document.getElementById('notification-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
         if (typeof sendNotification === 'function') {
@@ -406,12 +388,12 @@ function initEventListeners() {
         document.getElementById('edit-book-modal').classList.add('hidden');
     });
 
-    // 添加供应商按钮事件
+    // 供应商按钮事件
     document.getElementById('add-supplier-btn')?.addEventListener('click', () => {
         openAddSupplierModal();
     });
 
-    // 添加供应商表单提交 - 使用 window 版本确保调用 API
+    // 供应商表单提交
     document.getElementById('add-supplier-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
         if (typeof window.addNewSupplier === 'function') {
@@ -429,7 +411,7 @@ function initEventListeners() {
         closeEditSupplierModal();
     });
 
-    // 编辑供应商表单提交 - 使用 window 版本确保调用 API
+    // 编辑供应商表单提交
     document.getElementById('edit-supplier-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
         if (typeof window.updateSupplier === 'function') {
@@ -513,7 +495,7 @@ function debounce(func, wait) {
     };
 }
 
-// 书籍/定价搜索由 API 版本处理（manager-api-integration.js）
+// 书籍/定价搜索
 
 // 初始化搜索框
 function initSearchBoxes() {
@@ -533,10 +515,10 @@ function initSearchBoxes() {
     }
 }
 
-// 库存/员工搜索与渲染由 API 版本处理（manager-api-integration.js）
+// 库存/员工搜索
 
 // ============================================
-// 员工管理相关函数（保留UI交互部分）
+// 员工管理相关函数（UI交互部分）
 // ============================================
 
 // Apply filters
@@ -850,7 +832,7 @@ async function updateStaff() {
 }
 
 // ============================================
-// 定价管理相关函数（保留UI交互部分）
+// 定价管理相关函数（UI交互部分）
 // ============================================
 
 // Open edit book modal
@@ -1130,7 +1112,7 @@ function performSKUSearch(searchTerm) {
 
 
 
-// 供应商数据与搜索由 API 版本处理（manager-supplier-api.js）
+// 供应商数据与搜索
 
 // 打开添加供应商模态框
 function openAddSupplierModal() {
@@ -1163,13 +1145,6 @@ function closeEditSupplierModal() {
     document.getElementById('edit-supplier-form').reset();
 }
 
-// 供应商详情/删除由 API 版本处理（manager-supplier-api.js）
-
-// 添加新供应商 - 已移至 manager-supplier-api.js，使用 API 版本
-// 此函数由 window.addNewSupplier 在 manager-supplier-api.js 中定义
-
-// 更新供应商信息 - 已移至 manager-supplier-api.js，使用 API 版本
-// 此函数由 window.updateSupplier 在 manager-supplier-api.js 中定义
 
 // 布局修复辅助函数
 function fixLayoutAfterFilter() {
@@ -1221,13 +1196,10 @@ function fixLayoutAfterDataLoad() {
     }, 100);
 }
 
-// 修复缺失的函数
 function addInventoryActionButtonListeners() {
-    // 这里可以添加库存表格按钮的事件监听器
     console.log('Inventory action button listeners initialized');
 }
 
-// 初始化布局后调用
 document.addEventListener('DOMContentLoaded', function () {
     // 确保库存管理相关事件监听器已初始化
     initInventoryEventListeners();
