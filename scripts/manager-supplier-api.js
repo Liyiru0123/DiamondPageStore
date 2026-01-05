@@ -31,7 +31,7 @@ async function loadSupplierData() {
 }
 
 // =============================================================================
-// 添加供应商表格按钮事件监听器（使用事件委托，不使用 cloneNode）
+// 添加供应商表格按钮事件监听器
 // =============================================================================
 function addSupplierActionButtonListeners() {
     const container = document.getElementById('supplier-table-body');

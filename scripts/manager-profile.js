@@ -279,7 +279,7 @@ function isValidEmail(email) {
     return emailRegex.test(email);
 }
 
-// 注意：showMessage 函数已在 manager-api-integration.js 中定义
+// showMessage 函数已在 manager-api-integration.js 中定义
 // 不再在此重复定义，避免无限递归问题
 
 console.log('Manager Profile functions loaded successfully');

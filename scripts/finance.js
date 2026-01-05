@@ -1,7 +1,7 @@
 // scripts/finance.js
 const CURRENCY_SYMBOL = '\u00A3';
 
-// 🟢 1. 全局变量存储当前财务/管理人员信息
+//  1. 全局变量存储当前财务/管理人员信息
 let currentFinanceUser = {
     store_id: null,
     store_name: '',
@@ -10,8 +10,7 @@ let currentFinanceUser = {
 };
 
 /**
- * 🟢 2. 获取当前登录人员信息并同步 UI
- * 替代之前的 syncStoreAndUserInfo
+ *  2. 获取当前登录人员信息并同步 UI
  */
 async function initFinanceSession() {
     try {
@@ -35,7 +34,7 @@ async function initFinanceSession() {
 
             console.log("[Finance] Session sync successful:", currentFinanceUser.store_name);
             
-            // 🟢 3. 只有获取到 store_id 后，才开始加载业务数据
+            // 3. 只有获取到 store_id 后，才开始加载业务数据
             // 您可以根据需要将 store_id 传入过滤器
             loadInvoiceList();
             initIncomeStatsCharts();
@@ -272,7 +271,7 @@ function renderTotalRevenueCard(data) {
 }
 
 function initPaymentMethodPieChart(summaryRows) {
-    // 1. 打印数据到控制台，让你能亲眼看到到底有没有数据
+    // 1. 打印数据到控制台
     //console.log("饼图接收到的数据:", summaryRows);
 
     const paymentMethodCtx = document.getElementById('payment-method-pie-chart');
@@ -286,7 +285,7 @@ function initPaymentMethodPieChart(summaryRows) {
     
     // 3. 智能匹配字段名（不管后端是大写还是小写）
     const labels = safeRows.map(row => row.payment_method || row.paymentMethod || 'Unknown');
-    // 如果你在 SP 里改成了 COUNT(*)，数值就是整数；如果是金额，就是浮点数
+    // 在 SP 里如果改成了 COUNT(*)，数值就是整数；如果是金额，就是浮点数
     let data = safeRows.map(row => Number(row.amount || row.AMOUNT || 0));
     
     let backgroundColors = ['#774b30', '#a9805b', '#9f5933', '#d2b48c', '#e5e7eb'];
@@ -343,82 +342,6 @@ function initPaymentMethodPieChart(summaryRows) {
     });
 }
 
-/*function initPaymentMethodPieChart(summaryRows) {
-    const paymentMethodCtx = document.getElementById('payment-method-pie-chart');
-    if (!paymentMethodCtx) return;
-
-    const ctx = paymentMethodCtx.getContext('2d');
-    if (!ctx) return;
-
-    const labels = summaryRows.map(row => row.payment_method || 'Unknown');
-    const data = summaryRows.map(row => Number(row.amount || 0));
-    const colors = ['#774b30', '#a9805b', '#9f5933', '#d2b48c'];
-
-    if (labels.length === 0) {
-        labels.push('No Data');
-        data.push(0);
-    }
-
-    if (paymentMethodPieChart) {
-        paymentMethodPieChart.destroy();
-    }
-
-    paymentMethodPieChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels,
-            datasets: [{
-                data,
-                backgroundColor: colors.slice(0, labels.length),
-                borderWidth: 2,
-                borderColor: '#fff',
-                hoverOffset: 20,
-                hoverBorderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            layout: { padding: { top: 15, bottom: 50, left: 15, right: 15 } },
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 25,
-                        usePointStyle: true,
-                        pointStyle: 'rect',
-                        pointStyleWidth: 22,
-                        pointStyleHeight: 22,
-                        font: { size: 13, weight: '500' },
-                        color: '#374151'
-                    },
-                    align: 'center'
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    titleColor: '#374151',
-                    bodyColor: '#374151',
-                    borderColor: '#e5e7eb',
-                    borderWidth: 1,
-                    cornerRadius: 6,
-                    padding: 12,
-                    callbacks: {
-                        label: function (context) {
-                            const label = context.label || '';
-                            const value = context.raw || 0;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = total === 0 ? 0 : Math.round((value / total) * 100);
-                            return `${label}: ${formatCurrency(value)} (${percentage}%)`;
-                        }
-                    }
-                }
-            }
-        }
-    });*/
-
-
-// scripts/finance.js (修改后的部分)
-// 只需要修改 renderRevenueByDateChart 和 renderPurchaseCostByDateChart 这两个函数
 
 async function renderRevenueByDateChart(startDate, endDate) {
     const container = document.getElementById('revenue-by-date-chart-container');
@@ -428,7 +351,7 @@ async function renderRevenueByDateChart(startDate, endDate) {
     const defaultEnd = endDate || formatDateInput(now);
     const defaultStart = startDate || formatDateInput(new Date(now.getTime() - 13 * 24 * 60 * 60 * 1000));
     
-    // [新增] 获取当前登录用户的 store_id
+    // 获取当前登录用户的 store_id
     const currentStoreId = currentFinanceUser ? currentFinanceUser.store_id : null;
     
     // const rows = await fetchRevenueByDate(defaultStart, defaultEnd,currentStoreId);
@@ -671,8 +594,6 @@ async function fetchOrderList(filters = {}) {
         
         if (filters.orderId) params.append('order_id', filters.orderId);
 
-        // 🟢 【关键】：把 store_id 传过去！
-        // 兼容两种写法，确保万无一失
         const storeId = filters.store_id || filters.storeId;
         if (storeId) {
             params.append('store_id', storeId);
@@ -702,15 +623,6 @@ async function fetchOrderList(filters = {}) {
         return []; // 出错返回空数组防止页面崩坏
     }
 }
-
-/*function initOrderFilters() {
-    document.getElementById('order-search-btn').addEventListener('click', filterOrders);
-    document.getElementById('order-reset-btn').addEventListener('click', resetOrderFilters);
-    document.getElementById('refresh-orders-btn').addEventListener('click', () => loadOrderList());
-    document.getElementById('order-search').addEventListener('keypress', e => {
-        if (e.key === 'Enter') filterOrders();
-    });
-}*/
 
 
 async function filterOrders() {
@@ -1046,9 +958,6 @@ async function fetchOrderDetail(orderId) {
         
         if (result.success) {
             
-            // PHP 返回的是 { success: true, data: { order: {...}, items: [...] } }
-            // 但是 showOrderDetailModal 期望的是一个包含 items 的大对象
-            
             const orderData = result.data.order;
             
             // 把 items 数组手动塞进 order 对象里
@@ -1103,28 +1012,6 @@ function showOrderDetailModal(order) {
     if (existingModal) {
         existingModal.remove();
     }
-
-    /*
-    const orderId = order.order_id || 'N/A';
-    const memberName = order.member_name || 'N/A';
-    const memberId = order.member_id || 'N/A';
-    const storeName = order.store_name || 'N/A';
-    const orderDate = order.order_date ? formatDateTime(order.orderDate) : 'N/A';
-    const paymentMethod = order.payment_method || 'Not specified';
-    const note = order.note || 'No note';
-    const shippingAddress = order.shipping_address || 'Not specified';
-
-    // 计算各项数据，确保有默认值
-    const grossAmount = Number(order.gross_amount) || 0;
-    const discountRate = Number(order.discount_rate) || 0;
-    const discountedAmount = Number(order.discounted_amount) || 0;
-    const redeemedPoints = Number(order.redeemed_points) || 0;
-    const pointsDiscountAmount = Number(order.points_discountAmount) || 0;
-    const payableAmount = Number(order.payable_amount) || 0;
-    const paidAmount = Number(order.paid_amount) || 0;
-    const itemCount = Number(order.item_count) || 0;
-    const totalQuantity = Number(order.total_quantity) || 0;
-*/
 
     // 确保数据存在，使用安全访问
     
@@ -1372,12 +1259,12 @@ async function filterInvoices() {
         startDate: document.getElementById('invoice-start-date').value,
         endDate: document.getElementById('invoice-end-date').value,
         
-        // 🟢 新增：金额范围 (核心修改点)
+        // 金额范围 (核心修改点)
         minAmount: document.getElementById('filter-min-amount') ? document.getElementById('filter-min-amount').value : '',
         maxAmount: document.getElementById('filter-max-amount') ? document.getElementById('filter-max-amount').value : ''
     };
 
-    console.log("正在筛选发票，条件:", filters); // 方便你在 F12 控制台调试
+    console.log("正在筛选发票，条件:", filters); 
     await loadInvoiceList(filters);
 }
 
@@ -1390,8 +1277,8 @@ async function resetInvoiceFilters() {
         'invoice-order-filter',  // 订单ID
         'invoice-start-date',    // 开始日期
         'invoice-end-date',      // 结束日期
-        'filter-min-amount',     // 🟢 新增：最小金额
-        'filter-max-amount'      // 🟢 新增：最大金额
+        'filter-min-amount',     // 最小金额
+        'filter-max-amount'      // 最大金额
     ];
 
     // 循环清空，并在清空前检查元素是否存在(防止报错)
@@ -1408,7 +1295,6 @@ async function loadInvoiceList(filters = {}) {
     const container = document.getElementById('invoice-table-body');
     if (!container) return;
 
-    // 既然全局变量 currentFinanceUser 在 finance.js 里是有的，那就直接传过去，别让 API 层去猜
     if (currentFinanceUser && currentFinanceUser.store_id) {
         filters.store_id = currentFinanceUser.store_id; 
     }
@@ -1458,14 +1344,6 @@ function updateInvoicePaginationInfo(totalInvoices) {
 }
 
 function addInvoiceEventListeners() {
-    /*document.querySelectorAll('.view-invoice').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const invoiceId = btn.getAttribute('data-invoice');
-            await window.viewInvoiceDetail(invoiceId);
-        });
-    });*/
-
-
 
     document.querySelectorAll('.print-invoice').forEach(btn => {
         btn.addEventListener('click', async () => {
@@ -1629,21 +1507,18 @@ window.voidInvoice = async function(invoiceId) {
     }
 
     // 2. 状态检查：二次确认
-    // (注意：HTML 里的 disabled 属性防君子不防小人，这里确认框是最后一道防线)
     if (!confirm('Are you sure you want to void this invoice? This action cannot be undone.')) {
         return;
     }
 
     try {
         // 3. 调用 API (注意：这里用了 voidInvoiceRequest)
-        // 确保你的 finance-api.js 里已经改成了 endpoints.invoices.voidInvoice
         const response = await voidInvoiceRequest(invoiceId);
         
         if (response.success) {
             alert('Invoice has been voided successfully.');
             
             // 4. 刷新列表 (保留当前筛选条件的最佳做法是重新调用 loadInvoiceList)
-            // 如果你想做得更完美，可以检查当前是否有筛选条件
             await loadInvoiceList(); 
         } else {
             alert('Failed to void invoice: ' + response.message);
@@ -1809,7 +1684,6 @@ async function receivePayment(invoiceId, balance) {
 
 /**
  * 身份与分店信息同步补丁
- * 作用：从本地缓存提取登录信息，替换 layout.js 预留的 "Loading..."
  */
 function syncStoreAndUserInfo() {
     try {
