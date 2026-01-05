@@ -442,8 +442,6 @@ function closeBookModal() {
     if (bookModal) {
         bookModal.classList.add('hidden');
         bookModal.classList.remove('flex');
-        
-        // 重新启用所有字段
         const fields = [
             'book-title', 'book-isbn', 'book-category', 'book-price',
             'book-language', 'book-binding', 'book-publisher',
@@ -461,7 +459,7 @@ function closeBookModal() {
  * 5.1 Dashboard 相关渲染函数
  */
 
-// 渲染 Dashboard: 只取前 5 条数据，画在首页的简略表格里。
+// 渲染 Dashboard: 只取前 5 条数据
 function renderRecentOrders(data) {
     const recentOrdersList = document.getElementById('recent-orders-list');
     if (!recentOrdersList || !data) return;
@@ -498,7 +496,7 @@ function renderLowStockItems(inventoryData) {
     if (!lowStockList) return;
     lowStockList.innerHTML = '';
 
-    // 修改筛选逻辑：qty == 1
+    // 筛选逻辑：qty == 1
     const criticalItems = inventoryData.filter(item => {
         const qty = parseInt(item.quantity || item.stock || 0);
         return qty === 1;
@@ -543,7 +541,7 @@ function renderInventory(data) {
     // 2. 获取分页后的切片数据
     const paginatedData = getPaginatedData(sourceData, staffPageState.inventory, pageSize);
 
-    // 4. 渲染行内容
+    // 3. 渲染行内容
     inventoryList.innerHTML = paginatedData.map(item => {
         const title = item.book_name || item.title || 'Unknown Title';
         const batch = item.batch_number || '-';
@@ -580,7 +578,7 @@ function renderInventory(data) {
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${authorDisplay}</td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-mono">${isbn}</td>
                 
-                <!-- 修改点：添加 max-w-[150px] 和 truncate 实现省略号 -->
+                <!-- 添加 max-w-[150px] 和 truncate 实现省略号 -->
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 max-w-[150px] truncate" title="${category}">
                     ${category}
                 </td>
@@ -630,7 +628,7 @@ function updateDashboardStats(inventoryData = [], ordersData = []) {
         return qty === 1;
     }).length;
 
-    // C. 统计总订单数 (增加安全性检查)
+    // C. 统计总订单数
     const totalOrders = Array.isArray(ordersData) ? ordersData.length : 0;
 
 
@@ -653,7 +651,7 @@ function renderOrders(data) {
     const ordersList = document.getElementById('orders-list');
     if (!ordersList) return;
 
-    // 1. 数据源：优先使用传入的 data，否则为空数组 (不再使用 mockOrders)
+    // 1. 数据源：优先使用传入的 data，否则为空数组
     const sourceData = data || [];
     const pageSize = 10;
 
@@ -868,7 +866,7 @@ async function saveBook() {
             batch_code: document.getElementById('book-batch').value.trim()
         };
     } else {
-        // 新增模式需要完整数据
+        // 新增书籍需要完整数据
         url = '../api/staff/add_book.php';
         const formData = {
             isbn: document.getElementById('book-isbn').value.trim(),
@@ -922,7 +920,7 @@ async function saveBook() {
 // 编辑书籍：填充表单（只编辑库存数量）
 function editBook(skuId) {
     const book = globalBooks.find(b => b.sku_id == skuId);
-    console.log("Editing book data:", book); // 添加调试日志
+    console.log("Editing book data:", book);
     const bookModal = document.getElementById('book-modal');
     if (book && bookModal) {
         document.getElementById('modal-title').textContent = 'Edit Inventory';
