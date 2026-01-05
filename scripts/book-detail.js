@@ -43,7 +43,7 @@ function showBookDetail(bookData) {
   // 1. 设置当前操作的书籍引用
   currentBook = bookData;
 
-  // 2. 执行渲染（因为是本地数据，无需 await）
+  // 2. 执行渲染
   renderBookDetail(bookData);
 
   // 3. 打开 UI 动画
@@ -88,8 +88,6 @@ function renderBookDetail(book) {
   updateFavoriteButtonUI(book.isbn);
 }
 
-// --- 以下 UI 控制逻辑保持不变 ---
-
 function openModalUI() {
   if (!elements.modal) return;
   elements.overlay.classList.remove('hidden');
@@ -133,7 +131,6 @@ function init() {
     elements.addToCartBtn.onclick = () => {
       if (currentBook && typeof addToCart === 'function') {
         addToCart(currentBook.id, currentBook.storeId);
-        // hideBookDetail(); // 如果你想保持弹窗不关闭可以注释掉
       }
     };
   }
@@ -143,8 +140,6 @@ function init() {
     elements.addToFavoriteBtn.onclick = () => {
       if (currentBook && typeof toggleFavorite === 'function') {
         toggleFavorite(currentBook.isbn);
-        // 注意：toggleFavorite 内部会调用 updateFavoriteUIState，
-        // 而 updateFavoriteUIState 已经写了处理详情页按钮的逻辑。
       }
     };
   }

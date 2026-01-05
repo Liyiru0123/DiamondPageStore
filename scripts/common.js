@@ -34,7 +34,7 @@ window.showAlert = function(message, type = 'info') {
 
     // 2. 根据 type 动态调整背景颜色 (可选，增加视觉反馈)
     const typeColors = {
-        'info': 'bg-brown-dark',   // 你原本定义的棕色
+        'info': 'bg-brown-dark', 
         'success': 'bg-green-600',
         'error': 'bg-red-600',
         'warning': 'bg-orange-500'
@@ -100,12 +100,8 @@ function logout() {
     
     // 2. 清除会话存储（页面状态记忆）
     sessionStorage.removeItem('currentPage');
-    
-    // 3. (可选) 清除可能存在的购物车缓存，如果你希望登出后清空购物车
-    // localStorage.removeItem('bookCart'); 
 
-    // 4. 跳转回纯净的登录页，不带任何参数
-    // 这样 login.html 就会显示“Identity Yourself”选择界面，而不是直接进入输入密码界面
+    // 3. 跳转回纯净的登录页，不带任何参数
     window.location.href = getPagePath('login.html');
 }
 
@@ -133,7 +129,7 @@ function renderPaginationControls(containerId, totalItems, currentPage, onPageCh
     const totalPages = Math.ceil(totalItems / pageSize) || 1;
     let buttonsHtml = '';
 
-    // A. 统计信息 (左侧) - 保持不变
+    // A. 统计信息 (左侧)
     const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
     const end = Math.min(currentPage * pageSize, totalItems);
     const infoHtml = `<p class="text-sm text-gray-500">Showing ${start} to ${end} of <span class="font-bold">${totalItems}</span> records</p>`;
